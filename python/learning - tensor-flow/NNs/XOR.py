@@ -4,8 +4,8 @@ from random import randint
 
 DEBUG = True
 
-total_inputs = 10000
-batch_size = 100
+total_inputs = 1000
+batch_size = 10
 n_hiddent_units = 2
 
 ones_for_layer3 = tf.ones([batch_size, 1])
@@ -61,7 +61,7 @@ with tf.Session() as sess:
     
     trY = sess.run(tf.reshape(tf.identity(trX[0:total_inputs * 4, 3:5]), [total_inputs * 4, 2]))
     
-    for i in range(100):
+    for i in range(15):
         for start, end in zip(range(0, len(trX), batch_size), range(batch_size, len(trX) + 1, batch_size)):
             sess.run(train_op, feed_dict={ X: trX[start:end, 0:3], Y: trY[start:end] })
            
@@ -74,3 +74,6 @@ with tf.Session() as sess:
         #print(actual_output)
     
         print("iteration :", i, " accuracy :", np.mean(actual_output == predicted_output), "\n")
+    
+    print("trained weight for hidden layer\n", sess.run(weight_hidden))
+    print("\ntrained weights for output layer\n", sess.run(weight_output))

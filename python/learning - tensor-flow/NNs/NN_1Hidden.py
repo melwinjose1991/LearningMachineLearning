@@ -3,6 +3,7 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow.examples.tutorials.mnist import input_data
+import matplotlib.pyplot as plt
 
 DEBUG=False
 
@@ -26,6 +27,26 @@ def model(X, weight_hidden, weight_output):
 def getHiddenLayerOutput(X, weight_hidden):
     hiddern_units_output = tf.nn.sigmoid(tf.matmul(X, weight_hidden))
     return hiddern_units_output
+
+
+def plot_weights():
+    w = sess.run(weight_hidden)
+    
+    w_min = np.min(w)
+    w_max = np.max(w)
+
+    fig, axes = plt.subplots(3, 4)
+    fig.subplots_adjust(hspace=0.3, wspace=0.3)
+
+    for i, axis in enumerate(axes.flat):
+        if i<10:
+            image = w[:, i].reshape([28,28])
+            axis.set_xlabel("Weights: {0}".format(i))
+            axis.imshow(image, vmin=w_min, vmax=w_max, cmap='seismic')
+        axis.set_xticks([])
+        axis.set_yticks([])
+    
+    plt.show()
 
 
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
@@ -69,3 +90,6 @@ with tf.Session() as sess:
         
         predictions_vector = sess.run(predict_op, feed_dict={X: teX})
         print("iteration :",i, " accuracy :", np.mean(np.argmax(teY, axis=1) == predictions_vector))
+        
+    plot_weights()
+    

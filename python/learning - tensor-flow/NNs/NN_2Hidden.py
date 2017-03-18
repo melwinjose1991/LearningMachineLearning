@@ -3,6 +3,7 @@
 import tensorflow as tf
 import numpy as np
 from tensorflow.examples.tutorials.mnist import input_data
+import matplotlib.pyplot as plt
 
 DEBUG = False
 
@@ -25,6 +26,27 @@ def model(X, w_h, w_h2, w_o, p_keep_input, p_keep_hidden):
     h2 = tf.nn.dropout(h2, p_keep_hidden)
 
     return tf.matmul(h2, w_o)
+
+
+def plot_weights(weights):
+    w = sess.run(weights)
+    
+    w_min = np.min(w)
+    w_max = np.max(w)
+
+    fig, axes = plt.subplots(3, 4)
+    fig.subplots_adjust(hspace=0.3, wspace=0.3)
+
+    for i, axis in enumerate(axes.flat):
+        if i<10:
+            image = w[:, i].reshape([28,28])
+            axis.set_xlabel("Weights: {0}".format(i))
+            axis.imshow(image, vmin=w_min, vmax=w_max, cmap='seismic')
+        axis.set_xticks([])
+        axis.set_yticks([])
+    
+    plt.show()
+
 
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 trX, trY, teX, teY = mnist.train.images, mnist.train.labels, mnist.test.images, mnist.test.labels
@@ -54,7 +76,7 @@ with tf.Session() as sess:
     # you need to initialize all variables
     tf.global_variables_initializer().run()
 
-    for i in range(10):
+    for i in range(5):
         for start, end in zip(range(0, len(trX), 128), range(128, len(trX) + 1, 128)):
             sess.run(train_op, feed_dict={X: trX[start:end], Y: trY[start:end], p_keep_input: 0.8, p_keep_hidden: 0.5})
         
@@ -71,3 +93,5 @@ with tf.Session() as sess:
             
         predictions_vector = sess.run(predict_op, feed_dict={X: teX, p_keep_input: 1.0, p_keep_hidden: 1.0})
         print("iteration :", i, " accuracy :", np.mean(np.argmax(teY, axis=1) == predictions_vector))
+    
+    plot_weights(weight_hidden_1)
