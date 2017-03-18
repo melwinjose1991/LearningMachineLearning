@@ -6,24 +6,24 @@ from tensorflow.examples.tutorials.mnist import input_data
 import matplotlib.pyplot as plt
 
 DEBUG = False
+drop_out = True
 
 def init_weights(shape):
-    '''
-    tf.random_normal(shape, mean=0.0, stddev=1.0)
-        Outputs random values from a normal distribution.
-        shape: A 1-D integer Tensor or Python array. The shape of the output tensor.
-    '''
     return tf.Variable(tf.random_normal(shape, stddev=0.01))
 
 
-def model(X, w_h, w_h2, w_o, p_keep_input, p_keep_hidden):
-    X = tf.nn.dropout(X, p_keep_input)
+## NN for ML - Lecture 10E : Dropout: an efficient way to combine neural nets
+def model(X, w_h, w_h2, w_o, p_keep_input, p_keep_hidden, drop_out = True):
+    if(drop_out):
+        X = tf.nn.dropout(X, p_keep_input)
+    
     h = tf.nn.relu(tf.matmul(X, w_h))
-
-    h = tf.nn.dropout(h, p_keep_hidden)
+    if(drop_out):
+        h = tf.nn.dropout(h, p_keep_hidden)
+    
     h2 = tf.nn.relu(tf.matmul(h, w_h2))
-
-    h2 = tf.nn.dropout(h2, p_keep_hidden)
+    if(drop_out):
+        h2 = tf.nn.dropout(h2, p_keep_hidden)
 
     return tf.matmul(h2, w_o)
 
@@ -56,19 +56,19 @@ n_hidden2_units = 625
 X = tf.placeholder("float", [None, 784])
 Y = tf.placeholder("float", [None, 10])
 
-# input nodes 784
-# hidden nodes n_hiddent_units
-# output nodes 10
 weight_hidden_1 = init_weights([784, n_hidden1_units])
 weight_hidden_2 = init_weights([n_hidden1_units, n_hidden2_units])
 weight_output = init_weights([n_hidden2_units, 10])
 
 p_keep_input = tf.placeholder("float")
 p_keep_hidden = tf.placeholder("float")
-py_x = model(X, weight_hidden_1, weight_hidden_2, weight_output, p_keep_input, p_keep_hidden)
+py_x = model(X, weight_hidden_1, weight_hidden_2, weight_output, p_keep_input, p_keep_hidden, drop_out)
 
 cost = tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(logits=py_x, labels=Y))
+
+# RMSPropOptimizer(learning_rate, decay, momentum)
 train_op = tf.train.RMSPropOptimizer(0.001, 0.9).minimize(cost)
+
 predict_op = tf.argmax(py_x, 1)
 
 # Launch the graph in a session
