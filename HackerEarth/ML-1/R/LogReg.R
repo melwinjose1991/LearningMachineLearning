@@ -8,15 +8,15 @@ data = data[, !(names(data) %in% drops)]
 apply(data, 2, function(x) any(is.na(x)))
 
 ## Feature Engineering
-# delinq_2yrs
+# delinq_2yrs ||REPLACING NA||
 sum(is.na(data$delinq_2yrs))
 data[is.na(data$delinq_2yrs),"delinq_2yrs"] = 0
 
-# pub_rec
+# pub_rec ||REPLACING NA||
 sum(is.na(data$pub_rec))
 data[is.na(data$pub_rec),"pub_rec"] = 0
 
-# home_ownership
+# home_ownership ||MERGING CATEGORY VARIABLES||
 levels(data$home_ownership) = c(levels(data$home_ownership), "NONE&OTHER")
 data$home_ownership[data$home_ownership=="OTHER"] = "NONE&OTHER"
 data$home_ownership[data$home_ownership=="NONE"] = "NONE&OTHER"
@@ -43,7 +43,7 @@ if(FALSE){
   ## emp_length won;t effect the accuracy much
   
   ## home_ownership : combine NONE & OTHER
-  ## over-fitted !!! the count of NONE & OTHER are very less
+  ## ||OVER-FITTED|| !!! the count of NONE & OTHER are very less
   pivot_1 = aggregate(loan_status~home_ownership, data, FUN=sum)
   pivot_2 = aggregate(loan_status~home_ownership, data, FUN=length)
   pivot_2["defaults"] = pivot_1["loan_status"]
@@ -83,6 +83,7 @@ predictors_4 = c("loan_amnt","funded_amnt","funded_amnt_inv", "term", "home_owne
 model_4 = glm(loan_status~loan_amnt+funded_amnt+funded_amnt_inv+term+home_ownership+delinq_2yrs+pub_rec, family=binomial(link='logit'), data=train)
 predictAccuracy(model_4, test, predictors_4)
 # 0.7667
+
 
 
 ## Real-test data
