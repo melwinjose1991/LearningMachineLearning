@@ -2,3 +2,4 @@
 *.pydevproject
 *.gz
 *.csv
+*.dot
