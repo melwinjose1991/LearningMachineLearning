@@ -3,3 +3,5 @@
 *.gz
 *.csv
 *.dot
+*.RDataTmp
+*.Rhistory
