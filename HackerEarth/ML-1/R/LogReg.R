@@ -22,17 +22,50 @@ data$home_ownership[data$home_ownership=="OTHER"] = "NONE&OTHER"
 data$home_ownership[data$home_ownership=="NONE"] = "NONE&OTHER"
 data$home_ownership = factor(data$home_ownership)
 
-if(FALSE){
-  sum(is.na(data$home_ownership))
-  unique(data[,"home_ownership"])
-  
-  ## verifications
-  # pub_rec has negative coef in the model
-  pivot_1 = aggregate(loan_status~pub_rec, data, FUN=sum)
-  pivot_2 = aggregate(loan_status~pub_rec, data, FUN=length)
+getPivotTable = function(variable){
+  pivot_1 = aggregate(loan_status~variable, data, FUN=sum)
+  pivot_2 = aggregate(loan_status~variable, data, FUN=length)
   pivot_2["defaults"] = pivot_1["loan_status"]
   pivot_2["avg"] = pivot_2["defaults"]/pivot_2["loan_status"]
+  pivot_2
+}
 
+getNAs=function(column){
+  print(sum(is.na(column)))
+}
+
+getUniqueEntries=function(column){
+  print(unique(column))
+}
+
+getQuartile=function(column){
+  data$quartile = with(data,factor(findInterval(column,c(-Inf,quantile(column,probs=c(0.25,.5,.75)),Inf)),
+            labels=c("Q1","Q2","Q3","Q4")))
+}
+
+if(FALSE){
+  
+  # loan_amnt +ve coef, 
+    # seems like funded_amnt and funded_amnt_inv are confounding loan_amnt
+    # loan_amnt alone has -ve coef
+  getQuartile(data$loan_amnt)
+  
+  # funded_amnt added, has a negative correlation with loan_status
+    # check and plot the pivot table of funded_amnt
+  
+  # funded_amnt_inv added
+  
+  # term not significant
+  
+  # batch_enrolled ??? 105 levels, 2 empty levels 
+  
+  # int_rate
+  
+  
+  
+  # pub_rec has negative coef in the model
+  getPivotTable(data$pub_rec)
+  
   # adding grade woun't effect the accuracy
   # as each grade has equal avg of defaulters
   pivot_1 = aggregate(loan_status~grade, data, FUN=sum)
@@ -79,10 +112,16 @@ predictAccuracy(basic_model, test, basic_predictors)
 makePredictions(basic_model, test, basic_predictors)
 
 # better model
-predictors_4 = c("loan_amnt","funded_amnt","funded_amnt_inv", "term", "home_ownership", "delinq_2yrs", "pub_rec")
-model_4 = glm(loan_status~loan_amnt+funded_amnt+funded_amnt_inv+term+home_ownership+delinq_2yrs+pub_rec, family=binomial(link='logit'), data=train)
+predictors_4 = c("loan_amnt","funded_amnt","funded_amnt_inv", "term", "emp_length", "home_ownership", "delinq_2yrs", "pub_rec")
+model_4 = glm(loan_status~loan_amnt+funded_amnt+funded_amnt_inv+term+emp_length+home_ownership+delinq_2yrs+pub_rec, family=binomial(link='logit'), data=train)
 predictAccuracy(model_4, test, predictors_4)
 # 0.7667
+
+
+predictors_5 = c("loan_amnt","pub_rec")
+model_5 = glm(loan_status~loan_amnt+pub_rec, family=binomial(link='logit'), data=train)
+summary(model_5)
+predictAccuracy(model_5, test, predictors_5)
 
 
 

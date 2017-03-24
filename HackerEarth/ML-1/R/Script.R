@@ -2,6 +2,7 @@ library(h2o)
 library(corrplot)
 library(stringr)
 library(data.table)
+library(tm)
 
 data = read.csv("../data/train_indessa.csv")
 rows = dim(data)[1]
@@ -52,6 +53,32 @@ getPivotTable = function(variable){
   pivot_2
 }
 
+trim = function (x) gsub("^\\s+|\\s+$", "", x)
+
+getNFrequentWords=function(var_col, var_str, rows_to_use=4000, defaulter=TRUE){
+
+  non_empty_rows = var_col != ""
+  
+  if(defaulter){
+    defaulters_rows = data$loan_status == 1
+    df = data[ non_empty_rows&defaulters_rows, c(var_str,"loan_status")]
+  }else{
+    non_defaulters_rows = data$loan_status == 0
+    df = data[ non_empty_rows&non_defaulters_rows, c(var_str, "loan_status")]
+  }
+  print("Converting to Corpus")
+  x_cor = Corpus(DataframeSource(df[1:row_to_use,]))
+  print("Applying transformations")
+  x_cor = tm_map(x_cor, removeWords, stopwords("english")) 
+  x_cor = tm_map(x_cor, removePunctuation) 
+  x_cor = tm_map(x_cor, removeNumbers) 
+  x_cor = tm_map(x_cor, stripWhitespace) 
+  print("Converting to DocumentTermMatrix")
+  dtm =  DocumentTermMatrix(x_cor)
+  print("Calculating Frequencies")
+  findFreqTerms(dtm, row_to_use/4)
+}
+
 
 ### Feature engineering ###
 # loan_amt added
@@ -93,6 +120,21 @@ data$annual_inc = log(data$annual_inc+10)
 # desc 
 trim = function (x) gsub("^\\s+|\\s+$", "", x)
 data$desc1 = trim(data$desc)
+non_empty_rows = data$desc1 != ""
+defaulters_rows = data$loan_status == 1
+non_defaulters_rows = data$loan_status == 0
+defaulters = data[ non_empty_rows&defaulters_rows, c("desc1","loan_status")]
+non_defaulters = data[ non_empty_rows&non_defaulters_rows, c("desc1", "loan_status")]
+
+row_to_use = 4000
+x_cor = Corpus(DataframeSource(non_defaulters[1:row_to_use,]))
+x_cor = tm_map(x_cor, removeWords, stopwords("english")) 
+x_cor = tm_map(x_cor, removePunctuation) 
+x_cor = tm_map(x_cor, removeNumbers) 
+x_cor = tm_map(x_cor, stripWhitespace) 
+dtm =  DocumentTermMatrix(x_cor)
+findFreqTerms(dtm, row_to_use/4)
+
 
 # delinq_2yrs
 sum(is.na(data$delinq_2yrs))
