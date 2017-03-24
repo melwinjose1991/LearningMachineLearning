@@ -55,7 +55,7 @@ getPivotTable = function(variable){
 
 trim = function (x) gsub("^\\s+|\\s+$", "", x)
 
-getNFrequentWords=function(var_col, var_str, rows_to_use=4000, defaulter=TRUE){
+getNFrequentWords=function(var_col, var_str, rows_to_use=0.50, defaulter=TRUE, N=0.75){
 
   non_empty_rows = var_col != ""
   
@@ -67,16 +67,44 @@ getNFrequentWords=function(var_col, var_str, rows_to_use=4000, defaulter=TRUE){
     df = data[ non_empty_rows&non_defaulters_rows, c(var_str, "loan_status")]
   }
   print("Converting to Corpus")
-  x_cor = Corpus(DataframeSource(df[1:row_to_use,]))
-  print("Applying transformations")
+  rows_to_use = dim(df)[1] * rows_to_use
+  print(rows_to_use)
+  x_cor = Corpus(DataframeSource(df[1:rows_to_use,]))
+  print("Applying transformations toLower & removeWords")
+  x_cor = tm_map(x_cor, content_transformer(tolower)) 
   x_cor = tm_map(x_cor, removeWords, stopwords("english")) 
+  print("Applying transformations removePunctuation")
   x_cor = tm_map(x_cor, removePunctuation) 
   x_cor = tm_map(x_cor, removeNumbers) 
+  print("Applying transformations stripWhitespace")
   x_cor = tm_map(x_cor, stripWhitespace) 
   print("Converting to DocumentTermMatrix")
   dtm =  DocumentTermMatrix(x_cor)
   print("Calculating Frequencies")
-  findFreqTerms(dtm, row_to_use/4)
+  print(rows_to_use*N)
+  findFreqTerms(dtm, rows_to_use*N)
+}
+
+getFrequentWordsCount=function(var_str, remove_words_list){
+  #var_str = "desc1"
+  #remove_words_list=c("family")
+  df = data[1:5000 , c(var_str,"loan_status")]
+  print("Converting to Corpus")
+  x_cor = Corpus(DataframeSource(df))
+  print("Applying transformations tolower removeWords")
+  x_cor = tm_map(x_cor, content_transformer(tolower)) 
+  x_cor = tm_map(x_cor, removeWords, stopwords("english"))
+  x_cor = tm_map(x_cor, removeWords, remove_words_list)
+  print("Applying transformations removePunctuation")
+  x_cor = tm_map(x_cor, removePunctuation) 
+  x_cor = tm_map(x_cor, removeNumbers) 
+  print("Applying transformations stripWhitespace")
+  x_cor = tm_map(x_cor, stripWhitespace) 
+  print("Converting to DocumentTermMatrix")
+  dtm =  DocumentTermMatrix(x_cor)
+  print("Calculating Frequencies")
+  count = rowSums(as.matrix(dtm))
+  count
 }
 
 
@@ -99,6 +127,14 @@ data$term = as.numeric(unlist(str_extract_all(string = data$term,pattern = "\\d+
 
 # sub-garde : added
 
+# emp_title
+data$emp_title1 = trim(data$emp_title)
+title_defaulters = getNFrequentWords(data$emp_title1, "emp_title1", defaulter = TRUE, rows_to_use = 0.125, N=0.025)
+title_nondefaulters = getNFrequentWords(data$emp_title1, "emp_title1", defaulter = FALSE, rows_to_use = 0.125, N=0.025)
+only_defaulter_title = setdiff(title_defaulters, title_nondefaulters)
+#check if title doesnt containt any of the defaulters' title
+title_mark = getFrequentWordsCount("emp_title1", only_defaulter_title) 
+
 # emp_length : added : do we need to convert them into numeric ???
 levels(data$emp_length) = c(levels(data$emp_length), -1:11)
 data$emp_length [data$emp_length=="n/a"] = 11
@@ -118,23 +154,11 @@ data$annual_inc = log(data$annual_inc+10)
 # pymnt_plan : not adding : almost everything is n
 
 # desc 
-trim = function (x) gsub("^\\s+|\\s+$", "", x)
 data$desc1 = trim(data$desc)
-non_empty_rows = data$desc1 != ""
-defaulters_rows = data$loan_status == 1
-non_defaulters_rows = data$loan_status == 0
-defaulters = data[ non_empty_rows&defaulters_rows, c("desc1","loan_status")]
-non_defaulters = data[ non_empty_rows&non_defaulters_rows, c("desc1", "loan_status")]
-
-row_to_use = 4000
-x_cor = Corpus(DataframeSource(non_defaulters[1:row_to_use,]))
-x_cor = tm_map(x_cor, removeWords, stopwords("english")) 
-x_cor = tm_map(x_cor, removePunctuation) 
-x_cor = tm_map(x_cor, removeNumbers) 
-x_cor = tm_map(x_cor, stripWhitespace) 
-dtm =  DocumentTermMatrix(x_cor)
-findFreqTerms(dtm, row_to_use/4)
-
+words_defaulters = getNFrequentWords(data$desc1, "desc1", defaulter = TRUE, rows_to_use = 1, N=0.025)
+words_nondefaulters = getNFrequentWords(data$desc1, "desc1", defaulter = FALSE, rows_to_use = 1, N=0.025)
+only_defaulter_words = setdiff(words_defaulters, words_nondefaulters)
+words_count = getFrequentWordsCount("desc1", only_defaulter_words) # count of words not in defaulters_Words
 
 # delinq_2yrs
 sum(is.na(data$delinq_2yrs))
