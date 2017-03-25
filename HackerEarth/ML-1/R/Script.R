@@ -56,16 +56,16 @@ getPivotTable = function(variable){
 
 trim = function (x) gsub("^\\s+|\\s+$", "", x)
 
-getNFrequentWords=function(var_col, var_str, rows_to_use=0.50, defaulter=TRUE, N=0.75){
+getNFrequentWords=function(df, var_col, var_str, rows_to_use=0.50, defaulter=TRUE, N=0.75){
 
   non_empty_rows = var_col != ""
   
   if(defaulter){
-    defaulters_rows = data$loan_status == 1
-    df = data[ non_empty_rows&defaulters_rows, c(var_str,"loan_status")]
+    defaulters_rows = df$loan_status == 1
+    df = df[ non_empty_rows&defaulters_rows, c(var_str,"loan_status")]
   }else{
-    non_defaulters_rows = data$loan_status == 0
-    df = data[ non_empty_rows&non_defaulters_rows, c(var_str, "loan_status")]
+    non_defaulters_rows = df$loan_status == 0
+    df = df[ non_empty_rows&non_defaulters_rows, c(var_str, "loan_status")]
   }
   print("Converting to Corpus")
   rows_to_use = dim(df)[1] * rows_to_use
@@ -86,10 +86,14 @@ getNFrequentWords=function(var_col, var_str, rows_to_use=0.50, defaulter=TRUE, N
   findFreqTerms(dtm, rows_to_use*N)
 }
 
-getFrequentWordsCount=function(var_str, remove_words_list){
+getFrequentWordsCount=function(df, var_str, remove_words_list, test=FALSE){
   #var_str = "desc1"
   #remove_words_list=c("family")
-  df = data[, c(var_str,"loan_status")]
+  if(test){
+    df = df[, c(var_str,"dummy")]
+  }else{
+    df = df[, c(var_str,"loan_status")]
+  }
   print("Converting to Corpus")
   x_cor = Corpus(DataframeSource(df))
   print("Applying transformations tolower removeWords")
@@ -134,14 +138,15 @@ data$term = as.numeric(unlist(str_extract_all(string = data$term,pattern = "\\d+
 # emp_title
 if(FALSE){
   data$emp_title1 = trim(data$emp_title)
-  title_defaulters = getNFrequentWords(data$emp_title1, "emp_title1", defaulter = TRUE, rows_to_use = 1, N=0.0125)
-  title_nondefaulters = getNFrequentWords(data$emp_title1, "emp_title1", defaulter = FALSE, rows_to_use = 1, N=0.0125)
+  title_defaulters = getNFrequentWords(data, data$emp_title1, "emp_title1", defaulter = TRUE, rows_to_use = 1, N=0.0125)
+  title_nondefaulters = getNFrequentWords(data, data$emp_title1, "emp_title1", defaulter = FALSE, rows_to_use = 1, N=0.0125)
   only_defaulter_title = setdiff(title_defaulters, title_nondefaulters)
   # "inc" for 1 0.025
   # "bank","center","county","inc","medical","school","services" for 1 0.0125
+  write(only_defaulter_title,"only_defaulter_title.txt")
   
   #check if title doesnt containt any of the defaulters' title
-  title_mark = getFrequentWordsCount("emp_title1", only_defaulter_title) 
+  title_mark = getFrequentWordsCount(data, "emp_title1", only_defaulter_title) 
   emp_title2 = as.vector(title_mark)
   write(emp_title2,"emp_title2.txt")
 }
@@ -175,6 +180,9 @@ if(FALSE){
   words_count = getFrequentWordsCount("desc1", only_defaulter_words) # count of words not in defaulters_Words
 }
 
+# purpose - added
+sum(is.na(data$purpose))
+
 # delinq_2yrs
 sum(is.na(data$delinq_2yrs))
 data[is.na(data$delinq_2yrs),"delinq_2yrs"] = 0
@@ -186,8 +194,8 @@ data[is.na(data$pub_rec),"pub_rec"] = 0
 
 
 ### Train Test Split ###
-x = c("loan_amnt", "term", "grade", "sub_grade", "emp_title", "emp_length", "home_ownership", "annual_inc", 
-      "verification_status",
+x = c("loan_amnt", "term", "grade", "sub_grade", "emp_title2", "emp_length", "home_ownership", "annual_inc", 
+      "verification_status", "purpose", 
       "delinq_2yrs", "pub_rec")
 y = c("loan_status")
 x_y = c("member_id",x,y)
@@ -216,8 +224,8 @@ gbm_clf <- h2o.gbm(x = x
                    ,training_frame = h2o_train
                    ,validation_frame = split_val
                    #,ignore_const_cols = TRUE
-                   ,ntrees = 100
-                   ,max_depth = 10
+                   ,ntrees = 1000
+                   ,max_depth = 15
                    ,stopping_rounds = 5
                    ,model_id = "gbm_model"
                    ,stopping_metric = "AUC"
@@ -230,6 +238,8 @@ gbm_clf <- h2o.gbm(x = x
 gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
 predictions = gbm_clf_pred$p1
 getAccuracy(predictions, test$loan_status)
+# after adding purpose = 0.769 | 0.68
+# after adding emp_title2 = 0.766 | 0.67
 
 
 
@@ -237,9 +247,24 @@ getAccuracy(predictions, test$loan_status)
 real_test = read.csv("../data/test_indessa.csv")
 
 # tranformations
+real_test$term = as.numeric(unlist(str_extract_all(string = real_test$term,pattern = "\\d+")))
+
+if(FALSE){
+  real_test$emp_title1 = trim(real_test$emp_title)
+  real_test$dummy = 1
+  #check if title doesnt containt any of the defaulters' title
+  test_title_mark = getFrequentWordsCount(real_test, "emp_title1", only_defaulter_title, test = TRUE) 
+  emp_title2_test = as.vector(test_title_mark)
+  write(emp_title2_test,"emp_title2_test.txt")
+}
+emp_title2_test = scan(file="emp_title2_test.txt", what=integer())
+real_test$emp_title2 = emp_title2_test
+
+real_test[is.na(real_test$annual_inc),"annual_inc"] = 0
+real_test$annual_inc = log(real_test$annual_inc+10)
+
 real_test[is.na(real_test$delinq_2yrs),"delinq_2yrs"] = 0
 real_test[is.na(real_test$pub_rec),"pub_rec"] = 0
-real_test$term = as.numeric(unlist(str_extract_all(string = real_test$term,pattern = "\\d+")))
 
 levels(real_test$emp_length) = c(levels(real_test$emp_length), -1:11)
 real_test$emp_length [real_test$emp_length=="n/a"] = 11
