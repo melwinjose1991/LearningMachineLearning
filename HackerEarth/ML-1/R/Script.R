@@ -3,6 +3,7 @@ library(corrplot)
 library(stringr)
 library(data.table)
 library(tm)
+library(slam)
 
 data = read.csv("../data/train_indessa.csv")
 rows = dim(data)[1]
@@ -88,7 +89,7 @@ getNFrequentWords=function(var_col, var_str, rows_to_use=0.50, defaulter=TRUE, N
 getFrequentWordsCount=function(var_str, remove_words_list){
   #var_str = "desc1"
   #remove_words_list=c("family")
-  df = data[1:5000 , c(var_str,"loan_status")]
+  df = data[, c(var_str,"loan_status")]
   print("Converting to Corpus")
   x_cor = Corpus(DataframeSource(df))
   print("Applying transformations tolower removeWords")
@@ -103,8 +104,11 @@ getFrequentWordsCount=function(var_str, remove_words_list){
   print("Converting to DocumentTermMatrix")
   dtm =  DocumentTermMatrix(x_cor)
   print("Calculating Frequencies")
-  count = rowSums(as.matrix(dtm))
-  count
+  dtm_2 = rollup(dtm, 2, na.rm=TRUE, FUN = sum)
+  dtm_2
+  #count = as.vector(inspect(dtm_2))
+  #count = rowSums(as.matrix(dtm))
+  #count
 }
 
 
@@ -128,12 +132,21 @@ data$term = as.numeric(unlist(str_extract_all(string = data$term,pattern = "\\d+
 # sub-garde : added
 
 # emp_title
-data$emp_title1 = trim(data$emp_title)
-title_defaulters = getNFrequentWords(data$emp_title1, "emp_title1", defaulter = TRUE, rows_to_use = 0.125, N=0.025)
-title_nondefaulters = getNFrequentWords(data$emp_title1, "emp_title1", defaulter = FALSE, rows_to_use = 0.125, N=0.025)
-only_defaulter_title = setdiff(title_defaulters, title_nondefaulters)
-#check if title doesnt containt any of the defaulters' title
-title_mark = getFrequentWordsCount("emp_title1", only_defaulter_title) 
+if(FALSE){
+  data$emp_title1 = trim(data$emp_title)
+  title_defaulters = getNFrequentWords(data$emp_title1, "emp_title1", defaulter = TRUE, rows_to_use = 1, N=0.0125)
+  title_nondefaulters = getNFrequentWords(data$emp_title1, "emp_title1", defaulter = FALSE, rows_to_use = 1, N=0.0125)
+  only_defaulter_title = setdiff(title_defaulters, title_nondefaulters)
+  # "inc" for 1 0.025
+  # "bank","center","county","inc","medical","school","services" for 1 0.0125
+  
+  #check if title doesnt containt any of the defaulters' title
+  title_mark = getFrequentWordsCount("emp_title1", only_defaulter_title) 
+  emp_title2 = as.vector(title_mark)
+  write(emp_title2,"emp_title2.txt")
+}
+emp_title_2 = scan(file="emp_title2.txt", what=integer())
+data$emp_title2 = emp_title_2
 
 # emp_length : added : do we need to convert them into numeric ???
 levels(data$emp_length) = c(levels(data$emp_length), -1:11)
@@ -154,11 +167,13 @@ data$annual_inc = log(data$annual_inc+10)
 # pymnt_plan : not adding : almost everything is n
 
 # desc 
-data$desc1 = trim(data$desc)
-words_defaulters = getNFrequentWords(data$desc1, "desc1", defaulter = TRUE, rows_to_use = 1, N=0.025)
-words_nondefaulters = getNFrequentWords(data$desc1, "desc1", defaulter = FALSE, rows_to_use = 1, N=0.025)
-only_defaulter_words = setdiff(words_defaulters, words_nondefaulters)
-words_count = getFrequentWordsCount("desc1", only_defaulter_words) # count of words not in defaulters_Words
+if(FALSE){
+  data$desc1 = trim(data$desc)
+  words_defaulters = getNFrequentWords(data$desc1, "desc1", defaulter = TRUE, rows_to_use = 1, N=0.025)
+  words_nondefaulters = getNFrequentWords(data$desc1, "desc1", defaulter = FALSE, rows_to_use = 1, N=0.025)
+  only_defaulter_words = setdiff(words_defaulters, words_nondefaulters)
+  words_count = getFrequentWordsCount("desc1", only_defaulter_words) # count of words not in defaulters_Words
+}
 
 # delinq_2yrs
 sum(is.na(data$delinq_2yrs))
@@ -171,7 +186,7 @@ data[is.na(data$pub_rec),"pub_rec"] = 0
 
 
 ### Train Test Split ###
-x = c("loan_amnt", "term", "grade", "sub_grade", "emp_length", "home_ownership", "annual_inc", 
+x = c("loan_amnt", "term", "grade", "sub_grade", "emp_title", "emp_length", "home_ownership", "annual_inc", 
       "verification_status",
       "delinq_2yrs", "pub_rec")
 y = c("loan_status")
