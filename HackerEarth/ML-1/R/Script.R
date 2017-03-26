@@ -181,32 +181,70 @@ if(FALSE){
 }
 
 # purpose - added
-sum(is.na(data$purpose))
+
+# purpose ???
+
+# zip-code & addr_state - reduced accuracy
+
+# dti - xxx reduced accuracy
+data$dti = log10(data$dti+10)
 
 # delinq_2yrs
 sum(is.na(data$delinq_2yrs))
 data[is.na(data$delinq_2yrs),"delinq_2yrs"] = 0
 
+# inq_last_6mths
+sum(is.na(data$inq_last_6mths))
+data[is.na(data$inq_last_6mths),"inq_last_6mths"] = 0
+
+# mths_since_last_delinq - too many missing entries
+# mths_since_last_record - too many missing entries
+
+# open_acc
+sum(is.na(data$open_acc))
+data[is.na(data$open_acc),"open_acc"] = 0
+
 # pub_rec
 sum(is.na(data$pub_rec))
 data[is.na(data$pub_rec),"pub_rec"] = 0
 
+# revol_bal   ???
+# revol_util  ???
 
+# total_acc
+data[is.na(data$total_acc),"total_acc"] = 0
+data[data$total_acc >= 70, "total_acc" ] = 70
+data[data$total_acc >=60 & data$total_acc <=69, "total_acc"] = 60
+data[data$total_acc >=50 & data$total_acc <=59, "total_acc"] = 50
+data[data$total_acc >=40 & data$total_acc <=49, "total_acc"] = 40
+data[data$total_acc >=30 & data$total_acc <=39, "total_acc"] = 30
+data[data$total_acc >=20 & data$total_acc <=29, "total_acc"] = 20
+data[data$total_acc >=10 & data$total_acc <=19, "total_acc"] = 10
+data[data$total_acc >=5 & data$total_acc <=9, "total_acc"] = 5
+data[data$total_acc >=2 & data$total_acc <=3, "total_acc"] = 2
+data[data$total_acc >=0 & data$total_acc <=1, "total_acc"] = 0
+
+# initial_list_status - added
+
+# <<< next var >>>
+
+# last_week_pay - added
 
 ### Train Test Split ###
 x = c("loan_amnt", "term", "grade", "sub_grade", "emp_title2", "emp_length", "home_ownership", "annual_inc", 
-      "verification_status", "purpose", 
-      "delinq_2yrs", "pub_rec")
+      "verification_status", "purpose", "delinq_2yrs", "inq_last_6mths", "open_acc", "pub_rec", 
+      "total_acc", "initial_list_status", 
+      "last_week_pay")
 y = c("loan_status")
-x_y = c("member_id",x,y)
+x_y = c(x,y)
 train_rows = sample(1:rows, 0.75*rows, replace=F)
-train = data[train_rows, x_y]
+train = data[, x_y]
 test = data[-train_rows, x_y]
 
 
 
 ### h2o initialization ###
-h2o.init(nthreads = -1,max_mem_size = "2G") 
+h2o.init(nthreads = -1, max_mem_size = "2G") 
 
 h2o_train = as.h2o(train)
 h2o_test = as.h2o(test)
@@ -226,7 +264,7 @@ gbm_clf <- h2o.gbm(x = x
                    #,ignore_const_cols = TRUE
                    ,ntrees = 1000
                    ,max_depth = 15
-                   ,stopping_rounds = 5
+                   ,stopping_rounds = 10
                    ,model_id = "gbm_model"
                    ,stopping_metric = "AUC"
                    ,learn_rate = 0.05
@@ -238,8 +276,17 @@ gbm_clf <- h2o.gbm(x = x
 gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
 predictions = gbm_clf_pred$p1
 getAccuracy(predictions, test$loan_status)
-# after adding purpose = 0.769 | 0.68
-# after adding emp_title2 = 0.766 | 0.67
+# after adding total_acc    = 0.897 | ???          F
+#      & initial_list_status  
+# after adding total_acc    = 0.819 | 0.80
+#      & initial_list_status  
+# adding inq_last_6mths     = 0.815 | 0.79
+#     &  open_acc
+# after adding last_week_pay= 0.812 | 0.77
+# after adding dti          = 0.769 | 0.57      XXX
+# after adding zip & addr   = 0.765 | 0.65      XXX
+# after adding purpose      = 0.769 | 0.68
+# after adding emp_title2   = 0.766 | 0.67
 
 
 
