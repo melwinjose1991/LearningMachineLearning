@@ -226,15 +226,35 @@ data[data$total_acc >=0 & data$total_acc <=1, "total_acc"] = 0
 
 # initial_list_status - added
 
-# <<< next var >>>
+# total_rec_int & total_rec_late_fee - added
+
+# mths_since_last_major_derog - too many NAs
+
+# application_type -added
+
+# verification_status_joint -added
 
 # last_week_pay - added
+
+# acc_now_delinq
+data[is.na(data$acc_now_delinq),"acc_now_delinq"] = 0
+
+# tot_coll_amt, tot_cur_bal, total_rev_hi_lim - ??? 
+
+# PR
+data$PR = data$loan_amnt * data$int_rate
+
+# logINC_amnt
+data$logINC_amnt = log(data$annual_inc/data$loan_amnt)
+
+# <<< next var >>>
 
 ### Train Test Split ###
 x = c("loan_amnt", "term", "grade", "sub_grade", "emp_title2", "emp_length", "home_ownership", "annual_inc", 
       "verification_status", "purpose", "delinq_2yrs", "inq_last_6mths", "open_acc", "pub_rec", 
-      "total_acc", "initial_list_status", 
-      "last_week_pay")
+      "total_acc", "initial_list_status", "total_rec_int", "total_rec_late_fee", 
+      "application_type", "verification_status_joint", "last_week_pay", "acc_now_delinq",
+      "PR", "logINC_amnt" )
 y = c("loan_status")
 x_y = c(x,y)
 train_rows = sample(1:rows, 0.75*rows, replace=F)
@@ -244,7 +264,7 @@ test = data[-train_rows, x_y]
 
 
 ### h2o initialization ###
-h2o.init(nthreads = -1, max_mem_size = "2G") 
+h2o.init(nthreads = -1, max_mem_size = "4G") 
 
 h2o_train = as.h2o(train)
 h2o_test = as.h2o(test)
@@ -263,7 +283,8 @@ gbm_clf <- h2o.gbm(x = x
                    ,validation_frame = split_val
                    #,ignore_const_cols = TRUE
                    ,ntrees = 1000
-                   ,max_depth = 15
+                   ,max_depth = 20
+                   ,min_rows = 150
                    ,stopping_rounds = 10
                    ,model_id = "gbm_model"
                    ,stopping_metric = "AUC"
@@ -276,6 +297,11 @@ gbm_clf <- h2o.gbm(x = x
 gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
 predictions = gbm_clf_pred$p1
 getAccuracy(predictions, test$loan_status)
+#                           = 0.842 |              F  min_rows=200
+# added total_rec_int       = 0.839 | ???          F  min_rows=250
+#      & total_rec_late_fee
+# added total_rec_int       = 0.821 | ???
+#      & total_rec_late_fee
 # after adding total_acc    = 0.897 | ???          F
 #      & initial_list_status  
 # after adding total_acc    = 0.819 | 0.80
