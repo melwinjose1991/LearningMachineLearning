@@ -46,7 +46,7 @@ for example in tf.python_io.tf_record_iterator(video_lvl_record):
     
     mean_audio.append(tf_example.features.feature['mean_audio'].float_list.value)
     avg_audio.append(np.mean(tf_example.features.feature['mean_audio'].float_list.value))
-
+    
     current_labels = labels[i]
     current_id = vid_ids[i]
     one_hot = [0] * 4716
@@ -62,6 +62,8 @@ for example in tf.python_io.tf_record_iterator(video_lvl_record):
 
 print('Number of videos in this tfrecord: ', len(mean_rgb))
 print("\nLabels of video-0:", labels[0])
+print("\nID of video-0:", vid_ids[0])
+
 
 #print('\nIDs with label 1', label_id_map[1])
 
