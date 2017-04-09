@@ -4,6 +4,7 @@ library(dplyr)
 library(purrr)
 library(h2o)
 library(data.table)
+library(stringr)
 
 data = fromJSON("../data/train.json")
 real_test = fromJSON("../data/test.json")
@@ -50,6 +51,32 @@ getPivotTableAvg = function(variable, target){
   pivot_2["target"] = pivot_1["target"]/pivot_2["target"]
   pivot_2
 }
+
+getWordCount=function(target, N){
+  df = as.data.frame(sort(table(tolower(unlist(data[data$interest_level==target,"features"],' '))), 
+                          decreasing = TRUE)[1:N])
+  df$total = lapply(df$Var1, FUN=function(x) length(grep(x,tolower(data$features))) )
+  df$total = as.numeric(df$total)
+  df$per = df$Freq / df$total
+  df
+}
+
+getRows=function(word){
+  grep(word, tolower(data$features))
+}
+
+freq_features = c("elevator", "cats allowed", "dogs allowed", "doorman", "hardwood", "dishwasher", 
+                  "laundry", "no fee", "fitness", "war", "deck", "dining", "outdoor", "internet",
+                  "balcony", "swimming", "exclusive", "terrace", "loft", "wheelchair")
+createFeatureCol=function(){
+  for(f in freq_features){
+    print(f)
+    data[f] = rep(0, rows)
+    data[getRows(f),f] = 1
+    data[f] = factor(data[[f]])
+  }
+}
+
 
 
 ## Feature Engineering
@@ -119,31 +146,78 @@ real_test$f_len = lengths(real_test$features)
 data$nphotos = lengths(data$photos)
 real_test$nphotos = lengths(real_test$photos)
 
+
 # manager_id
 data$manager_id = factor(data$manager_id)
 real_test$manager_id = factor(real_test$manager_id)
 
 
-# facotrizing
-if(FALSE){
-  data$bathrooms = factor(data$bathrooms)
-  data$bedrooms = factor(data$bedrooms)
-  data$bathbed = factor(data$bathbed)
-  data$month = factor(data$month)
-  data$f_length = factor(data$f_length)
-  data$rooms = factor(data$rooms)
-  
-  real_test$bathrooms = factor(real_test$bathrooms)
-  real_test$bedrooms = factor(real_test$bedrooms)
-  real_test$bathbed = factor(real_test$bathbed)
-  real_test$month = factor(real_test$month)
-  real_test$f_length = factor(real_test$f_length)
-  real_test$rooms = factor(real_test$rooms)
+# specific features
+rows=dim(data)[1]
+for(f in freq_features){
+  print(f)
+  data[f] = rep(0, rows)
+  data[getRows(f),f] = 1
+  data[f] = factor(data[[f]])
 }
+
+rows_test=dim(real_test)[1]
+for(f in freq_features){
+  print(f)
+  real_test[f] = rep(0, rows_test)
+  real_test[getRows(f),f] = 1
+  real_test[f] = factor(real_test[[f]])
+}
+
+
+# building_id
+isBuildingLvl=function(bldg_id){
+  lvls = data[data$building_id==bldg_id,"interest_level"]
+  total = dim(lvls)[1]
+  low_lvls = sum(lvls$interest_level=="low") / total
+  med_lvls = sum(lvls$interest_level=="medium") / total 
+  high_lvls = sum(lvls$interest_level=="hgih") / total
+  pers = c(low_lvls, med_lvls, high_lvls)
+  pers
+}
+
+data["high_bldg"]=0
+data["med_bldg"]=0
+data["low_bldg"]=0
+high_map= c()
+med_map= c()
+low_map= c()
+
+unique_ids = unique(data$building_id)
+for(b_id in unique_ids){
+  distb = isBuildingLvl(b_id)
+  if(distb[1] == max(distb)){
+    low_map = c(low_map, b_id)
+    data[data$building_id==b_id,"low_bldg"] = 1
+  }
+  if(distb[2] == max(distb)){
+    med_map = c(med_map, b_id)
+    data[data$building_id==b_id,"med_bldg"] = 1
+  }
+  if(distb[3] == max(distb)){
+    high_map = c(high_map, b_id)
+    data[data$building_id==b_id,"high_bldg"] = 1
+  }
+}
+
+real_test["high_bldg"]=0
+real_test["med_bldg"]=0
+real_test["low_bldg"]=0
+real_test[real_test$building_id %in% low_map,"low_bldg"] = 1
+real_test[real_test$building_id %in% med_map,"med_bldg"] = 1
+real_test[real_test$building_id %in% high_map,"high_bldg"] = 1
+
+data$building_id = factor(data$building_id)
+real_test$building_id = factor(real_test$building_id)
 
 ## 
 x = c("bathrooms", "bedrooms", "bathbed", "price", "month", "f_len", "manager_id", "rooms", 
-      "nphotos", "bed_price")
+      "nphotos", "bed_price", freq_features, "building_id")
 y = c("interest_level")
 x_y = c(x,y)
 rows = dim(data)[1]
@@ -166,18 +240,23 @@ gbm_clf <- h2o.gbm(x = x
                    ,training_frame = h2o_train
                    ,distribution = "multinomial"
                    ,stopping_metric = "logloss"
-                   ,ntrees = 400
+                   ,ntrees = 500
                    ,max_depth = length(x) * 2
                    ,min_rows = 100
                    ,stopping_rounds = 10
                    ,learn_rate = 0.025
                    ,sample_rate = 0.8
+                   ,model_id = "gbm_30"
 )
 
 gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
 predictions = gbm_clf_pred$predict
 getAccuracy(predictions, as.factor(test$interest_level))
 
+# building _id    500   0.951
+# building vector 500   0.924
+# 25 features     500   0.907
+# 10 features     400   0.909 
 # bed_price       400   0.891 
 # nphotos         400   0.887  manager_id factor, rest not
 # rooms           400   0.863  factor
