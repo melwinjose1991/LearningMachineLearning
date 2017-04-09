@@ -1,26 +1,40 @@
-library("jsonlite")
-library("magrittr")
-library("dplyr")
-library("purrr")
+library(jsonlite)
+library(magrittr)
+library(dplyr)
+library(purrr)
 library(h2o)
 library(data.table)
 
 data = fromJSON("../data/train.json")
+real_test = fromJSON("../data/test.json")
 
-features <- data$features
-photos <- data$photos
 
+data_features <- data$features
+data_photos <- data$photos
 data$features <- NULL
 data$photos <- NULL 
 
+test_features <- real_test$features
+test_photos <- real_test$photos
+real_test$features <- NULL
+real_test$photos <- NULL 
+
+
 vars = setdiff(names(data), c("photos", "features"))
 data = map_at(data, vars, unlist) %>% tibble::as_tibble(.)
+real_test = map_at(real_test, vars, unlist) %>% tibble::as_tibble(.)
 
-data$features <- features
-data$photos <- photos
 
-rm(features)
-rm(photos)
+data$features <- data_features
+data$photos <- data_photos
+
+real_test$features = test_features
+real_test$photos = test_photos
+
+rm(data_features)
+rm(data_photos)
+rm(test_features)
+rm(test_photos)
 
 
 
@@ -30,28 +44,112 @@ getAccuracy=function(predictions, actual){
   print(paste('Accuracy',percent))
 }
 
+getPivotTableAvg = function(variable, target){
+  pivot_1 = aggregate(target~variable, data, FUN=sum)
+  pivot_2 = aggregate(target~variable, data, FUN=length)
+  pivot_2["target"] = pivot_1["target"]/pivot_2["target"]
+  pivot_2
+}
+
 
 ## Feature Engineering
+
 #bathrooms
 data$bathrooms = as.numeric(as.character(data$bathrooms))
+data = data[!data$bathrooms>6,]
+
+real_test$bathrooms = as.numeric(as.character(real_test$bathrooms))
+
 
 # bedrooms
 data$bedrooms = as.numeric(as.character(data$bedrooms))
+data = data[!data$bedrooms>=7,]
+
+real_test$bedrooms = as.numeric(as.character(real_test$bedrooms))
+
+#dbath = as.data.frame(table(data$bedrooms, data$interest_level))
+#rbath = reshape(dbath, timevar="Var2", v.names = "Freq", idvar="Var1", direction = "wide")
+#barplot(t(rbath))
+
+
+# total rooms
+data$rooms = data$bathrooms + data$bedrooms
+real_test$rooms = real_test$bathrooms + real_test$bedrooms
+
+
+# bedrooms/bathrooms
+data$bathbed = data$bathrooms / data$bedrooms
+data[is.na(data$bathbed), c("bathbed")] = -1
+data[is.infinite(data$bathbed), c("bathbed")] = 100
+data$bathbed = floor(data$bathbed)
+
+real_test$bathbed = real_test$bathrooms / real_test$bedrooms
+real_test[is.na(real_test$bathbed), c("bathbed")] = -1
+real_test[is.infinite(real_test$bathbed), c("bathbed")] = 100
+real_test$bathbed = floor(real_test$bathbed)
+
 
 # price
 data$price = as.numeric(as.character(data$price))
+real_test$price = as.numeric(as.character(real_test$price))
 
 
+# price/bedrooms
+data$bed_price = data$price / data$bedrooms
+data[which(is.infinite(data$bed_price)),"bed_price"] = data[which(is.infinite(data$bed_price)),"price"]
+
+real_test$bed_price = real_test$price / real_test$bedrooms
+real_test[which(is.infinite(real_test$bed_price)),"bed_price"] = real_test[which(is.infinite(real_test$bed_price)),"price"]
+
+
+# created
+data$month = lapply(data$created, FUN=function(x) strsplit(x,'-')[[1]][2])
+data$month = as.numeric(as.character(data$month))
+
+real_test$month = lapply(real_test$created, FUN=function(x) strsplit(x,'-')[[1]][2])
+real_test$month = as.numeric(as.character(real_test$month))
+
+
+# feature length
+data$f_len = lengths(data$features)
+real_test$f_len = lengths(real_test$features)
+
+
+# num of pictures
+data$nphotos = lengths(data$photos)
+real_test$nphotos = lengths(real_test$photos)
+
+# manager_id
+data$manager_id = factor(data$manager_id)
+real_test$manager_id = factor(real_test$manager_id)
+
+
+# facotrizing
+if(FALSE){
+  data$bathrooms = factor(data$bathrooms)
+  data$bedrooms = factor(data$bedrooms)
+  data$bathbed = factor(data$bathbed)
+  data$month = factor(data$month)
+  data$f_length = factor(data$f_length)
+  data$rooms = factor(data$rooms)
+  
+  real_test$bathrooms = factor(real_test$bathrooms)
+  real_test$bedrooms = factor(real_test$bedrooms)
+  real_test$bathbed = factor(real_test$bathbed)
+  real_test$month = factor(real_test$month)
+  real_test$f_length = factor(real_test$f_length)
+  real_test$rooms = factor(real_test$rooms)
+}
 
 ## 
-x = c("bathrooms", "bedrooms", "price")
+x = c("bathrooms", "bedrooms", "bathbed", "price", "month", "f_len", "manager_id", "rooms", 
+      "nphotos", "bed_price")
 y = c("interest_level")
 x_y = c(x,y)
 rows = dim(data)[1]
 train_rows = sample(1:rows, 0.75*rows, replace=F)
 train = data[, x_y]
 test = data[-train_rows, x_y]
-
 
 
 ### h2o initialization ###
@@ -62,20 +160,17 @@ h2o_train$interest_level = as.factor(h2o_train$interest_level)
 h2o_test$interest_level = as.factor(h2o_test$interest_level)
 
 
-## validation strategy
-xd = h2o.splitFrame(h2o_train,ratios = 0.6)
-split_val = xd[[2]]
-
-
 ## Training model
 gbm_clf <- h2o.gbm(x = x
                    ,y = y
                    ,training_frame = h2o_train
-                   ,validation_frame = split_val
-                   ,ntrees = 200
-                   ,min_rows = 150
+                   ,distribution = "multinomial"
+                   ,stopping_metric = "logloss"
+                   ,ntrees = 400
+                   ,max_depth = length(x) * 2
+                   ,min_rows = 100
                    ,stopping_rounds = 10
-                   ,learn_rate = 0.05
+                   ,learn_rate = 0.025
                    ,sample_rate = 0.8
 )
 
@@ -83,30 +178,25 @@ gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
 predictions = gbm_clf_pred$predict
 getAccuracy(predictions, as.factor(test$interest_level))
 
+# bed_price       400   0.891 
+# nphotos         400   0.887  manager_id factor, rest not
+# rooms           400   0.863  factor
+# manager_id      400   0.857  factor
+# f_length        400   0.709 
+# month           400   0.704  factor
+# bathbed         300   0.700  as factor, floored
+# bed,bath,price  200   0.706
+
 
 
 ## Test Data
-real_test = fromJSON("../data/test.json")
-
-features <- real_test$features
-photos <- real_test$photos
-
-real_test$features <- NULL
-real_test$photos <- NULL 
-
-real_test = map_at(real_test, x, unlist) %>% tibble::as_tibble(.)
 id = unname(sapply(real_test$listing_id, `[[`, 1))
+
 real_test2 = real_test[, x]
-
-#real_test$features <- features
-#real_test$photos <- photos
-
-rm(features)
-rm(photos)
 
 real_test_h2o = as.h2o(real_test2)
 gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, real_test_h2o))
 
 to_write = data.frame("listing_id"=id, "high"=gbm_clf_pred$high, "medium"=gbm_clf_pred$medium, "low"=gbm_clf_pred$low)
-write.csv(to_write, file="gbm_3v.csv", row.names = FALSE, quote = FALSE)
+write.csv(to_write, file="gbm_xv.csv", row.names = FALSE, quote = FALSE)
 
