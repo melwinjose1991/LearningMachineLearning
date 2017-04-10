@@ -130,11 +130,35 @@ real_test[which(is.infinite(real_test$bed_price)),"bed_price"] = real_test[which
 
 
 # created
-data$month = lapply(data$created, FUN=function(x) strsplit(x,'-')[[1]][2])
-data$month = as.numeric(as.character(data$month))
+getMonth=function(x){
+  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$mon
+}
+getDay=function(x){
+  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$mday
+}
+getHour=function(x){
+  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$hour
+}
+getMin=function(x){
+  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$min
+}
+getSec=function(x){
+  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$sec
+}
 
-real_test$month = lapply(real_test$created, FUN=function(x) strsplit(x,'-')[[1]][2])
-real_test$month = as.numeric(as.character(real_test$month))
+if(FALSE){
+  data$month = unlist(lapply(data$created, FUN=getMonth))
+  data$day = unlist(lapply(data$created, FUN=getDay))
+  data$hour = unlist(lapply(data$created, FUN=getHour))
+  data$min = unlist(lapply(data$created, FUN=getMin))
+  data$sec = unlist(lapply(data$created, FUN=getSec))
+  
+  real_test$month = unlist(lapply(real_test$created, FUN=getMonth))
+  real_test$day = unlist(lapply(real_test$created, FUN=getDay))
+  real_test$hour = unlist(lapply(real_test$created, FUN=getHour))
+  real_test$min = unlist(lapply(real_test$created, FUN=getMin))
+  real_test$sec = unlist(lapply(real_test$created, FUN=getSec))
+}
 
 
 # feature length
@@ -181,43 +205,50 @@ isBuildingLvl=function(bldg_id){
   pers
 }
 
-data["high_bldg"]=0
-data["med_bldg"]=0
-data["low_bldg"]=0
-high_map= c()
-med_map= c()
-low_map= c()
-
-unique_ids = unique(data$building_id)
-for(b_id in unique_ids){
-  distb = isBuildingLvl(b_id)
-  if(distb[1] == max(distb)){
-    low_map = c(low_map, b_id)
-    data[data$building_id==b_id,"low_bldg"] = 1
+if(FALSE){
+  data["high_bldg"] = 0
+  data["med_bldg"] = 0
+  data["low_bldg"] = 0
+  high_map= c()
+  med_map= c()
+  low_map= c()
+  
+  unique_ids = unique(data$building_id)
+  for(b_id in unique_ids){
+    distb = isBuildingLvl(b_id)
+    if(distb[1] == max(distb)){
+      low_map = c(low_map, b_id)
+      data[data$building_id==b_id,"low_bldg"] = 1
+    }
+    if(distb[2] == max(distb)){
+      med_map = c(med_map, b_id)
+      data[data$building_id==b_id,"med_bldg"] = 1
+    }
+    if(distb[3] == max(distb)){
+      high_map = c(high_map, b_id)
+      data[data$building_id==b_id,"high_bldg"] = 1
+    }
   }
-  if(distb[2] == max(distb)){
-    med_map = c(med_map, b_id)
-    data[data$building_id==b_id,"med_bldg"] = 1
-  }
-  if(distb[3] == max(distb)){
-    high_map = c(high_map, b_id)
-    data[data$building_id==b_id,"high_bldg"] = 1
-  }
+  
+  real_test["high_bldg"] = 0
+  real_test["med_bldg"] = 0
+  real_test["low_bldg"] = 0
+  real_test[real_test$building_id %in% low_map,"low_bldg"] = 1
+  real_test[real_test$building_id %in% med_map,"med_bldg"] = 1
+  real_test[real_test$building_id %in% high_map,"high_bldg"] = 1
 }
-
-real_test["high_bldg"]=0
-real_test["med_bldg"]=0
-real_test["low_bldg"]=0
-real_test[real_test$building_id %in% low_map,"low_bldg"] = 1
-real_test[real_test$building_id %in% med_map,"med_bldg"] = 1
-real_test[real_test$building_id %in% high_map,"high_bldg"] = 1
 
 data$building_id = factor(data$building_id)
 real_test$building_id = factor(real_test$building_id)
 
+
 ## 
-x = c("bathrooms", "bedrooms", "bathbed", "price", "month", "f_len", "manager_id", "rooms", 
-      "nphotos", "bed_price", freq_features, "building_id")
+x = c("bathrooms", "bedrooms", "bathbed", "price", 
+      "f_len", "manager_id", "rooms", 
+      "nphotos", "bed_price", freq_features, 
+      #"building_id"
+      "low_bldg", "med_bldg", "high_bldg"
+      )
 y = c("interest_level")
 x_y = c(x,y)
 rows = dim(data)[1]
@@ -240,34 +271,34 @@ gbm_clf <- h2o.gbm(x = x
                    ,training_frame = h2o_train
                    ,distribution = "multinomial"
                    ,stopping_metric = "logloss"
-                   ,ntrees = 500
-                   ,max_depth = length(x) * 2
-                   ,min_rows = 100
+                   ,ntrees = 600
+                   ,max_depth = length(x)
+                   ,min_rows = 200
                    ,stopping_rounds = 10
                    ,learn_rate = 0.025
                    ,sample_rate = 0.8
-                   ,model_id = "gbm_30"
+                   ,col_sample_rate = 0.8
+                   ,model_id = "gbm_31"
 )
 
 gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
 predictions = gbm_clf_pred$predict
 getAccuracy(predictions, as.factor(test$interest_level))
 
-# building _id    500   0.951
-# building vector 500   0.924
-# 25 features     500   0.907
-# 10 features     400   0.909 
-# bed_price       400   0.891 
-# nphotos         400   0.887  manager_id factor, rest not
-# rooms           400   0.863  factor
-# manager_id      400   0.857  factor
-# f_length        400   0.709 
-# month           400   0.704  factor
-# bathbed         300   0.700  as factor, floored
-# bed,bath,price  200   0.706
+
+## Train only on train_rows
+# building vector 600   200   0.781   0.??  xx  no building_id,  
+# building_id     600   200   0.738   0.62  ok  we were over-fitting !!!
+# building_id     650   150   0.737   0.64  ok  we were over-fitting !!!      
+# building_id     700   100   0.740   0.68  xx  we are over-fitting, try 150=min_rows
+# m/d/h/m/s       700         0.786   0.97  xx    
+# m/d/h/m/s       400         0.786         xx
+# building vector 400         0.77    0.79  xx  no building_id,   
+# building_id     400         0.736   0.65  ok  no building encoding
 
 
 
+### >>> TRAIN ON ALL THE TRAINING DATA and then proceed <<< ### 
 ## Test Data
 id = unname(sapply(real_test$listing_id, `[[`, 1))
 
