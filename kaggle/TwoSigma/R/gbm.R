@@ -5,6 +5,7 @@ library(purrr)
 library(h2o)
 library(data.table)
 library(stringr)
+library(tm)
 
 data = fromJSON("../data/train.json")
 real_test = fromJSON("../data/test.json")
@@ -77,6 +78,37 @@ createFeatureCol=function(){
   }
 }
 
+uniqueWords = function(d) {
+  return(paste(unique(strsplit(d, " ")[[1]]), collapse = ' '))
+}
+
+getNFrequentWords=function(df, var_col, var_str, rows_to_use=0.50, int_lvl, N=0.75){
+  
+  type_rows = df$interest_level == int_lvl
+  df = df[ type_rows, c(var_str,"interest_level")]
+
+  print("Converting to Corpus")
+  rows_to_use = dim(df)[1] * rows_to_use
+  print(rows_to_use)
+  x_cor = Corpus(DataframeSource(df[1:rows_to_use,]))
+  print("Applying transformations toLower & removeWords")
+  x_cor = tm_map(x_cor, content_transformer(tolower)) 
+  x_cor = tm_map(x_cor, removeWords, stopwords("english")) 
+  print("Applying transformations removePunctuation")
+  x_cor = tm_map(x_cor, removePunctuation) 
+  x_cor = tm_map(x_cor, removeNumbers) 
+  print("Applying transformations stripWhitespace")
+  x_cor = tm_map(x_cor, stripWhitespace) 
+  x_cor = tm_map(x_cor, content_transformer(uniqueWords))
+  print("Converting to DocumentTermMatrix")
+  dtm =  DocumentTermMatrix(x_cor)
+  print("Calculating Frequencies")
+  print(rows_to_use*N)
+  findFreqTerms(dtm, rows_to_use*N)
+}
+# high : 
+# medium : kitchen
+# low : 
 
 
 ## Feature Engineering
@@ -241,16 +273,80 @@ if(FALSE){
 data$building_id = factor(data$building_id)
 real_test$building_id = factor(real_test$building_id)
 
+## description
+# kitchen
+data$kitchen = mapply(grepl, pattern=c("kitchen"), x=tolower(data$description))
+data$kitchen =factor(data$kitchen)
+
+real_test$kitchen = mapply(grepl, pattern=c("kitchen"), x=tolower(real_test$description))
+real_test$kitchen =factor(real_test$kitchen)
+
+## address
+addr_code = c("n","e","s","w","st","ave")
+addr_expansion = c("north","east","south","west","street","avenue")
+
+expandCodes=function(s){
+  words = strsplit(s, " ")[[1]]
+  output = c()
+  for(word in words){
+    #print(word)
+    index = match(word, addr_code)
+    if(!is.na(index)){
+      output = c(output,addr_expansion[index])
+    }else{
+      output = c(output,word)
+    }
+  }
+  paste(output, collapse = " ")
+}
+
+getNewColumn=function(df){
+  x = df$display_address
+  x = str_replace_all(x, "[^[:alnum:]]", " ")
+  x = gsub("\\s+", " ", str_trim(x))
+  x = tolower(x)
+  length(unique(x))
+  y = unlist(lapply(x, FUN=expandCodes))
+  length(unique(y))
+  factor(y)
+}
+
+data$display_addr = getNewColumn(data)
+real_test$display_addr = getNewColumn(real_test)
+data[sample(1:rows,10),c("display_address","display_addr") ]
+
+
+for(exp in addr_expansion){
+  #exp = "east"
+  data[,exp] = rep(0,dim(data)[1])
+  data[,exp] = lapply(data[,"display_addr"], FUN=function(x) grepl(exp,x))
+}
+for(exp in addr_expansion){
+  #exp = "east"
+  real_test[,exp] = rep(0,dim(real_test)[1])
+  real_test[,exp] = lapply(real_test[,"display_addr"], FUN=function(x) grepl(exp,x))
+}
+
+data[sample(1:rows,10),c("display_address","display_addr","street") ]
+
+
 
 ## 
 x = c("bathrooms", "bedrooms", "bathbed", "price", 
       "f_len", "manager_id", "rooms", 
-      "nphotos", "bed_price", freq_features, 
-      #"building_id"
-      "low_bldg", "med_bldg", "high_bldg"
+      "nphotos", "bed_price", freq_features, "kitchen", 
+      
+      #"display_addr", 
+      addr_expansion, 
+      
+      "building_id"
+      #"low_bldg", "med_bldg", "high_bldg"
       )
+
 y = c("interest_level")
+
 x_y = c(x,y)
+
 rows = dim(data)[1]
 train_rows = sample(1:rows, 0.75*rows, replace=F)
 train = data[, x_y]
@@ -271,7 +367,7 @@ gbm_clf <- h2o.gbm(x = x
                    ,training_frame = h2o_train
                    ,distribution = "multinomial"
                    ,stopping_metric = "logloss"
-                   ,ntrees = 600
+                   ,ntrees = 550
                    ,max_depth = length(x)
                    ,min_rows = 200
                    ,stopping_rounds = 10
@@ -287,7 +383,10 @@ getAccuracy(predictions, as.factor(test$interest_level))
 
 
 ## Train only on train_rows
-# building vector 600   200   0.781   0.??  xx  no building_id,  
+# display_addr    500   200   0.???   0.64  
+# addr_vector     600   200   0.745   0.62  ok
+# kitchen         600   200   0.737   0.62  ok    
+# building vector 600   200   0.781   0.75  xx  no building_id,  
 # building_id     600   200   0.738   0.62  ok  we were over-fitting !!!
 # building_id     650   150   0.737   0.64  ok  we were over-fitting !!!      
 # building_id     700   100   0.740   0.68  xx  we are over-fitting, try 150=min_rows
