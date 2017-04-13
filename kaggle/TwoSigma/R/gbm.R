@@ -66,9 +66,6 @@ getRows=function(word){
   grep(word, tolower(data$features))
 }
 
-freq_features = c("elevator", "cats allowed", "dogs allowed", "doorman", "hardwood", "dishwasher", 
-                  "laundry", "no fee", "fitness", "war", "deck", "dining", "outdoor", "internet",
-                  "balcony", "swimming", "exclusive", "terrace", "loft", "wheelchair")
 createFeatureCol=function(){
   for(f in freq_features){
     print(f)
@@ -162,23 +159,23 @@ real_test[which(is.infinite(real_test$bed_price)),"bed_price"] = real_test[which
 
 
 # created
-getMonth=function(x){
-  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$mon
-}
-getDay=function(x){
-  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$mday
-}
-getHour=function(x){
-  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$hour
-}
-getMin=function(x){
-  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$min
-}
-getSec=function(x){
-  as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$sec
-}
-
 if(FALSE){
+  getMonth=function(x){
+    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$mon
+  }
+  getDay=function(x){
+    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$mday
+  }
+  getHour=function(x){
+    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$hour
+  }
+  getMin=function(x){
+    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$min
+  }
+  getSec=function(x){
+    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$sec
+  }
+
   data$month = unlist(lapply(data$created, FUN=getMonth))
   data$day = unlist(lapply(data$created, FUN=getDay))
   data$hour = unlist(lapply(data$created, FUN=getHour))
@@ -209,6 +206,106 @@ real_test$manager_id = factor(real_test$manager_id)
 
 
 # specific features
+
+## duplicate features ## 
+# sort(unique(unlist(data[data$interest_level=="high","features"])))
+# sort(table(tolower(unlist(data[,"features"]))))
+# 1556 features
+# 1294 lowered features
+
+freq_features = c(
+  "elevator",
+  "hardwood floors",
+  "cats allowed",
+  "dogs allowed",
+  "doorman", "24hr doorman","part time doorman",
+  "dishwasher",
+  "laundry in building",
+  "no fee",
+  "fitness center",
+  "laundry in unit",
+  "pre-war", "post-war",
+  "roof deck",
+  "outdoor space", "common outdoor space", "private outdoor space",
+  "dining room",
+  "high speed internet",
+  "balcony", "private balcony"
+)
+
+freq_features_map = c(
+  "hardwood"="hardwood floors",
+  "hardwood floor"="hardwood floors",
+  "hardwood flooring"="hardwood floors",
+  
+  "full-time doorman"="24hr doorman",
+  "ft doorman" = "24hr doorman",
+  "24/7 doorman"= "24hr doorman",
+  "24/7 doorman concierge"= "24h doorman",
+  "24-hour doorman"= "24hr doorman",
+  "24 hour doorman"= "24hr doorman",
+  "24 hr doorman"= "24hr doorman",
+  "24/7 full-time doorman concierge" = "24hr doorman",
+  "twenty-four hour concierge and doorman" = "24hr doorman",
+  
+  "part-time doorman"="part time doorman",
+  
+  "no fee!"="no fee",
+  "no fee!!"="no fee",
+  
+  "gym/fitness" = "fitness center",
+  "fitness room" = "fitness center",
+  "state-of-the-art fitness center" = "fitness center",
+  "fitness facility" = "fitness center",
+  "fully-equipped club fitness center" = "fitness center",
+  "state-of-the-art cardio and fitness club" = "fitness center",
+    
+  "prewar" = "pre-war",
+  "pre war" = "pre-war",
+  "pre-war charm" = "pre-war",
+  
+  "post-war" = "post war",
+  "postwar" = "post war",
+  
+  "roof-deck" = "roof deck",
+  "roofdeck" = "roof deck",
+  "rooftopdeck" = "roof deck",
+  
+  "private roofdeck" = "private roof deck",
+  "private roof-deck" = "private roof deck",
+  
+  "outdoor areas" = "outdoor space",
+
+  "publicoutdoor"="common outdoor space",
+  "building-common-outdoor-space"="common outdoor space",
+  
+  "private-outdoor-space" = "private outdoor space",
+  
+  "high-speed internet" = "high speed internet",
+  "high speed internet available" = "high speed internet",
+  
+  "private-balcony" = "private balcony"
+)
+
+mapFeatures=function(list_of_features){
+  output = list()
+  for(f in list_of_features){
+    f = tolower(f)
+    if(f %in% freq_features){
+      output[[length(output)+1]] = f
+    }else{
+      for(code in names(freq_features_map)){
+        if(f == code){
+          output[[length(output)+1]] = freq_features_map[[code]]
+        }else{
+          #non-mapped features
+        }
+      }
+    }
+  }
+  unlist(output)
+}
+data$features_star = lapply(data$features,mapFeatures)
+
 rows=dim(data)[1]
 for(f in freq_features){
   print(f)
@@ -273,6 +370,7 @@ if(FALSE){
 data$building_id = factor(data$building_id)
 real_test$building_id = factor(real_test$building_id)
 
+
 ## description
 # kitchen
 data$kitchen = mapply(grepl, pattern=c("kitchen"), x=tolower(data$description))
@@ -281,46 +379,103 @@ data$kitchen =factor(data$kitchen)
 real_test$kitchen = mapply(grepl, pattern=c("kitchen"), x=tolower(real_test$description))
 real_test$kitchen =factor(real_test$kitchen)
 
+
 ## address
 addr_code = c("n","e","s","w","st","ave")
 addr_expansion = c("north","east","south","west","street","avenue")
+skip_words = c("laundry", "elevator", "bathroom", "kitchen", "usa", "bedroom", 
+               "apartment", "amazing", "dryer", "price", "great", "renovated", 
+               "location", "doorman", "fee", "studio", "call", "get", "exclusive",
+               "deal", "it", "hot", "included", "bed", "today", "large", "newly",
+               "your", "in", "the", "what", "stunning", "txt", "a", "steal", 
+               "living", "kr", "room", "sized", "beautiful", "modern", "there",
+               "own", "your", "throw", "big", "with", "k", "r", "huge", "lux",
+               "told", "near", "massive", "views", "joanne", "now", "to", "stay",
+               "asap", "size", "restaurants", "restaurant", "fantastic", "unique",
+               "block", "fire", "ask", "for", "more", "and", "super", "hardwood", "over",
+               "please", "read", "cannot", "fabulous", "broker", "only", "washer", "top",
+               "best", "ultra", "service", "this", "is", "full", "eyes", "off", "miss",
+               "updates", "that", "extra", "you", "heart", "decorative", "dplx", "grab",
+               "perfect", "gone", "time", "true", "limited", "amenities", "years", "needs",
+               "on", "sqft", "floors", "floor", "if", "out", "brokers", "our", "have", "years",
+               "spacious", "outdoor", "space", "we", "us", "experience", "thousands", "take",
+               "care", "find", "listings", "special", "sq", "ft", "brand", "new", "home",
+               "utilities", "all", "one", "from", "delicious", "generous", "reno", "long",
+               "bright", "charming", "bath", "roof", "deck", "plus", "office", "train",
+               "share", "viewing", "place", "look", "finding", "fit", "ceilings","market",
+               "priced", "just", "steps", "amex", "gift", "card", "fees", "spectacular",
+               "private", "terrace", "penthouse", "luxury", "pool", "th", "free", "balcony",
+               "gorgeous", "tempting", "br", "ba", "wow", "oh", "i", "will", "not", "last",
+               "bathrooms", "no", "live", "like", "the", "it", "cost", "much", "nd", "pets",
+               "ok", "st", "rd", "how", "before", "secure", "subway")
 
 expandCodes=function(s){
   words = strsplit(s, " ")[[1]]
   output = c()
+  total_words = length(words)
+  skip_words_count = 0
   for(word in words){
     #print(word)
     index = match(word, addr_code)
     if(!is.na(index)){
       output = c(output,addr_expansion[index])
     }else{
-      output = c(output,word)
+      index = match(word, skip_words)
+      if(is.na(index)){
+        output = c(output,word)
+      }else{
+        # skip the word
+        skip_words_count = skip_words_count + 1
+      }
     }
   }
-  paste(output, collapse = " ")
+  if(total_words>0){
+    per = skip_words_count / total_words
+    #print(paste(per, skip_words_count, total_words))
+    if(per>0.75){
+      skip = "SKIP"
+    }else{
+      paste(output, collapse = " ")
+    }
+  }else{
+    skip="SKIP"
+  }
 }
 
 getNewColumn=function(df){
   x = df$display_address
   x = str_replace_all(x, "[^[:alnum:]]", " ")
+  x = gsub("[[:digit:]]+", " ", str_trim(x))
   x = gsub("\\s+", " ", str_trim(x))
   x = tolower(x)
   length(unique(x))
   y = unlist(lapply(x, FUN=expandCodes))
   length(unique(y))
-  factor(y)
+  y
+  #factor(y)
 }
 
 data$display_addr = getNewColumn(data)
-real_test$display_addr = getNewColumn(real_test)
-data[sample(1:rows,10),c("display_address","display_addr") ]
+data$display_addr = factor(data$display_addr)
 
+real_test$display_addr = getNewColumn(real_test)
+real_test$display_addr = factor(real_test$display_addr)
+
+as.data.frame(data[sample(1:rows,50),c("display_address","display_addr") ])
+
+
+
+getWordCount=function(s){
+  words = strsplit(s, " ")[[1]]
+  length(words)
+}
 
 for(exp in addr_expansion){
   #exp = "east"
   data[,exp] = rep(0,dim(data)[1])
   data[,exp] = lapply(data[,"display_addr"], FUN=function(x) grepl(exp,x))
 }
+
 for(exp in addr_expansion){
   #exp = "east"
   real_test[,exp] = rep(0,dim(real_test)[1])
@@ -338,6 +493,7 @@ x = c("bathrooms", "bedrooms", "bathbed", "price",
       
       #"display_addr", 
       addr_expansion, 
+      "display_addr",
       
       "building_id"
       #"low_bldg", "med_bldg", "high_bldg"
@@ -349,7 +505,7 @@ x_y = c(x,y)
 
 rows = dim(data)[1]
 train_rows = sample(1:rows, 0.75*rows, replace=F)
-train = data[, x_y]
+train = data[train_rows, x_y]
 test = data[-train_rows, x_y]
 
 
@@ -367,13 +523,13 @@ gbm_clf <- h2o.gbm(x = x
                    ,training_frame = h2o_train
                    ,distribution = "multinomial"
                    ,stopping_metric = "logloss"
-                   ,ntrees = 550
+                   ,ntrees = 625
                    ,max_depth = length(x)
-                   ,min_rows = 200
+                   ,min_rows = 225
                    ,stopping_rounds = 10
                    ,learn_rate = 0.025
-                   ,sample_rate = 0.8
-                   ,col_sample_rate = 0.8
+                   ,sample_rate = 0.80
+                   ,col_sample_rate = 0.80
                    ,model_id = "gbm_31"
 )
 
@@ -383,8 +539,9 @@ getAccuracy(predictions, as.factor(test$interest_level))
 
 
 ## Train only on train_rows
-# display_addr    500   200   0.???   0.64  
-# addr_vector     600   200   0.745   0.62  ok
+# display_addr*   550   200   0.741   0.62   
+# display_addr    500   200   0.???   0.64  xx
+# addr_expans     600   200   0.745   0.62  ok
 # kitchen         600   200   0.737   0.62  ok    
 # building vector 600   200   0.781   0.75  xx  no building_id,  
 # building_id     600   200   0.738   0.62  ok  we were over-fitting !!!
