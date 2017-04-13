@@ -62,10 +62,6 @@ getWordCount=function(target, N){
   df
 }
 
-getRows=function(word){
-  grep(word, tolower(data$features))
-}
-
 createFeatureCol=function(){
   for(f in freq_features){
     print(f)
@@ -158,36 +154,7 @@ real_test$bed_price = real_test$price / real_test$bedrooms
 real_test[which(is.infinite(real_test$bed_price)),"bed_price"] = real_test[which(is.infinite(real_test$bed_price)),"price"]
 
 
-# created
-if(FALSE){
-  getMonth=function(x){
-    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$mon
-  }
-  getDay=function(x){
-    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$mday
-  }
-  getHour=function(x){
-    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$hour
-  }
-  getMin=function(x){
-    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$min
-  }
-  getSec=function(x){
-    as.POSIXlt(x[[1]], format="%Y-%m-%d%t%H:%M:%S")$sec
-  }
-
-  data$month = unlist(lapply(data$created, FUN=getMonth))
-  data$day = unlist(lapply(data$created, FUN=getDay))
-  data$hour = unlist(lapply(data$created, FUN=getHour))
-  data$min = unlist(lapply(data$created, FUN=getMin))
-  data$sec = unlist(lapply(data$created, FUN=getSec))
-  
-  real_test$month = unlist(lapply(real_test$created, FUN=getMonth))
-  real_test$day = unlist(lapply(real_test$created, FUN=getDay))
-  real_test$hour = unlist(lapply(real_test$created, FUN=getHour))
-  real_test$min = unlist(lapply(real_test$created, FUN=getMin))
-  real_test$sec = unlist(lapply(real_test$created, FUN=getSec))
-}
+# created ???
 
 
 # feature length
@@ -205,13 +172,16 @@ data$manager_id = factor(data$manager_id)
 real_test$manager_id = factor(real_test$manager_id)
 
 
-# specific features
-
 ## duplicate features ## 
-# sort(unique(unlist(data[data$interest_level=="high","features"])))
-# sort(table(tolower(unlist(data[,"features"]))))
-# 1556 features
-# 1294 lowered features
+
+# x = as.data.frame(sort(table(tolower(unlist(data[,"features"]))), decreasing = TRUE))
+# x[1:50,]
+
+# 1556 features length(unique(unlist(data[,"features"])))
+# 1294 lowered features length(unique(tolower(unlist(data[,"features"]))))
+
+# y = as.data.frame(sort(table(tolower(unlist(data$features))), decreasing = TRUE))
+# y[grepl("doorman",y$Var1) & y$Freq>1,]
 
 freq_features = c(
   "elevator",
@@ -306,6 +276,9 @@ mapFeatures=function(list_of_features){
 }
 data$features_star = lapply(data$features,mapFeatures)
 
+getRows=function(word){
+  grep(word, tolower(data$features_star))
+}
 rows=dim(data)[1]
 for(f in freq_features){
   print(f)
@@ -324,49 +297,6 @@ for(f in freq_features){
 
 
 # building_id
-isBuildingLvl=function(bldg_id){
-  lvls = data[data$building_id==bldg_id,"interest_level"]
-  total = dim(lvls)[1]
-  low_lvls = sum(lvls$interest_level=="low") / total
-  med_lvls = sum(lvls$interest_level=="medium") / total 
-  high_lvls = sum(lvls$interest_level=="hgih") / total
-  pers = c(low_lvls, med_lvls, high_lvls)
-  pers
-}
-
-if(FALSE){
-  data["high_bldg"] = 0
-  data["med_bldg"] = 0
-  data["low_bldg"] = 0
-  high_map= c()
-  med_map= c()
-  low_map= c()
-  
-  unique_ids = unique(data$building_id)
-  for(b_id in unique_ids){
-    distb = isBuildingLvl(b_id)
-    if(distb[1] == max(distb)){
-      low_map = c(low_map, b_id)
-      data[data$building_id==b_id,"low_bldg"] = 1
-    }
-    if(distb[2] == max(distb)){
-      med_map = c(med_map, b_id)
-      data[data$building_id==b_id,"med_bldg"] = 1
-    }
-    if(distb[3] == max(distb)){
-      high_map = c(high_map, b_id)
-      data[data$building_id==b_id,"high_bldg"] = 1
-    }
-  }
-  
-  real_test["high_bldg"] = 0
-  real_test["med_bldg"] = 0
-  real_test["low_bldg"] = 0
-  real_test[real_test$building_id %in% low_map,"low_bldg"] = 1
-  real_test[real_test$building_id %in% med_map,"med_bldg"] = 1
-  real_test[real_test$building_id %in% high_map,"high_bldg"] = 1
-}
-
 data$building_id = factor(data$building_id)
 real_test$building_id = factor(real_test$building_id)
 
@@ -505,7 +435,7 @@ x_y = c(x,y)
 
 rows = dim(data)[1]
 train_rows = sample(1:rows, 0.75*rows, replace=F)
-train = data[train_rows, x_y]
+train = data[, x_y]
 test = data[-train_rows, x_y]
 
 
@@ -539,6 +469,7 @@ getAccuracy(predictions, as.factor(test$interest_level))
 
 
 ## Train only on train_rows
+# feature*22      625   225   0.740   0.62  ok
 # display_addr*   550   200   0.741   0.62   
 # display_addr    500   200   0.???   0.64  xx
 # addr_expans     600   200   0.745   0.62  ok
