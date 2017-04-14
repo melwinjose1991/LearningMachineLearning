@@ -6,6 +6,7 @@ library(h2o)
 library(data.table)
 library(stringr)
 library(tm)
+library(ggmap)
 
 data = fromJSON("../data/train.json")
 real_test = fromJSON("../data/test.json")
@@ -154,6 +155,47 @@ real_test$bed_price = real_test$price / real_test$bedrooms
 real_test[which(is.infinite(real_test$bed_price)),"bed_price"] = real_test[which(is.infinite(real_test$bed_price)),"price"]
 
 
+# price/rooms
+data$room_price = data$price / data$rooms
+data[which(is.infinite(data$room_price)),"room_price"] = data[which(is.infinite(data$room_price)),"price"]
+
+real_test$room_price = real_test$price / real_test$rooms
+real_test[which(is.infinite(real_test$room_price)),"room_price"] = real_test[which(is.infinite(real_test$room_price)),"price"]
+
+
+# longitude & latitude
+zeros_addrs = data[data$latitude==0 & data$longitude==0,]$street_address
+zeros_ny = paste(zeros_addrs,", new york")
+zeros_addrs = data.frame("street_address"=zeros_addrs)
+coords <- sapply(zeros_ny, function(x) geocode(x, source = "google")) %>%
+  t %>%
+  data.frame %>%
+  cbind(zeros_addrs, .)
+rownames(coords) = 1:nrow(coords)
+
+data[data$latitude==0 & data$longitude==0, c("listing_id","latitude","longitude") ]
+zeros_id = data$latitude==0 & data$longitude==0
+data[zeros_id,"longitude"] = unlist(coords$lon)
+data[zeros_id,"latitude"] = unlist(coords$lat)
+data[zeros_id,c("listing_id", "street_address", "longitude", "latitude")]
+
+
+zeros_addrs = real_test[real_test$latitude==0 & real_test$longitude==0,]$street_address
+zeros_ny = paste(zeros_addrs,", new york")
+zeros_addrs = data.frame("street_address"=zeros_addrs)
+coords <- sapply(zeros_ny, function(x) geocode(x, source = "google")) %>%
+  t %>%
+  data.frame %>%
+  cbind(zeros_addrs, .)
+rownames(coords) = 1:nrow(coords)
+
+real_test[real_test$latitude==0 & real_test$longitude==0, c("listing_id","latitude","longitude") ]
+zeros_id = real_test$latitude==0 & real_test$longitude==0
+real_test[zeros_id,"longitude"] = unlist(coords$lon)
+real_test[zeros_id,"latitude"] = unlist(coords$lat)
+real_test[zeros_id,c("listing_id", "street_address", "longitude", "latitude")]
+
+
 # created ???
 
 
@@ -188,19 +230,49 @@ freq_features = c(
   "hardwood floors",
   "cats allowed",
   "dogs allowed",
-  "doorman", "24hr doorman","part time doorman",
+  "doorman", ##"24hr doorman","part time doorman",
   "dishwasher",
-  "laundry in building",
+  "laundry", "common laundry", "private laundry",
   "no fee",
-  "fitness center",
-  "laundry in unit",
-  "pre-war", "post-war",
-  "roof deck",
-  "outdoor space", "common outdoor space", "private outdoor space",
-  "dining room",
-  "high speed internet",
-  "balcony", "private balcony"
+  ##"fitness center",
+  "pre-war", #"post-war",
+  ##"roof deck",
+  ##"outdoor space", "common outdoor space", "private outdoor space",
+  ##"dining room",
+  ##"high speed internet",
+  ##"balcony", "private balcony",
+  ##"swimming pool",
+  ##"new construction", "newly renovated",
+  #"terrace",
+  ##"exclusive",
+  #"loft",
+  #"garden","common garden","private garden",
+  #"wheelchair access",
+  #"fireplace",
+  ##"simplex",
+  #"lowrise","highrise","midrise",
+  #"garage", "common garage",
+  "reduced fee"
+  ##"furnished",
+  #"multi-level",
+  #"high ceilings"
+  
+  ## in top 50 of high
+  ##"loft",
+  #"closet","walk in closet",
+  #"marble bath",
+  ##"ss" #stainless steel kitchen
+  #"wifi"
+  
+  ## in top 50 of medium
+  #"green building",
+  #"granite kitchen",
+  #"subway"
 )
+## Adding a new feature has to have a accuracy better
+## than 0.70 with x=freq_features only and better
+## varaible importance than 25
+
 
 freq_features_map = c(
   "hardwood"="hardwood floors",
@@ -216,6 +288,16 @@ freq_features_map = c(
   "24 hr doorman"= "24hr doorman",
   "24/7 full-time doorman concierge" = "24hr doorman",
   "twenty-four hour concierge and doorman" = "24hr doorman",
+  
+  "full-time doorman"="doorman",
+  "ft doorman" = "doorman",
+  "24/7 doorman"= "doorman",
+  "24/7 doorman concierge"= "doorman",
+  "24-hour doorman"= "doorman",
+  "24 hour doorman"= "doorman",
+  "24 hr doorman"= "doorman",
+  "24/7 full-time doorman concierge" = "doorman",
+  "twenty-four hour concierge and doorman" = "doorman",
   
   "part-time doorman"="part time doorman",
   
@@ -253,7 +335,78 @@ freq_features_map = c(
   "high-speed internet" = "high speed internet",
   "high speed internet available" = "high speed internet",
   
-  "private-balcony" = "private balcony"
+  "private-balcony" = "private balcony",
+  
+  "pool" = "swimming pool",
+  "indoor swimming pool" = "indoor pool",
+  
+  "brand new" = "new construction",
+  "all new" = "new construction",
+  
+  "new renovation" = "newly renovated",
+  
+  "terraces / balconies" = "terrace",
+  
+  "garden/patio" = "garden",
+  "residents garden" = "common garden",
+  "shared garden" = "common garden",
+
+  "wheelchair ramp"="wheelchair access",
+  
+  "decorative fireplace" = "fireplace",
+  "fireplaces" = "fireplace",
+  "wood-burning fireplace" = "fireplace",
+  "deco fireplace" = "fireplace",
+  "fire place" = "fireplace",
+  "working fireplace" = "fireplace",
+  
+  "hi rise"="highrise",
+  
+  "on-site garage" = "garage",
+  "common parking/garage" = "common garage",
+  "full service garage" = "garage",
+  "on-site attended garage" = "garage",
+  "garage attached" = "garage",
+  "garage parking" = "garage",
+  "garage." = "garage",
+  
+  "laundry in building"="common laundry",
+  "laundry in unit" = "private laundry",
+  "laundry room"="private laundry",
+  "on-site laundry" = "common laundry",
+  "laundry on floor" = "common laundry",
+  "laundry & housekeeping" = "laundry",
+  "private laundry room on every floor" = "common laundry",
+  "laundry on every floor" = "common laundry",
+  
+  "multi level" = "multi-level",
+  
+  "high ceiling" = "high ceilings",
+  
+  "walk in closet(s)" = "walk in closet",
+  "walk-in closet" = "walk in closet",
+  
+  "closets galore!" = "closet",
+  "closet space" = "closet",
+  "extra closet space" = "closet",
+  "great closet space" = "closet",
+  
+  "marble bathroom"="marble bath",
+  
+  "stainless steel appliances" = "ss",
+  "stainless steel" = "ss",
+  "stainless appliances" = "ss",
+  "stainless steal appliances" = "ss",
+  "stainless steel kitchen" = "ss",
+  
+  "wifi access" = "wifi",
+  
+  "granite counter tops" = "granite kitchen",
+  "granite countertops" = "granite kitchen",
+  "granite counters" = "granite kitchen",
+  "granite counter" = "granite kitchen",
+  
+  "close to subway" = "subway"
 )
 
 mapFeatures=function(list_of_features){
@@ -419,14 +572,17 @@ data[sample(1:rows,10),c("display_address","display_addr","street") ]
 ## 
 x = c("bathrooms", "bedrooms", "bathbed", "price", 
       "f_len", "manager_id", "rooms", 
-      "nphotos", "bed_price", freq_features, "kitchen", 
+      "nphotos", "bed_price", "room_price", "kitchen", 
       
-      #"display_addr", 
-      addr_expansion, 
+      "latitude", "longitude",
+      
+      freq_features ,
+      
+      #addr_expansion, "east", "street",
       "display_addr",
       
       "building_id"
-      #"low_bldg", "med_bldg", "high_bldg"
+      #"low_bldg", "med_bldg", "high_bldg" XXX
       )
 
 y = c("interest_level")
@@ -440,7 +596,7 @@ test = data[-train_rows, x_y]
 
 
 ### h2o initialization ###
-h2o.init(nthreads = -1, max_mem_size = "4G") 
+h2o.init(nthreads = -1, max_mem_size = "6G") 
 h2o_train = as.h2o(train)
 h2o_test = as.h2o(test)
 h2o_train$interest_level = as.factor(h2o_train$interest_level)
@@ -453,13 +609,13 @@ gbm_clf <- h2o.gbm(x = x
                    ,training_frame = h2o_train
                    ,distribution = "multinomial"
                    ,stopping_metric = "logloss"
-                   ,ntrees = 625
+                   ,ntrees = 600
                    ,max_depth = length(x)
-                   ,min_rows = 225
+                   ,min_rows = 200
                    ,stopping_rounds = 10
                    ,learn_rate = 0.025
-                   ,sample_rate = 0.80
-                   ,col_sample_rate = 0.80
+                   ,sample_rate = 0.5
+                   ,col_sample_rate = 0.5
                    ,model_id = "gbm_31"
 )
 
@@ -469,20 +625,17 @@ getAccuracy(predictions, as.factor(test$interest_level))
 
 
 ## Train only on train_rows
-# feature*22      625   225   0.740   0.62  ok
-# display_addr*   550   200   0.741   0.62   
-# display_addr    500   200   0.???   0.64  xx
-# addr_expans     600   200   0.745   0.62  ok
-# kitchen         600   200   0.737   0.62  ok    
-# building vector 600   200   0.781   0.75  xx  no building_id,  
-# building_id     600   200   0.738   0.62  ok  we were over-fitting !!!
-# building_id     650   150   0.737   0.64  ok  we were over-fitting !!!      
-# building_id     700   100   0.740   0.68  xx  we are over-fitting, try 150=min_rows
-# m/d/h/m/s       700         0.786   0.97  xx    
-# m/d/h/m/s       400         0.786         xx
-# building vector 400         0.77    0.79  xx  no building_id,   
-# building_id     400         0.736   0.65  ok  no building encoding
-
+# lat long        600   200   0.748   0.866   0.???   
+# room_price      600   200   0.738           0.619  ???
+# top 25 vars     600   200   0.742           0.62x  ookk!!
+# top 30 vars     600   200   0.742           0.62x  ok
+# feature*32      600   200   0.738           0.63x  --
+# just_feature*32 600   200   0.705           -----  ok
+# feature*45      625   225   0.742           0.65x  ok
+# feature*22      625   225   0.740           0.62x  ok
+# display_addr*   550   200   0.741           0.62x   
+# display_addr    500   200   0.???           0.64x  xx
+# addr_expans     600   200   0.745           0.62x  ok
 
 
 ### >>> TRAIN ON ALL THE TRAINING DATA and then proceed <<< ### 
