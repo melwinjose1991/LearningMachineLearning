@@ -6,3 +6,4 @@
 *.RDataTmp
 *.Rhistory
 *.tfrecord
+*.RData

@@ -180,6 +180,50 @@ data[zeros_id,"latitude"] = unlist(coords$lat)
 data[zeros_id,c("listing_id", "street_address", "longitude", "latitude")]
 
 
+getDistance = function(df, loc_lat, loc_lon){
+  mapply(function(lon, lat) sqrt((lon - loc_lon)^2  + (lat - loc_lat)^2),
+         df$longitude, df$latitude) 
+}
+places = list(
+              ## largest 5 parks
+              "park_central"=c(40.785091, -73.968285), 
+              "park_prospect"=c(40.660204, -73.968956),
+              "park_pelham"=c(40.850569, -73.821018), 
+              "park_greenbelt"=c(40.591831, -74.139199),
+              "park_van_cortlandt"=c(40.897935, -73.885951), 
+              "park_flushing"=c(40.739714, -73.840785),
+              
+              ## universities based on student population
+              "univ_nyu"=c(40.729513, -73.9964610),         # New York University
+              "univ_borough_comm"=c(40.718780, -74.011878), # Borough of Manhattan Community College
+              "univ_columbia"=c(40.807536, -73.962573),     # Columbia Unviersity
+              "univ_hunter"=c(40.768541, -73.964625),       # Hunter College
+              "univ_bernard_m"=c(40.740199, -73.983374),    # Bernard M Baruch College
+              "univ_brooklyn"=c(40.630995, -73.954412),     # Brooklyn College, New York
+              "univ_ny_cc_tech"=c(40.695534, -73.987459),   # New York City College of Tech 
+              "univ_city_college"=c(40.820047, -73.949272), # City College
+              "univ_touro"=c(40.742247, -73.990653),        # Touro College, NY
+              "univ_john_jay"=c(40.770393, -73.988499),     # John Jay College of Criminal Justice
+              "univ_pace"=c(40.711120, -74.004857),         # Pace university
+              "univ_cuny"=c(40.750630, -73.973418), 
+              "univ_yesh"=c(40.850485, -73.929107),
+              "univ_the_new"=c(40.735501, -73.997138),      # The New School
+              
+              ## top rated subway stations
+              "subway_times_square" = c(40.755223, -73.987402),
+              "subway_grand_central" = c(40.752397, -73.977469),
+              "subway_herald_square" = c(40.752397, -73.977469),
+              "subway_union_square" = c(40.735284, -73.991058),
+              "subway_penn" = c(40.750754, -73.990383)
+              
+)
+
+for(place in names(places)){
+  coords = places[[place]]
+  data[,place] = getDistance(data, coords[1], coords[2])
+}
+
+  
 zeros_addrs = real_test[real_test$latitude==0 & real_test$longitude==0,]$street_address
 zeros_ny = paste(zeros_addrs,", new york")
 zeros_addrs = data.frame("street_address"=zeros_addrs)
@@ -195,6 +239,10 @@ real_test[zeros_id,"longitude"] = unlist(coords$lon)
 real_test[zeros_id,"latitude"] = unlist(coords$lat)
 real_test[zeros_id,c("listing_id", "street_address", "longitude", "latitude")]
 
+for(place in names(places)){
+  coords = places[[place]]
+  real_test[,place] = getDistance(real_test, coords[1], coords[2])
+}
 
 # created ???
 
@@ -228,11 +276,11 @@ real_test$manager_id = factor(real_test$manager_id)
 freq_features = c(
   "elevator",
   "hardwood floors",
-  "cats allowed",
-  "dogs allowed",
+  ### "cats allowed",
+  ### "dogs allowed",
   "doorman", ##"24hr doorman","part time doorman",
-  "dishwasher",
-  "laundry", "common laundry", "private laundry",
+  ### "dishwasher",
+  "laundry", "common laundry", ### "private laundry",
   "no fee",
   ##"fitness center",
   "pre-war", #"post-war",
@@ -570,19 +618,20 @@ data[sample(1:rows,10),c("display_address","display_addr","street") ]
 
 
 ## 
-x = c("bathrooms", "bedrooms", "bathbed", "price", 
+x = c("bathrooms", "bedrooms", "price", ### "bathbed",  
       "f_len", "manager_id", "rooms", 
       "nphotos", "bed_price", "room_price", "kitchen", 
       
-      "latitude", "longitude",
+      "latitude", "longitude", 
+      names(places),
       
       freq_features ,
       
-      #addr_expansion, "east", "street",
+      # xxx addr_expansion, "east", "street",
       "display_addr",
       
       "building_id"
-      #"low_bldg", "med_bldg", "high_bldg" XXX
+      # xxx "low_bldg", "med_bldg", "high_bldg"
       )
 
 y = c("interest_level")
@@ -591,7 +640,7 @@ x_y = c(x,y)
 
 rows = dim(data)[1]
 train_rows = sample(1:rows, 0.75*rows, replace=F)
-train = data[, x_y]
+train = data[train_rows, x_y]
 test = data[-train_rows, x_y]
 
 
@@ -625,6 +674,11 @@ getAccuracy(predictions, as.factor(test$interest_level))
 
 
 ## Train only on train_rows
+# more univ       600   200   0.749   0.xxx   0.xxx vars=47, places=25
+# lowest 5 rmvd   600   200   0.751   0.869   0.600 lowest features: private laundry, 
+#                                                     bathbed, dishwasher, cats, dogs   
+# 16 places       600   200   0.752   0.866   0.602
+# lat long        600   200   0.748   0.866   0.603   
 # lat long        600   200   0.748   0.866   0.???   
 # room_price      600   200   0.738           0.619  ???
 # top 25 vars     600   200   0.742           0.62x  ookk!!

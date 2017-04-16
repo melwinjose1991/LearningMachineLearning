@@ -7,6 +7,7 @@ library(stringr)
 library(tm)
 library(ggmap)
 library(mclust)
+library(fpc)
 
 data = fromJSON("../data/train.json")
 
@@ -35,12 +36,13 @@ data[zeros_id,"latitude"] = unlist(coords$lat)
 data[zeros_id,c("listing_id", "street_address", "longitude", "latitude")]
 
 
-## Clustering
+
+###   Clustering  ###
 df=data.frame(lon=data$longitude, lat=data$latitude, interest_level=data$interest_level)
 plot(df[,c("lon","lat")])
 
-quantile(df$lat, probs=seq(0,1,by=0.0025))
-quantile(df$lon, probs=seq(0,1,by=0.0025))
+#quantile(df$lat, probs=seq(0,1,by=0.0025))
+#quantile(df$lon, probs=seq(0,1,by=0.0025))
 
 sum(df$lat>=40.58 & df$lat<=40.88)/dim(df)[1]
 sum(df$lon>=-74.03 & df$lon<=-73.80)/dim(df)[1]
@@ -48,50 +50,52 @@ sum(df$lon>=-74.03 & df$lon<=-73.80)/dim(df)[1]
 df=df[df$lat>=40.58 & df$lat<=40.88 & df$lon>=-74.03 & df$lon<=-73.80,]
 plot(df[,c("lon","lat")])
 
-# high
-lat_high = df[df$interest_level=="high","lat"]
-lon_high = df[df$interest_level=="high","lon"]
-lat_high = unlist(lat_high)
-lon_high = unlist(lon_high)
-df_high=data.frame(lon=lon_high, lat=lat_high)
-plot(df_high)
-model_high = Mclust(df_high, G=17, modelNames = "VVV")
-plot(model_high)
-mean_all = data.frame(lon=model_high$parameters$mean[1,],lat=model_high$parameters$mean[2,],level="high")
+
+getMeans = function(lvl, e=0.001, min_pts=5, just_plot = FALSE){
+  lats = df[df$interest_level==lvl,"lat"]
+  lons = df[df$interest_level==lvl,"lon"]
+  lats = unlist(lats)
+  lons = unlist(lons)
+  df = data.frame(lon=lons, lat=lats)
+  #plot(df)
+  model = dbscan(df, eps=e, MinPts = min_pts)
+  print(length(unique(model$cluster)))
+  plot(model, df)
+  
+  if(just_plot==FALSE){
+    total = length(unique(model$cluster))
+    means_lon = c()
+    means_lat = c()
+    for(i in 1:(total-1)){
+      mean = colMeans(df[model$cluster==i,])
+      lon = mean[1]
+      lat = mean[2]
+      means_lon = c(means_lon, lon)
+      means_lat = c(means_lat, lat)
+    }
+    data.frame(lon=means_lon, lat=means_lat, level=lvl)
+  }
+}
+means = getMeans("high", e=0.0001, min_pts=5)
+
+m = getMeans("medium", e=0.0001, min_pts = 5, just_plot = TRUE)
+means = rbind(means, m) 
+
+m = getMeans("low", e=0.0001, min_pts = 5, just_plot = TRUE)
+means = rbind(means, m) 
 
 calculateDistance=function(x_1, y_1, x_2, y_2){
   sqrt((x_1-x_2)^2+(y_1-y_2)^2)
 }
 
 findClosest=function(row_i){
-  row_i = x[1,]
-  lon = row_i$longitude
-  lat = row_i$latitude
-  dist = apply(mean_all[,c("lat","lon")],1,FUN=function(x) calculateDistance(lon,lat,x[1],x[2]))
-  mean_all[which.min(dist),"level"]
+  #row_i = x[1,]
+  #print(row_i)
+  lon = row_i[2]
+  lat = row_i[1]
+  dist = apply(means[,c("lat","lon")],1,FUN=function(x) calculateDistance(lon,lat,x[1],x[2]))
+  #print(dist)
+  means[which.min(dist),"level"]
 }
 
-
-# medium
-lat_medium = df[df$interest_level=="medium","lat"]
-lon_medium = df[df$interest_level=="medium","lon"]
-lat_medium = unlist(lat_medium)
-lon_medium = unlist(lon_medium)
-df_medium=data.frame(lon=lon_medium, lat=lat_medium)
-plot(df_medium)
-model_medium = Mclust(df_medium, G=38, modelNames = "VVV")
-plot(model_medium)
-mean_med = data.frame(lon=model_medium$parameters$mean[1,],lat=model_medium$parameters$mean[2,],level="medium")
-mean_all = rbind(mean_all, mean_med)
-  
-# low
-lat_low = df[df$interest_level=="low","lat"]
-lon_low = df[df$interest_level=="low","lon"]
-lat_low = unlist(lat_low)
-lon_low = unlist(lon_low)
-df_low=data.frame(lat=lat_low, lon=lon_low)
-plot(df_low)
-model_low = Mclust(df_low, G=38:100, modelNames = "VVV")
-plot(model_low)
-
-
+apply(x[,c("latitude","longitude")], 1, FUN=findClosest)
