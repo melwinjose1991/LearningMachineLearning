@@ -106,27 +106,27 @@ getNFrequentWords=function(df, var_col, var_str, rows_to_use=0.50, int_lvl, N=0.
 
 
 ## Feature Engineering
+# initial state of data
+init_rows = dim(data)[1]
 
 #bathrooms
 data$bathrooms = as.numeric(as.character(data$bathrooms))
-data = data[!data$bathrooms>6,]
+data = data[!data$bathrooms>=6, ]  # outliers
 
 real_test$bathrooms = as.numeric(as.character(real_test$bathrooms))
 
 
 # bedrooms
 data$bedrooms = as.numeric(as.character(data$bedrooms))
-data = data[!data$bedrooms>=7,]
+data = data[!data$bedrooms>=7, ]  # outliers
 
 real_test$bedrooms = as.numeric(as.character(real_test$bedrooms))
-
-#dbath = as.data.frame(table(data$bedrooms, data$interest_level))
-#rbath = reshape(dbath, timevar="Var2", v.names = "Freq", idvar="Var1", direction = "wide")
-#barplot(t(rbath))
 
 
 # total rooms
 data$rooms = data$bathrooms + data$bedrooms
+data = data[!data$rooms>=10, ]
+
 real_test$rooms = real_test$bathrooms + real_test$bedrooms
 
 
@@ -134,18 +134,23 @@ real_test$rooms = real_test$bathrooms + real_test$bedrooms
 data$bathbed = data$bathrooms / data$bedrooms
 data[is.na(data$bathbed), c("bathbed")] = -1
 data[is.infinite(data$bathbed), c("bathbed")] = 100
-data$bathbed = floor(data$bathbed)
+#data$bathbed = floor(data$bathbed)
 
 real_test$bathbed = real_test$bathrooms / real_test$bedrooms
 real_test[is.na(real_test$bathbed), c("bathbed")] = -1
 real_test[is.infinite(real_test$bathbed), c("bathbed")] = 100
-real_test$bathbed = floor(real_test$bathbed)
+#real_test$bathbed = floor(real_test$bathbed)
 
 
 # price
 data$price = as.numeric(as.character(data$price))
-real_test$price = as.numeric(as.character(real_test$price))
+data = data[!data$price>30000,]
+data = data[!data$price<700,]
+data$log_price = log(data$price)
+#quantile(data$price, probs=seq(0,1,by=0.0025))
 
+real_test$price = as.numeric(as.character(real_test$price))
+real_test$log_price = log(real_test$price)
 
 # price/bedrooms
 data$bed_price = data$price / data$bedrooms
@@ -163,7 +168,9 @@ real_test$room_price = real_test$price / real_test$rooms
 real_test[which(is.infinite(real_test$room_price)),"room_price"] = real_test[which(is.infinite(real_test$room_price)),"price"]
 
 
-# longitude & latitude
+## longitude & latitude
+
+  # getting lat & long of places for which they are zero
 zeros_addrs = data[data$latitude==0 & data$longitude==0,]$street_address
 zeros_ny = paste(zeros_addrs,", new york")
 zeros_addrs = data.frame("street_address"=zeros_addrs)
@@ -179,6 +186,19 @@ data[zeros_id,"longitude"] = unlist(coords$lon)
 data[zeros_id,"latitude"] = unlist(coords$lat)
 data[zeros_id,c("listing_id", "street_address", "longitude", "latitude")]
 
+plot(data[,c("longitude","latitude")])
+  # removing outliers
+#quantile(data$latitude, probs=seq(0,1,by=0.00125))
+#sum(data$latitude<=39.58 | data$latitude>=41.88)
+data = data[!(data$latitude<=39.58 | data$latitude>=41.88), ]
+
+quantile(data$longitude , probs=seq(0,1,by=0.00125))
+sum(data$longitude<=-74.23 | data$longitude>=-73.60)
+data = data[!(data$longitude<=-74.23 | data$longitude>=-73.60), ]
+plot(data[,c("longitude","latitude")])
+
+plot(real_test[,c("longitude","latitude")])
+
 
 getDistance = function(df, loc_lat, loc_lon){
   mapply(function(lon, lat) sqrt((lon - loc_lon)^2  + (lat - loc_lat)^2),
@@ -186,7 +206,7 @@ getDistance = function(df, loc_lat, loc_lon){
 }
 places = list(
               ## largest 5 parks
-              "park_central"=c(40.785091, -73.968285), 
+              #"park_central"=c(40.785091, -73.968285), 
               "park_prospect"=c(40.660204, -73.968956),
               "park_pelham"=c(40.850569, -73.821018), 
               "park_greenbelt"=c(40.591831, -74.139199),
@@ -198,6 +218,7 @@ places = list(
               "univ_borough_comm"=c(40.718780, -74.011878), # Borough of Manhattan Community College
               "univ_columbia"=c(40.807536, -73.962573),     # Columbia Unviersity
               "univ_hunter"=c(40.768541, -73.964625),       # Hunter College
+              "univ_kingsborough"=c(40.578522, -73.934690), # Kingsborough Community College
               "univ_bernard_m"=c(40.740199, -73.983374),    # Bernard M Baruch College
               "univ_brooklyn"=c(40.630995, -73.954412),     # Brooklyn College, New York
               "univ_ny_cc_tech"=c(40.695534, -73.987459),   # New York City College of Tech 
@@ -205,17 +226,30 @@ places = list(
               "univ_touro"=c(40.742247, -73.990653),        # Touro College, NY
               "univ_john_jay"=c(40.770393, -73.988499),     # John Jay College of Criminal Justice
               "univ_pace"=c(40.711120, -74.004857),         # Pace university
-              "univ_cuny"=c(40.750630, -73.973418), 
-              "univ_yesh"=c(40.850485, -73.929107),
+              #"univ_cuny"=c(40.750630, -73.973418), 
+              #"univ_yesh"=c(40.850485, -73.929107),
               "univ_the_new"=c(40.735501, -73.997138),      # The New School
+              "univ_fashion_IT"=c(40.747484, -73.995082),    # Fashion Inst of Tech
               
               ## top rated subway stations
               "subway_times_square" = c(40.755223, -73.987402),
               "subway_grand_central" = c(40.752397, -73.977469),
-              "subway_herald_square" = c(40.752397, -73.977469),
+              #"subway_herald_square" = c(40.752397, -73.977469),
               "subway_union_square" = c(40.735284, -73.991058),
               "subway_penn" = c(40.750754, -73.990383)
               
+              ## most expensive neighborhoods
+              #"xpnsv_madison"=c(40.777613, -73.961179),       # Madison Ave
+              #"xpnsv_met_college_ny"=c(40.708723,-74.014951), # Metropolitan College of New York 
+              #"xpnsv_N_end_avenue"=c(40.715816, -74.015383),  # North End Ave
+              
+              # safest neighborhoods
+              #"safe_sutton"=c(40.769449, -73.951862),       # Sutton Place
+              #"safe_battery_park"=c(40.703277, -74.017028), # Battery Park
+              #"safe_carnegie_hill"=c(40.784465, -73.955086),# Carnegie Hill
+              #"safe_turdor"=c(40.748849,-73.971616), # Turdor City
+              #"safe_roosevelt_is"=c(40.760503, -73.950993) # Roosevelt Island
+
 )
 
 for(place in names(places)){
@@ -358,6 +392,7 @@ freq_features_map = c(
   "fitness facility" = "fitness center",
   "fully-equipped club fitness center" = "fitness center",
   "state-of-the-art cardio and fitness club" = "fitness center",
+  "health club"="fitness center",
     
   "prewar" = "pre-war",
   "pre war" = "pre-war",
@@ -595,12 +630,29 @@ real_test$display_addr = factor(real_test$display_addr)
 as.data.frame(data[sample(1:rows,50),c("display_address","display_addr") ])
 
 
-
 getWordCount=function(s){
   words = strsplit(s, " ")[[1]]
   length(words)
 }
 
+# mean price of neighborhood
+# do mapping to improve accuracy
+
+all_ = rbind(data[,c("display_addr","price")], real_test[,c("display_addr","price")])
+mean_addr_price = as.data.frame(aggregate(price~display_addr, all_, mean))
+rm(all_)
+
+getPriceDiff = function(addr, price){
+  mean_price = mean_addr_price[mean_addr_price$display_addr==addr,"price"]
+  price - mean_price
+}
+data$mean_price_diff = mapply(function(addr, p) getPriceDiff(as.String(addr),p), data$display_addr, data$price)
+
+real_test$mean_price_diff = mapply(function(addr, p) getPriceDiff(as.String(addr),p), real_test$display_addr, real_test$price)
+
+
+
+# xxx encoding for addr_expansion xxx
 for(exp in addr_expansion){
   #exp = "east"
   data[,exp] = rep(0,dim(data)[1])
@@ -618,7 +670,8 @@ data[sample(1:rows,10),c("display_address","display_addr","street") ]
 
 
 ## 
-x = c("bathrooms", "bedrooms", "price", ### "bathbed",  
+x = c("bathrooms", "bedrooms", "price", "log_price", ### "bathbed",  
+      "mean_price_diff",
       "f_len", "manager_id", "rooms", 
       "nphotos", "bed_price", "room_price", "kitchen", 
       
@@ -640,7 +693,7 @@ x_y = c(x,y)
 
 rows = dim(data)[1]
 train_rows = sample(1:rows, 0.75*rows, replace=F)
-train = data[train_rows, x_y]
+train = data[, x_y]
 test = data[-train_rows, x_y]
 
 
@@ -658,13 +711,13 @@ gbm_clf <- h2o.gbm(x = x
                    ,training_frame = h2o_train
                    ,distribution = "multinomial"
                    ,stopping_metric = "logloss"
-                   ,ntrees = 600
+                   ,ntrees = 620
                    ,max_depth = length(x)
                    ,min_rows = 200
                    ,stopping_rounds = 10
                    ,learn_rate = 0.025
-                   ,sample_rate = 0.5
-                   ,col_sample_rate = 0.5
+                   ,sample_rate = 0.45
+                   ,col_sample_rate = 0.45
                    ,model_id = "gbm_31"
 )
 
@@ -673,23 +726,16 @@ predictions = gbm_clf_pred$predict
 getAccuracy(predictions, as.factor(test$interest_level))
 
 
-## Train only on train_rows
-# more univ       600   200   0.749   0.xxx   0.xxx vars=47, places=25
+### Change Logs ###
+# outliers+log_pr 620   200   0.758   0.xxx   0.xxx
+# rmvd exp+safe   625   200   0.xxx   0.861   0.601
+# lowest 4 remvd  600   200   0.xxx   0.868   0.600 -(park_central, univ_pace, xpnsv_madison, safe_carnegie_hill, univ_city_college)
+# mean_price_diff 600   200   0.751   0.865   0.599
+# expensive+safe  600   200   0.xxx   0.xxx   0.599 
+# lowest 5 rmvd   600   200   0.749   0.874   0.600 subway_grand_central, univ_yesh, univ_city_college, univ_cuny, subway_herald_square
+# more univ       600   200   0.749   0.863   0.600 vars=47, places=25
 # lowest 5 rmvd   600   200   0.751   0.869   0.600 lowest features: private laundry, 
 #                                                     bathbed, dishwasher, cats, dogs   
-# 16 places       600   200   0.752   0.866   0.602
-# lat long        600   200   0.748   0.866   0.603   
-# lat long        600   200   0.748   0.866   0.???   
-# room_price      600   200   0.738           0.619  ???
-# top 25 vars     600   200   0.742           0.62x  ookk!!
-# top 30 vars     600   200   0.742           0.62x  ok
-# feature*32      600   200   0.738           0.63x  --
-# just_feature*32 600   200   0.705           -----  ok
-# feature*45      625   225   0.742           0.65x  ok
-# feature*22      625   225   0.740           0.62x  ok
-# display_addr*   550   200   0.741           0.62x   
-# display_addr    500   200   0.???           0.64x  xx
-# addr_expans     600   200   0.745           0.62x  ok
 
 
 ### >>> TRAIN ON ALL THE TRAINING DATA and then proceed <<< ### 
