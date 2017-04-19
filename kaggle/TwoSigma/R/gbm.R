@@ -192,8 +192,8 @@ plot(data[,c("longitude","latitude")])
 #sum(data$latitude<=39.58 | data$latitude>=41.88)
 data = data[!(data$latitude<=39.58 | data$latitude>=41.88), ]
 
-quantile(data$longitude , probs=seq(0,1,by=0.00125))
-sum(data$longitude<=-74.23 | data$longitude>=-73.60)
+#quantile(data$longitude , probs=seq(0,1,by=0.00125))
+#sum(data$longitude<=-74.23 | data$longitude>=-73.60)
 data = data[!(data$longitude<=-74.23 | data$longitude>=-73.60), ]
 plot(data[,c("longitude","latitude")])
 
@@ -292,8 +292,41 @@ real_test$nphotos = lengths(real_test$photos)
 
 
 # manager_id
-data$manager_id = factor(data$manager_id)
-real_test$manager_id = factor(real_test$manager_id)
+if(TRUE){
+  manager_score = list()
+  ids = unique(data$manager_id)
+  for(id in ids){
+    count = sum(data$manager_id==id)
+    high_p = sum(data$manager_id==id & data$interest_level=="high") / count
+    med_p = sum(data$manager_id==id & data$interest_level=="medium") / count 
+    low_p = sum(data$manager_id==id & data$interest_level=="low") / count
+    manager_score[[id]]=c(low_p, med_p, high_p)
+  }
+  data$low_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[m_id]][1])
+  data$med_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[m_id]][2])
+  data$high_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[m_id]][3])
+  data$mngr_skill = mapply(function(med,high) 2*high+med, data$high_score, data$med_score)
+  
+  getScore=function(id,index){
+    #print(id)
+    if(id %in% names(manager_score)){
+      manager_score[[id]][index]
+    }else{
+      score=0
+      score    
+    }
+  }
+  real_test$low_score = sapply(real_test$manager_id, FUN=function(m_id) getScore(m_id,1))
+  real_test$med_score = sapply(real_test$manager_id, FUN=function(m_id) getScore(m_id,2))
+  real_test$high_score = sapply(real_test$manager_id, FUN=function(m_id) getScore(m_id,3))
+  real_test$mngr_skill = mapply(function(med,high) 2*high+med, real_test$high_score, real_test$med_score)
+  
+  rm(manager_score)
+  rm(ids)
+}
+
+#data$manager_id = factor(data$manager_id)
+#real_test$manager_id = factor(real_test$manager_id)
 
 
 ## duplicate features ## 
@@ -310,46 +343,48 @@ real_test$manager_id = factor(real_test$manager_id)
 freq_features = c(
   "elevator",
   "hardwood floors",
-  ### "cats allowed",
-  ### "dogs allowed",
-  "doorman", ##"24hr doorman","part time doorman",
-  ### "dishwasher",
-  "laundry", "common laundry", ### "private laundry",
+  "doorman", #"24hr doorman","part time doorman",
+  "laundry", "common laundry", "private laundry",
   "no fee",
-  ##"fitness center",
   "pre-war", #"post-war",
-  ##"roof deck",
-  ##"outdoor space", "common outdoor space", "private outdoor space",
-  ##"dining room",
-  ##"high speed internet",
-  ##"balcony", "private balcony",
-  ##"swimming pool",
-  ##"new construction", "newly renovated",
-  #"terrace",
-  ##"exclusive",
-  #"loft",
-  #"garden","common garden","private garden",
-  #"wheelchair access",
-  #"fireplace",
-  ##"simplex",
-  #"lowrise","highrise","midrise",
-  #"garage", "common garage",
-  "reduced fee"
-  ##"furnished",
-  #"multi-level",
-  #"high ceilings"
+  "reduced fee",
   
-  ## in top 50 of high
-  ##"loft",
+  "loft",
   #"closet","walk in closet",
-  #"marble bath",
-  ##"ss" #stainless steel kitchen
-  #"wifi"
-  
-  ## in top 50 of medium
+  "marble bath",
+  "ss", #stainless steel kitchen
+  "wifi",
   #"green building",
   #"granite kitchen",
-  #"subway"
+  #"subway",
+  "cats allowed",
+  "dogs allowed",
+  "furnished",
+  "multi-level",
+  "high ceilings",
+  "garage", "private garage",
+  "parking", #"private parking",
+  "roof deck",
+  "outdoor space", "common outdoor space", "private outdoor space",
+  "dining room",
+  "high speed internet",
+  "balcony", #"private balcony",
+  "swimming pool",
+  "new construction", #"newly renovated",
+  "terrace",
+  "exclusive",
+  "garden",#"common garden","private garden",
+  "wheelchair access",
+  "fireplace",
+  "simplex",
+  "lowrise",#"highrise","midrise",
+  "dishwasher",
+  "fitness center",
+  
+  #"photos",
+  #"playroom",
+  
+  "long string"
 )
 ## Adding a new feature has to have a accuracy better
 ## than 0.70 with x=freq_features only and better
@@ -361,15 +396,15 @@ freq_features_map = c(
   "hardwood floor"="hardwood floors",
   "hardwood flooring"="hardwood floors",
   
-  "full-time doorman"="24hr doorman",
-  "ft doorman" = "24hr doorman",
-  "24/7 doorman"= "24hr doorman",
-  "24/7 doorman concierge"= "24h doorman",
-  "24-hour doorman"= "24hr doorman",
-  "24 hour doorman"= "24hr doorman",
-  "24 hr doorman"= "24hr doorman",
-  "24/7 full-time doorman concierge" = "24hr doorman",
-  "twenty-four hour concierge and doorman" = "24hr doorman",
+  #"full-time doorman"="24hr doorman",
+  #"ft doorman" = "24hr doorman",
+  #"24/7 doorman"= "24hr doorman",
+  #"24/7 doorman concierge"= "24h doorman",
+  #"24-hour doorman"= "24hr doorman",
+  #"24 hour doorman"= "24hr doorman",
+  #"24 hr doorman"= "24hr doorman",
+  #"24/7 full-time doorman concierge" = "24hr doorman",
+  #"twenty-four hour concierge and doorman" = "24hr doorman",
   
   "full-time doorman"="doorman",
   "ft doorman" = "doorman",
@@ -418,7 +453,9 @@ freq_features_map = c(
   "high-speed internet" = "high speed internet",
   "high speed internet available" = "high speed internet",
   
-  "private-balcony" = "private balcony",
+  #"private-balcony" = "private balcony",
+  "private-balcony" = "balcony",
+  "private balcony" = "balcony",
   
   "pool" = "swimming pool",
   "indoor swimming pool" = "indoor pool",
@@ -431,8 +468,8 @@ freq_features_map = c(
   "terraces / balconies" = "terrace",
   
   "garden/patio" = "garden",
-  "residents garden" = "common garden",
-  "shared garden" = "common garden",
+  "residents garden" = "garden",
+  "shared garden" = "garden",
 
   "wheelchair ramp"="wheelchair access",
   
@@ -443,15 +480,24 @@ freq_features_map = c(
   "fire place" = "fireplace",
   "working fireplace" = "fireplace",
   
-  "hi rise"="highrise",
+  #"hi rise"="highrise",
   
   "on-site garage" = "garage",
-  "common parking/garage" = "common garage",
+  "common parking/garage" = "garage",
   "full service garage" = "garage",
   "on-site attended garage" = "garage",
   "garage attached" = "garage",
   "garage parking" = "garage",
   "garage." = "garage",
+  
+  "parking space"="parking",
+  "valet parking"="parking",
+  "on-site parking lot"="parking",
+  "on-site parking"="parking",
+  "assigned-parking-space"="parking",
+  "assigned-parking-space"="parking",
+  "on-site parking available"="parking",
+  "parking available"="parking",
   
   "laundry in building"="common laundry",
   "laundry in unit" = "private laundry",
@@ -466,45 +512,87 @@ freq_features_map = c(
   
   "high ceiling" = "high ceilings",
   
-  "walk in closet(s)" = "walk in closet",
-  "walk-in closet" = "walk in closet",
+  #"walk in closet(s)" = "walk in closet",
+  #"walk-in closet" = "walk in closet",
   
-  "closets galore!" = "closet",
-  "closet space" = "closet",
-  "extra closet space" = "closet",
-  "great closet space" = "closet",
+  #"closets galore!" = "closet",
+  #"closet space" = "closet",
+  #"extra closet space" = "closet",
+  #"great closet space" = "closet",
   
-  "marble bathroom"="marble bath",
+  #"marble bathroom"="marble bath",
   
   "stainless steel appliances" = "ss",
   "stainless steel" = "ss",
   "stainless appliances" = "ss",
   "stainless steal appliances" = "ss",
-  "stainless steel kitchen" = "ss",
+  "stainless steel kitchen" = "ss"
   
-  "wifi access" = "wifi",
+  #"wifi access" = "wifi",
   
-  "granite counter tops" = "granite kitchen",
-  "granite countertops" = "granite kitchen",
-  "granite counters" = "granite kitchen",
-  "granite counter" = "granite kitchen",
+  #"granite counter tops" = "granite kitchen",
+  #"granite countertops" = "granite kitchen",
+  #"granite counters" = "granite kitchen",
+  #"granite counter" = "granite kitchen",
   
-  "close to subway" = "subway"
+  #"close to subway" = "subway",
+  
+  #"actual apt. photos"="photos",
+  #"actual photos!"="photos",
+  
+  #"childrens playroom"="playroom",
+  #"children's playroom"="playroom",
+  #"playroom/nursery"="playroom",
+  #"children's playroom"="playroom",
+  #"children playroom"="playroom",
+  #"kids playroom"="playroom"
+  
 )
 
 mapFeatures=function(list_of_features){
   output = list()
   for(f in list_of_features){
     f = tolower(f)
+    mapped = FALSE
+    
+    # looking for exact matches
     if(f %in% freq_features){
       output[[length(output)+1]] = f
+      mapped = TRUE
     }else{
       for(code in names(freq_features_map)){
         if(f == code){
           output[[length(output)+1]] = freq_features_map[[code]]
+          mapped = TRUE
         }else{
-          #non-mapped features
+          #no mapping for this feature
         }
+      }
+    }
+    
+    # checking if string contains any features
+    if(!mapped){
+      for(ff in freq_features){
+        if(grepl(ff, f)){
+          output[[length(output)+1]] = ff
+          mapped=TRUE
+        }
+      }
+      for(code in names(freq_features_map)){
+        if(grepl(code,f)){
+          output[[length(output)+1]] = freq_features_map[[code]]
+          mapped = TRUE
+        }
+      }
+    }
+    
+    if(!mapped){
+      #print(f)
+      if(str_length(f)>23){
+        output[[length(output)+1]] = "long string"
+      }else{
+        #  some unmapped string
+        output[[length(output)+1]] = f
       }
     }
   }
@@ -637,7 +725,7 @@ getWordCount=function(s){
 
 # mean price of neighborhood
 # do mapping to improve accuracy
-
+rm(mean)
 all_ = rbind(data[,c("display_addr","price")], real_test[,c("display_addr","price")])
 mean_addr_price = as.data.frame(aggregate(price~display_addr, all_, mean))
 rm(all_)
@@ -670,19 +758,23 @@ data[sample(1:rows,10),c("display_address","display_addr","street") ]
 
 
 ## 
-x = c("bathrooms", "bedrooms", "price", "log_price", ### "bathbed",  
-      "mean_price_diff",
-      "f_len", "manager_id", "rooms", 
-      "nphotos", "bed_price", "room_price", "kitchen", 
+x = c("bathrooms", "bedrooms", "rooms", ### "bathbed",  
+      "price", "log_price", "mean_price_diff", "bed_price", "room_price", 
+      "nphotos", "kitchen", 
       
       "latitude", "longitude", 
       names(places),
       
+      "f_len",
       freq_features ,
       
       # xxx addr_expansion, "east", "street",
       "display_addr",
       
+      #"manager_id", 
+      ##"low_score","med_score","high_score"
+      "mngr_skill",
+
       "building_id"
       # xxx "low_bldg", "med_bldg", "high_bldg"
       )
@@ -692,41 +784,128 @@ y = c("interest_level")
 x_y = c(x,y)
 
 rows = dim(data)[1]
-train_rows = sample(1:rows, 0.75*rows, replace=F)
-train = data[, x_y]
-test = data[-train_rows, x_y]
 
+if(FALSE){
+  # without ensembling GBM
+  train_rows = sample(1:rows, 0.75*rows, replace=F)
+  train = data[train_rows, x_y]
+  test = data[-train_rows, x_y]
+  
+  
+  ### h2o initialization ###
+  h2o.init(nthreads = -1, max_mem_size = "6G") 
+  h2o_train = as.h2o(train)
+  h2o_test = as.h2o(test)
+  h2o_train$interest_level = as.factor(h2o_train$interest_level)
+  h2o_test$interest_level = as.factor(h2o_test$interest_level)
+  
+  
+  ## Training model
+  gbm_clf <- h2o.gbm(x = x
+                     ,y = y
+                     ,training_frame = h2o_train
+                     ,distribution = "multinomial"
+                     ,stopping_metric = "logloss"
+                     ,ntrees = 620
+                     ,max_depth = length(x)
+                     ,min_rows = 200
+                     ,stopping_rounds = 10
+                     ,learn_rate = 0.025
+                     ,sample_rate = 0.5
+                     ,col_sample_rate = 0.5
+                     ,model_id = "gbm_31"
+  )
+  
+  gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
+  predictions = gbm_clf_pred$predict
+  getAccuracy(predictions, as.factor(test$interest_level))
+}
 
-### h2o initialization ###
-h2o.init(nthreads = -1, max_mem_size = "6G") 
-h2o_train = as.h2o(train)
-h2o_test = as.h2o(test)
-h2o_train$interest_level = as.factor(h2o_train$interest_level)
-h2o_test$interest_level = as.factor(h2o_test$interest_level)
-
-
-## Training model
-gbm_clf <- h2o.gbm(x = x
-                   ,y = y
-                   ,training_frame = h2o_train
-                   ,distribution = "multinomial"
-                   ,stopping_metric = "logloss"
-                   ,ntrees = 620
-                   ,max_depth = length(x)
-                   ,min_rows = 200
-                   ,stopping_rounds = 10
-                   ,learn_rate = 0.025
-                   ,sample_rate = 0.45
-                   ,col_sample_rate = 0.45
-                   ,model_id = "gbm_31"
-)
-
-gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
-predictions = gbm_clf_pred$predict
-getAccuracy(predictions, as.factor(test$interest_level))
-
+# sort( sapply(ls(),function(x){object.size(get(x))})) 
+if(TRUE){
+  
+  # ensemble of GBMs
+  h2o.init(nthreads = -1, max_mem_size = "6G") 
+  
+  train_rows = sample(1:rows, 0.75*nrow(data), replace=F)
+  train_df = data[train_rows, x_y]
+  test_df  = data[-train_rows, x_y]
+  
+  K=5
+  folds = cut(seq(1,nrow(train_df)),breaks=K,labels=FALSE)
+  gbm_clfs = list()
+  
+  ## TRAIN
+  for(i in 1:K){
+    testIndexes = which(folds==i, arr.ind=TRUE)
+    
+    test = train_df[testIndexes, x_y]
+    train = train_df[-testIndexes,x_y]
+    
+    h2o_train = as.h2o(train)
+    h2o_test = as.h2o(test)
+    h2o_train$interest_level = as.factor(h2o_train$interest_level)
+    h2o_test$interest_level = as.factor(h2o_test$interest_level)
+    
+    model_name = paste0("gbm_",i)
+    gbm_clf <- h2o.gbm(x = x
+                       ,y = y
+                       ,training_frame = h2o_train
+                       ,distribution = "multinomial"
+                       ,stopping_metric = "logloss"
+                       ,ntrees = 200
+                       ,max_depth = length(x)
+                       ,min_rows = 200
+                       ,stopping_rounds = 10
+                       ,learn_rate = 0.025
+                       ,sample_rate = 0.5
+                       ,col_sample_rate = 0.5
+                       ,model_id = model_name
+    )
+    gbm_clfs[[i]] = gbm_clf
+    
+    gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
+    predictions = gbm_clf_pred$predict
+    getAccuracy(predictions, as.factor(test$interest_level))
+    
+    rm(test)
+    rm(train)
+    rm(h2o_test)
+    rm(h2o_train)
+    rm(gbm_clf_pred)
+    rm(predictions)
+  }
+  rm(train_df)
+  rm(folds)
+  
+  ## TEST
+  h2o_test = as.h2o(test_df)
+  h2o_test$interest_level = as.factor(h2o_test$interest_level)
+  
+  pred_df = data.frame("high"=rep(0, dim(test_df)[1]), "medium"=rep(0, dim(test_df)[1]), "low"=rep(0, dim(test_df)[1]))
+  for(i in 1:K){
+    gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], h2o_test))
+    pred_df$high = pred_df$high + gbm_clf_pred$high
+    pred_df$medium = pred_df$medium + gbm_clf_pred$medium
+    pred_df$low = pred_df$low + gbm_clf_pred$low
+  }
+  pred_df$high = pred_df$high / K
+  pred_df$medium = pred_df$medium / K
+  pred_df$low = pred_df$low / K
+  
+  predictions = colnames(pred_df)[apply(pred_df,1,which.max)]
+  getAccuracy(predictions, as.factor(test_df$interest_level))
+  
+  rm(test_df)
+  rm(h2o_test)
+  rm(pred_df)
+  rm(predictions)
+}
 
 ### Change Logs ###
+# rmvd 0 imp vars 620   200   0.xxx   0.xxx   0.xxx xxx
+# manager skill   620   200   0.773   0.840   0.655 xxx
+# manager score   620   200   0.770   0.xxx   0.653 xxx
 # outliers+log_pr 620   200   0.758   0.xxx   0.xxx
 # rmvd exp+safe   625   200   0.xxx   0.861   0.601
 # lowest 4 remvd  600   200   0.xxx   0.868   0.600 -(park_central, univ_pace, xpnsv_madison, safe_carnegie_hill, univ_city_college)
