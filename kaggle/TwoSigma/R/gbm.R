@@ -185,6 +185,7 @@ zeros_id = data$latitude==0 & data$longitude==0
 data[zeros_id,"longitude"] = unlist(coords$lon)
 data[zeros_id,"latitude"] = unlist(coords$lat)
 data[zeros_id,c("listing_id", "street_address", "longitude", "latitude")]
+rm(zeros_id)
 
 plot(data[,c("longitude","latitude")])
   # removing outliers
@@ -272,6 +273,7 @@ zeros_id = real_test$latitude==0 & real_test$longitude==0
 real_test[zeros_id,"longitude"] = unlist(coords$lon)
 real_test[zeros_id,"latitude"] = unlist(coords$lat)
 real_test[zeros_id,c("listing_id", "street_address", "longitude", "latitude")]
+rm(zeros_id)
 
 for(place in names(places)){
   coords = places[[place]]
@@ -288,8 +290,10 @@ real_test$f_len = lengths(real_test$features)
 
 # num of pictures
 data$nphotos = lengths(data$photos)
-real_test$nphotos = lengths(real_test$photos)
+data$photos = NULL
 
+real_test$nphotos = lengths(real_test$photos)
+real_test$photos = NULL
 
 # manager_id
 if(TRUE){
@@ -325,8 +329,8 @@ if(TRUE){
   rm(ids)
 }
 
-#data$manager_id = factor(data$manager_id)
-#real_test$manager_id = factor(real_test$manager_id)
+data$manager_id = factor(data$manager_id)
+real_test$manager_id = factor(real_test$manager_id)
 
 
 ## duplicate features ## 
@@ -349,42 +353,42 @@ freq_features = c(
   "pre-war", #"post-war",
   "reduced fee",
   
-  "loft",
+  ##"loft",
   #"closet","walk in closet",
-  "marble bath",
-  "ss", #stainless steel kitchen
-  "wifi",
+  #"marble bath",
+  ##"ss", #stainless steel kitchen
+  #"wifi",
   #"green building",
   #"granite kitchen",
   #"subway",
   "cats allowed",
   "dogs allowed",
   "furnished",
-  "multi-level",
-  "high ceilings",
-  "garage", "private garage",
-  "parking", #"private parking",
-  "roof deck",
-  "outdoor space", "common outdoor space", "private outdoor space",
-  "dining room",
-  "high speed internet",
-  "balcony", #"private balcony",
-  "swimming pool",
-  "new construction", #"newly renovated",
-  "terrace",
+  #"multi-level",
+  #"high ceilings",
+  #"garage", "private garage",
+  #"parking", #"private parking",
+  ##"roof deck",
+  "outdoor space", "private outdoor space", ##"common outdoor space", 
+  ##"dining room",
+  #"high speed internet",
+  #"balcony", #"private balcony",
+  #"swimming pool",
+  ##"new construction", #"newly renovated",
+  #"terrace",
   "exclusive",
-  "garden",#"common garden","private garden",
-  "wheelchair access",
-  "fireplace",
-  "simplex",
-  "lowrise",#"highrise","midrise",
-  "dishwasher",
-  "fitness center",
+  #"garden",#"common garden","private garden",
+  #"wheelchair access",
+  #"fireplace",
+  #"simplex",
+  #"lowrise",#"highrise","midrise",
+  "dishwasher"
+  ##"fitness center"
   
   #"photos",
   #"playroom",
   
-  "long string"
+  #"long string"
 )
 ## Adding a new feature has to have a accuracy better
 ## than 0.70 with x=freq_features only and better
@@ -759,7 +763,7 @@ data[sample(1:rows,10),c("display_address","display_addr","street") ]
 
 ## 
 x = c("bathrooms", "bedrooms", "rooms", ### "bathbed",  
-      "price", "log_price", "mean_price_diff", "bed_price", "room_price", 
+      "log_price", "mean_price_diff", "bed_price", "room_price", #"price", 
       "nphotos", "kitchen", 
       
       "latitude", "longitude", 
@@ -771,9 +775,9 @@ x = c("bathrooms", "bedrooms", "rooms", ### "bathbed",
       # xxx addr_expansion, "east", "street",
       "display_addr",
       
-      #"manager_id", 
+      "manager_id", 
       ##"low_score","med_score","high_score"
-      "mngr_skill",
+      #"mngr_skill",
 
       "building_id"
       # xxx "low_bldg", "med_bldg", "high_bldg"
@@ -826,22 +830,23 @@ if(TRUE){
   
   # ensemble of GBMs
   h2o.init(nthreads = -1, max_mem_size = "6G") 
-  
-  train_rows = sample(1:rows, 0.75*nrow(data), replace=F)
-  train_df = data[train_rows, x_y]
-  test_df  = data[-train_rows, x_y]
-  
-  K=5
-  folds = cut(seq(1,nrow(train_df)),breaks=K,labels=FALSE)
   gbm_clfs = list()
+
+  k_1 = list("ntrees"=600, "min_rows"=100, "learn_rate"=0.0125, "sample_rate"=0.75, "col_sample_rate"=0.75)
+  k_2 = list("ntrees"=300, "min_rows"=200, "learn_rate"=0.0250, "sample_rate"=0.50, "col_sample_rate"=0.50)
+  k_3 = list("ntrees"=150, "min_rows"=400, "learn_rate"=0.0500, "sample_rate"=0.25, "col_sample_rate"=0.25)
+  hyper_params = list()
+  hyper_params[[1]]=k_1
+  hyper_params[[2]]=k_2
+  hyper_params[[3]]=k_3
   
-  ## TRAIN
+  K=3
+  ## TRAIN - 1
   for(i in 1:K){
-    testIndexes = which(folds==i, arr.ind=TRUE)
-    
-    test = train_df[testIndexes, x_y]
-    train = train_df[-testIndexes,x_y]
-    
+    train_rows = sample(1:rows, 0.70*nrow(data), replace=F)
+    train = data[train_rows, x_y]
+    test  = data[-train_rows, x_y]
+        
     h2o_train = as.h2o(train)
     h2o_test = as.h2o(test)
     h2o_train$interest_level = as.factor(h2o_train$interest_level)
@@ -853,13 +858,13 @@ if(TRUE){
                        ,training_frame = h2o_train
                        ,distribution = "multinomial"
                        ,stopping_metric = "logloss"
-                       ,ntrees = 200
+                       ,ntrees = hyper_params[[i]][["ntrees"]]
                        ,max_depth = length(x)
-                       ,min_rows = 200
+                       ,min_rows = hyper_params[[i]][["min_rows"]]
                        ,stopping_rounds = 10
-                       ,learn_rate = 0.025
-                       ,sample_rate = 0.5
-                       ,col_sample_rate = 0.5
+                       ,learn_rate = hyper_params[[i]][["learn_rate"]]
+                       ,sample_rate = hyper_params[[i]][["sample_rate"]]
+                       ,col_sample_rate = hyper_params[[i]][["col_sample_rate"]]
                        ,model_id = model_name
     )
     gbm_clfs[[i]] = gbm_clf
@@ -875,8 +880,10 @@ if(TRUE){
     rm(gbm_clf_pred)
     rm(predictions)
   }
-  rm(train_df)
-  rm(folds)
+  
+  ## TRAIN - 2 
+  ## train a model to get weights
+  
   
   ## TEST
   h2o_test = as.h2o(test_df)
@@ -900,6 +907,31 @@ if(TRUE){
   rm(h2o_test)
   rm(pred_df)
   rm(predictions)
+  
+  
+  ## REAL TEST
+  id = unname(sapply(real_test$listing_id, `[[`, 1))
+  real_test2 = real_test[, x]
+  real_test_h2o = as.h2o(real_test2)
+  pred_df = data.frame("listing_id"=id, "high"=rep(0, dim(real_test2)[1]), 
+                       "medium"=rep(0, dim(real_test2)[1]), "low"=rep(0, dim(real_test2)[1]))
+  for(i in 1:K){
+    gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], real_test_h2o))
+    pred_df$high = pred_df$high + gbm_clf_pred$high
+    pred_df$medium = pred_df$medium + gbm_clf_pred$medium
+    pred_df$low = pred_df$low + gbm_clf_pred$low
+  }
+  pred_df$high = pred_df$high / K
+  pred_df$medium = pred_df$medium / K
+  pred_df$low = pred_df$low / K
+  
+  rm(real_test2)
+  rm(real_test_h2o)
+  
+  write.csv(pred_df, file="gbm_xv.csv", row.names = FALSE, quote = FALSE)
+  rm(pred_df)  
+  rm(gbm_clf_pred)
+  rm(id)
 }
 
 ### Change Logs ###
