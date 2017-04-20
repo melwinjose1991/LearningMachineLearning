@@ -123,11 +123,39 @@ data = data[!data$bedrooms>=7, ]  # outliers
 real_test$bedrooms = as.numeric(as.character(real_test$bedrooms))
 
 
+# price_diff_bedrooms
+all_ = rbind(data[,c("bedrooms","price")], real_test[,c("bedrooms","price")])
+mean_bedroooms_price = as.data.frame(aggregate(price~bedrooms, all_, mean))
+rm(all_)
+
+getPriceDiff = function(bedrooms, price){
+  mean_price = mean_bedroooms_price[mean_bedroooms_price$bedrooms==bedrooms,"price"]
+  price - mean_price
+}
+data$price_diff_bedrooms = mapply(function(bedrooms, p) getPriceDiff(bedrooms,p), data$bedrooms, data$price)
+
+real_test$price_diff_bedrooms = mapply(function(bedrooms, p) getPriceDiff(bedrooms,p), real_test$bedrooms, real_test$price)
+
+
 # total rooms
 data$rooms = data$bathrooms + data$bedrooms
 data = data[!data$rooms>=10, ]
 
 real_test$rooms = real_test$bathrooms + real_test$bedrooms
+
+
+# price_diff_rooms
+all_ = rbind(data[,c("rooms","price")], real_test[,c("rooms","price")])
+mean_rooms_price = as.data.frame(aggregate(price~rooms, all_, mean))
+rm(all_)
+
+getPriceDiff = function(rooms, price){
+  mean_price = mean_rooms_price[mean_rooms_price$rooms==rooms,"price"]
+  price - mean_price
+}
+data$price_diff_rooms = mapply(function(rooms, p) getPriceDiff(rooms,p), data$rooms, data$price)
+
+real_test$price_diff_rooms = mapply(function(rooms, p) getPriceDiff(rooms,p), real_test$rooms, real_test$price)
 
 
 # bedrooms/bathrooms
@@ -151,6 +179,7 @@ data$log_price = log(data$price)
 
 real_test$price = as.numeric(as.character(real_test$price))
 real_test$log_price = log(real_test$price)
+
 
 # price/bedrooms
 data$bed_price = data$price / data$bedrooms
@@ -345,13 +374,13 @@ real_test$manager_id = factor(real_test$manager_id)
 # y[grepl("doorman",y$Var1) & y$Freq>1,]
 
 freq_features = c(
-  "elevator",
+  ###"elevator",
   "hardwood floors",
-  "doorman", #"24hr doorman","part time doorman",
-  "laundry", "common laundry", "private laundry",
+  ###"doorman", #"24hr doorman","part time doorman",
+  "laundry", "common laundry", ###"private laundry",
   "no fee",
-  "pre-war", #"post-war",
-  "reduced fee",
+  #x4"pre-war", #"post-war",
+  #x4"reduced fee",
   
   ##"loft",
   #"closet","walk in closet",
@@ -361,28 +390,28 @@ freq_features = c(
   #"green building",
   #"granite kitchen",
   #"subway",
-  "cats allowed",
-  "dogs allowed",
-  "furnished",
+  #x4"cats allowed",
+  #x4"dogs allowed",
+  "furnished"
   #"multi-level",
   #"high ceilings",
   #"garage", "private garage",
   #"parking", #"private parking",
   ##"roof deck",
-  "outdoor space", "private outdoor space", ##"common outdoor space", 
+  ###"outdoor space", ##"private outdoor space", ##"common outdoor space", 
   ##"dining room",
   #"high speed internet",
   #"balcony", #"private balcony",
   #"swimming pool",
   ##"new construction", #"newly renovated",
   #"terrace",
-  "exclusive",
+  ##"exclusive",
   #"garden",#"common garden","private garden",
   #"wheelchair access",
   #"fireplace",
   #"simplex",
   #"lowrise",#"highrise","midrise",
-  "dishwasher"
+  #x4"dishwasher"
   ##"fitness center"
   
   #"photos",
@@ -738,9 +767,9 @@ getPriceDiff = function(addr, price){
   mean_price = mean_addr_price[mean_addr_price$display_addr==addr,"price"]
   price - mean_price
 }
-data$mean_price_diff = mapply(function(addr, p) getPriceDiff(as.String(addr),p), data$display_addr, data$price)
+data$price_diff_daddr = mapply(function(addr, p) getPriceDiff(as.String(addr),p), data$display_addr, data$price)
 
-real_test$mean_price_diff = mapply(function(addr, p) getPriceDiff(as.String(addr),p), real_test$display_addr, real_test$price)
+real_test$price_diff_daddr = mapply(function(addr, p) getPriceDiff(as.String(addr),p), real_test$display_addr, real_test$price)
 
 
 
@@ -763,7 +792,8 @@ data[sample(1:rows,10),c("display_address","display_addr","street") ]
 
 ## 
 x = c("bathrooms", "bedrooms", "rooms", ### "bathbed",  
-      "log_price", "mean_price_diff", "bed_price", "room_price", #"price", 
+      "log_price", "price_diff_daddr", "price_diff_bedrooms", "price_diff_rooms", 
+      "bed_price", "room_price", #"price", 
       "nphotos", "kitchen", 
       
       "latitude", "longitude", 
@@ -792,7 +822,7 @@ rows = dim(data)[1]
 if(FALSE){
   # without ensembling GBM
   train_rows = sample(1:rows, 0.75*rows, replace=F)
-  train = data[train_rows, x_y]
+  train = data[, x_y]
   test = data[-train_rows, x_y]
   
   
@@ -823,6 +853,26 @@ if(FALSE){
   gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
   predictions = gbm_clf_pred$predict
   getAccuracy(predictions, as.factor(test$interest_level))
+  
+  id = unname(sapply(real_test$listing_id, `[[`, 1))
+  real_test2 = real_test[, x]
+  real_test_h2o = as.h2o(real_test2)
+  gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, real_test_h2o))
+  
+  to_write = data.frame("listing_id"=id, "high"=gbm_clf_pred$high, "medium"=gbm_clf_pred$medium, "low"=gbm_clf_pred$low)
+  write.csv(to_write, file="gbm_xv.csv", row.names = FALSE, quote = FALSE)
+ 
+  rm(train)
+  rm(test)
+  rm(gbm_clf_pred)
+  rm(predictions)
+  rm(id)
+  rm(real_test2)
+  rm(real_test_h2o)
+  rm(to_write)
+  h2o.shutdown()
+  
+  # as.data.frame(h2o.varimp(gbm_clf))
 }
 
 # sort( sapply(ls(),function(x){object.size(get(x))})) 
@@ -886,6 +936,8 @@ if(TRUE){
   
   
   ## TEST
+  test_rows = sample(1:rows, 0.30*nrow(data), replace=F)
+  test_df = data[test_rows, x_y]
   h2o_test = as.h2o(test_df)
   h2o_test$interest_level = as.factor(h2o_test$interest_level)
   
@@ -947,17 +999,3 @@ if(TRUE){
 # more univ       600   200   0.749   0.863   0.600 vars=47, places=25
 # lowest 5 rmvd   600   200   0.751   0.869   0.600 lowest features: private laundry, 
 #                                                     bathbed, dishwasher, cats, dogs   
-
-
-### >>> TRAIN ON ALL THE TRAINING DATA and then proceed <<< ### 
-## Test Data
-id = unname(sapply(real_test$listing_id, `[[`, 1))
-
-real_test2 = real_test[, x]
-
-real_test_h2o = as.h2o(real_test2)
-gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, real_test_h2o))
-
-to_write = data.frame("listing_id"=id, "high"=gbm_clf_pred$high, "medium"=gbm_clf_pred$medium, "low"=gbm_clf_pred$low)
-write.csv(to_write, file="gbm_xv.csv", row.names = FALSE, quote = FALSE)
-
