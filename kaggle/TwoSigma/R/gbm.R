@@ -882,15 +882,17 @@ if(TRUE){
   h2o.init(nthreads = -1, max_mem_size = "6G") 
   gbm_clfs = list()
 
-  k_1 = list("ntrees"=600, "min_rows"=100, "learn_rate"=0.0125, "sample_rate"=0.75, "col_sample_rate"=0.75)
-  k_2 = list("ntrees"=300, "min_rows"=200, "learn_rate"=0.0250, "sample_rate"=0.50, "col_sample_rate"=0.50)
-  k_3 = list("ntrees"=150, "min_rows"=400, "learn_rate"=0.0500, "sample_rate"=0.25, "col_sample_rate"=0.25)
+  #k_1 = list("ntrees"=600, "min_rows"=100, "learn_rate"=0.0125, "sample_rate"=0.75, "col_sample_rate"=0.75)
+  #k_2 = list("ntrees"=300, "min_rows"=200, "learn_rate"=0.0250, "sample_rate"=0.50, "col_sample_rate"=0.50)
+  #k_3 = list("ntrees"=150, "min_rows"=400, "learn_rate"=0.0500, "sample_rate"=0.25, "col_sample_rate"=0.25)
+  k_1 = list("ntrees"=600, "min_rows"=200, "learn_rate"=0.025, "sample_rate"=0.50, "col_sample_rate"=0.50)
   hyper_params = list()
   hyper_params[[1]]=k_1
-  hyper_params[[2]]=k_2
-  hyper_params[[3]]=k_3
+  hyper_params[[2]]=k_1
+  #hyper_params[[3]]=k_1
+  # TODO: use different alogirthms
   
-  K=3
+  K=2
   ## TRAIN - 1
   for(i in 1:K){
     train_rows = sample(1:rows, 0.70*nrow(data), replace=F)
@@ -931,8 +933,47 @@ if(TRUE){
     rm(predictions)
   }
   
+  
+  
   ## TRAIN - 2 
   ## train a model to get weights
+  ## TODO: use multinomial LogReg
+  test_rows = sample(1:rows, 0.30*nrow(data), replace=F)
+  test_df = data[test_rows, x_y]
+  h2o_test = as.h2o(test_df)
+  h2o_test$interest_level = as.factor(h2o_test$interest_level)
+  
+  pred_df = data.frame("1_high"=rep(0,dim(test_df)[1]))
+  high_formula = "high ~"
+  medium_formula = "medium ~"
+  low_formula = "low ~"
+  for(i in 1:K){
+    gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], h2o_test))
+    
+    col_name = paste("high", as.String(i), sep="")
+    high_formula = paste(high_formula, paste(col_name, ifelse(i==K,"","+")))
+    pred_df[,col_name] = gbm_clf_pred$high
+    
+    col_name = paste("medium", as.String(i), sep="")
+    medium_formula = paste(medium_formula, paste(col_name, ifelse(i==K,"","+")))
+    pred_df[,col_name] = gbm_clf_pred$medium
+    
+    col_name = paste("low", as.String(i),  sep="")
+    low_formula = paste(low_formula, paste(col_name, ifelse(i==K,"","+")))
+    pred_df[,col_name] = gbm_clf_pred$low
+  }
+  pred_df$y = test_df$interest_level
+  pred_df$high = ifelse(test_df$interest_level=="high",1,0)
+  pred_df$medium = ifelse(test_df$interest_level=="medium",1,0)
+  pred_df$low = ifelse(test_df$interest_level=="low",1,0)
+  head(pred_df)
+  high_model = glm(as.formula(high_formula), data=pred_df, family=binomial(link='logit'))
+  medium_model = glm(as.formula(medium_formula), data=pred_df, family=binomial(link='logit'))
+  low_model = glm(as.formula(low_formula), data=pred_df, family=binomial(link='logit'))
+  
+  rm(test_df)
+  rm(h2o_test)
+  rm(pred_df)
   
   
   ## TEST
@@ -941,16 +982,23 @@ if(TRUE){
   h2o_test = as.h2o(test_df)
   h2o_test$interest_level = as.factor(h2o_test$interest_level)
   
-  pred_df = data.frame("high"=rep(0, dim(test_df)[1]), "medium"=rep(0, dim(test_df)[1]), "low"=rep(0, dim(test_df)[1]))
+  pred_df = data.frame("1_high"=rep(0,dim(test_df)[1]))
   for(i in 1:K){
     gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], h2o_test))
-    pred_df$high = pred_df$high + gbm_clf_pred$high
-    pred_df$medium = pred_df$medium + gbm_clf_pred$medium
-    pred_df$low = pred_df$low + gbm_clf_pred$low
+    
+    col_name = paste("high", as.String(i), sep="")
+    pred_df[,col_name] = gbm_clf_pred$high
+    
+    col_name = paste("medium", as.String(i), sep="")
+    pred_df[,col_name] = gbm_clf_pred$medium
+    
+    col_name = paste("low", as.String(i),  sep="")
+    pred_df[,col_name] = gbm_clf_pred$low
   }
-  pred_df$high = pred_df$high / K
-  pred_df$medium = pred_df$medium / K
-  pred_df$low = pred_df$low / K
+  pred_df$high = predict(high_model, newdata=pred_df, type="response")
+  pred_df$medium = predict(medium_model, newdata=pred_df, type="response")
+  pred_df$low = predict(low_model, newdata=pred_df, type="response")
+  pred_df = pred_df[,c("high","medium","low")]
   
   predictions = colnames(pred_df)[apply(pred_df,1,which.max)]
   getAccuracy(predictions, as.factor(test_df$interest_level))
@@ -961,21 +1009,28 @@ if(TRUE){
   rm(predictions)
   
   
+  
   ## REAL TEST
   id = unname(sapply(real_test$listing_id, `[[`, 1))
   real_test2 = real_test[, x]
   real_test_h2o = as.h2o(real_test2)
-  pred_df = data.frame("listing_id"=id, "high"=rep(0, dim(real_test2)[1]), 
-                       "medium"=rep(0, dim(real_test2)[1]), "low"=rep(0, dim(real_test2)[1]))
+  pred_df = data.frame("listing_id"=id)
   for(i in 1:K){
     gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], real_test_h2o))
-    pred_df$high = pred_df$high + gbm_clf_pred$high
-    pred_df$medium = pred_df$medium + gbm_clf_pred$medium
-    pred_df$low = pred_df$low + gbm_clf_pred$low
+    
+    col_name = paste("high", as.String(i), sep="")
+    pred_df[,col_name] = gbm_clf_pred$high
+    
+    col_name = paste("medium", as.String(i), sep="")
+    pred_df[,col_name] = gbm_clf_pred$medium
+    
+    col_name = paste("low", as.String(i),  sep="")
+    pred_df[,col_name] = gbm_clf_pred$low
   }
-  pred_df$high = pred_df$high / K
-  pred_df$medium = pred_df$medium / K
-  pred_df$low = pred_df$low / K
+  pred_df$high = predict(high_model, newdata=pred_df, type="response")
+  pred_df$medium = predict(medium_model, newdata=pred_df, type="response")
+  pred_df$low = predict(low_model, newdata=pred_df, type="response")
+  pred_df = pred_df[,c("listing_id","high","medium","low")]
   
   rm(real_test2)
   rm(real_test_h2o)
@@ -984,6 +1039,7 @@ if(TRUE){
   rm(pred_df)  
   rm(gbm_clf_pred)
   rm(id)
+
 }
 
 ### Change Logs ###
