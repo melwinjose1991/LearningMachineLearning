@@ -7,6 +7,7 @@ library(data.table)
 library(stringr)
 library(tm)
 library(ggmap)
+library(nnet)
 
 data = fromJSON("../data/train.json")
 real_test = fromJSON("../data/test.json")
@@ -124,6 +125,7 @@ real_test$bedrooms = as.numeric(as.character(real_test$bedrooms))
 
 
 # price_diff_bedrooms
+rm(mean)
 all_ = rbind(data[,c("bedrooms","price")], real_test[,c("bedrooms","price")])
 mean_bedroooms_price = as.data.frame(aggregate(price~bedrooms, all_, mean))
 rm(all_)
@@ -937,39 +939,30 @@ if(TRUE){
   
   ## TRAIN - 2 
   ## train a model to get weights
-  ## TODO: use multinomial LogReg
+  ## TODO: use neural_net
   test_rows = sample(1:rows, 0.30*nrow(data), replace=F)
   test_df = data[test_rows, x_y]
   h2o_test = as.h2o(test_df)
   h2o_test$interest_level = as.factor(h2o_test$interest_level)
   
   pred_df = data.frame("1_high"=rep(0,dim(test_df)[1]))
-  high_formula = "high ~"
-  medium_formula = "medium ~"
-  low_formula = "low ~"
+  single_formula = "interest_level ~"
   for(i in 1:K){
     gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], h2o_test))
     
     col_name = paste("high", as.String(i), sep="")
-    high_formula = paste(high_formula, paste(col_name, ifelse(i==K,"","+")))
+    single_formula = paste(single_formula, paste(col_name, "+"))
     pred_df[,col_name] = gbm_clf_pred$high
     
     col_name = paste("medium", as.String(i), sep="")
-    medium_formula = paste(medium_formula, paste(col_name, ifelse(i==K,"","+")))
+    single_formula = paste(single_formula, paste(col_name, "+"))
     pred_df[,col_name] = gbm_clf_pred$medium
     
     col_name = paste("low", as.String(i),  sep="")
-    low_formula = paste(low_formula, paste(col_name, ifelse(i==K,"","+")))
+    single_formula = paste(single_formula, paste(col_name, ifelse(i==K,"","+")))
     pred_df[,col_name] = gbm_clf_pred$low
   }
-  pred_df$y = test_df$interest_level
-  pred_df$high = ifelse(test_df$interest_level=="high",1,0)
-  pred_df$medium = ifelse(test_df$interest_level=="medium",1,0)
-  pred_df$low = ifelse(test_df$interest_level=="low",1,0)
-  head(pred_df)
-  high_model = glm(as.formula(high_formula), data=pred_df, family=binomial(link='logit'))
-  medium_model = glm(as.formula(medium_formula), data=pred_df, family=binomial(link='logit'))
-  low_model = glm(as.formula(low_formula), data=pred_df, family=binomial(link='logit'))
+  single_model = multinom(as.formula(single_formula), data=pred_df)
   
   rm(test_df)
   rm(h2o_test)
@@ -995,12 +988,7 @@ if(TRUE){
     col_name = paste("low", as.String(i),  sep="")
     pred_df[,col_name] = gbm_clf_pred$low
   }
-  pred_df$high = predict(high_model, newdata=pred_df, type="response")
-  pred_df$medium = predict(medium_model, newdata=pred_df, type="response")
-  pred_df$low = predict(low_model, newdata=pred_df, type="response")
-  pred_df = pred_df[,c("high","medium","low")]
-  
-  predictions = colnames(pred_df)[apply(pred_df,1,which.max)]
+  predictions = predict(single_model, newdata = pred_df)
   getAccuracy(predictions, as.factor(test_df$interest_level))
   
   rm(test_df)
@@ -1027,10 +1015,10 @@ if(TRUE){
     col_name = paste("low", as.String(i),  sep="")
     pred_df[,col_name] = gbm_clf_pred$low
   }
-  pred_df$high = predict(high_model, newdata=pred_df, type="response")
-  pred_df$medium = predict(medium_model, newdata=pred_df, type="response")
-  pred_df$low = predict(low_model, newdata=pred_df, type="response")
-  pred_df = pred_df[,c("listing_id","high","medium","low")]
+  predictions = predict(single_model, newdata = pred_df, "probs")
+  pred_df = cbind(pred_df$listing_id, predictions[,c(1,3,2)])
+  colnames(pred_df)[1] = "listing_id"
+  head(pred_df)
   
   rm(real_test2)
   rm(real_test_h2o)
@@ -1039,7 +1027,8 @@ if(TRUE){
   rm(pred_df)  
   rm(gbm_clf_pred)
   rm(id)
-
+  
+  h2o.shutdown()
 }
 
 ### Change Logs ###
