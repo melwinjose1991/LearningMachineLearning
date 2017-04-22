@@ -8,6 +8,7 @@ library(tm)
 library(ggmap)
 library(xgboost)
 library(lightgbm)
+library(caret)
 
 data = fromJSON("../data/train.json")
 real_test = fromJSON("../data/test.json")
@@ -858,9 +859,9 @@ trainAndTestLGBM=function(nrounds=800, depth=8, leaves=200,  col_sample=0.5,
   
   lxgb_model = lgb.train(params=lxgb_params, data=ltrain, nrounds=nrounds, 
                 valids=list(test = lval), 
-                record=T, eval_freq = 50, num_class=3)
+                varbose=1, eval_freq = 50, num_class=3)
   
-  all_predictions = predict(lxgb_model, data=ltest)
+  all_predictions = as.data.frame(predict(lxgb_model, data=ltest, reshape = TRUE))
 }
 
 if(TRUE){
@@ -888,22 +889,36 @@ if(TRUE){
   lval = lgb.Dataset(as.matrix(x_val), label=y_val)
   ltest = lgb.Dataset(as.matrix(real_test[, x_cols]))
     
-  #perform training
+  # training XGB
   depth = as.integer(length(x_cols)/2)
   nrounds = 800
   pred_1 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=1234, dtrain=dtrain, dval=dval, dtest=dtest)
   pred_2 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=2345, dtrain=dtrain, dval=dval, dtest=dtest)
   pred_3 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=3456, dtrain=dtrain, dval=dval, dtest=dtest)
-  pred = (pred_1 + pred_2 + pred_3)/3
+  stack_pred_xgb = (pred_1 + pred_2 + pred_3)/3
+  stack_pred_xgb = cbind(stack_pred_xgb, real_test$listing_id)
+  names(stack_pred_xgb) = c("high","low","medium","listing_id")
+  stack_pred_xgb = stack_pred_xgb[,c(1,3,2,4)]
+  head(stack_pred_xgb)
   
-  #pred_4 = trainAndTestLGBM(nrounds=nrounds, depth=depth, seed=1234, ltrain=ltrain, lval=lval, ltest=ltest)
+  file_name = paste0("xgboost_", "x",as.String(length(x_cols)), "_d",depth, "_r",nrounds, ".csv")
+  write.csv(stack_pred_lxgb, file_name, row.names = FALSE)
   
-  all_predictions = cbind (pred, real_test$listing_id)
-  names(all_predictions) = c("high","low","medium","listing_id")
-  all_predictions=all_predictions[,c(1,3,2,4)]
-  head(all_predictions)
-    
-  file_name = paste0("xgb_", "x",as.String(length(x_cols)), "_d",depth, "_r",nrounds, ".csv")
-  write.csv(all_predictions, file_name, row.names = FALSE)
+  # training LGBM
+  leaves = as.integer(length(x_cols)*0.5)
+  pred_4 = trainAndTestLGBM(nrounds=nrounds, depth=depth, leaves=leaves, seed=1234, 
+                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test[, x_cols]))
+  pred_5 = trainAndTestLGBM(nrounds=nrounds, depth=depth, leaves=leaves, seed=2345, 
+                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test[, x_cols]))
+  pred_6 = trainAndTestLGBM(nrounds=nrounds, depth=depth, leaves=leaves, seed=3456, 
+                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test[, x_cols]))
+  stack_pred_lxgb = (pred_4 + pred_5 + pred_6)/3
+  stack_pred_lxgb = cbind(stack_pred_lxgb, real_test$listing_id)
+  names(stack_pred_lxgb) = c("high","low","medium","listing_id")
+  stack_pred_lxgb = stack_pred_lxgb[,c(1,3,2,4)]
+  head(stack_pred_lxgb)
+  
+  file_name = paste0("xgbl_", "x",as.String(length(x_cols)), "_l",leaves, "_r",nrounds, ".csv")
+  write.csv(stack_pred_lxgb, file_name, row.names = FALSE)
   
 }
