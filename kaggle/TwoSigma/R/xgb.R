@@ -871,54 +871,69 @@ if(TRUE){
   #create folds
   kfolds = 10
   folds = createFolds(y, k = kfolds, list = TRUE, returnTrain = FALSE)
-  fold = as.numeric(unlist(folds[1]))
   
-  x_train = data[-fold, x_cols] #Train set
-  x_val = data[fold, x_cols]    #Out of fold validation set
+  ## Level - 1
+  fold = as.numeric(unlist(folds[1]))
+  x_train = data[-fold, x_cols] 
+  x_val = data[fold, x_cols]    
   
   y_train = y[-fold]
   y_val = y[fold]
   
-  
-  #convert to xgbmatrix
-  dtrain = xgb.DMatrix(as.matrix(x_train), label=y_train)
-  dval = xgb.DMatrix(as.matrix(x_val), label=y_val)
-  dtest = xgb.DMatrix(data.matrix(real_test[, x_cols]))
-
-  ltrain = lgb.Dataset(as.matrix(x_train), label=y_train)
-  lval = lgb.Dataset(as.matrix(x_val), label=y_val)
-  ltest = lgb.Dataset(as.matrix(real_test[, x_cols]))
-    
   # training XGB
+  dtrain = xgb.DMatrix(as.matrix(x_train), label=y_train)
+  dval  = xgb.DMatrix(as.matrix(x_val), label=y_val)
+  dtest = xgb.DMatrix(data.matrix(real_test[,x_cols]))
+  
   depth = as.integer(length(x_cols)/2)
   nrounds = 800
   pred_1 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=1234, dtrain=dtrain, dval=dval, dtest=dtest)
   pred_2 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=2345, dtrain=dtrain, dval=dval, dtest=dtest)
   pred_3 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=3456, dtrain=dtrain, dval=dval, dtest=dtest)
-  stack_pred_xgb = (pred_1 + pred_2 + pred_3)/3
-  stack_pred_xgb = cbind(stack_pred_xgb, real_test$listing_id)
-  names(stack_pred_xgb) = c("high","low","medium","listing_id")
-  stack_pred_xgb = stack_pred_xgb[,c(1,3,2,4)]
-  head(stack_pred_xgb)
+  xgb_pred_test = (pred_1 + pred_2 + pred_3)/3
+  names(xgb_pred_test) = c("high","low","medium")
+  xgb_pred_train = xgb_pred_test[,c(1,3,2)]
+  head(xgb_pred_test)
   
-  file_name = paste0("xgboost_", "x",as.String(length(x_cols)), "_d",depth, "_r",nrounds, ".csv")
-  write.csv(stack_pred_lxgb, file_name, row.names = FALSE)
+  dtest = xgb.DMatrix(data.matrix(data[,x_cols]))  # <<< it is data
+  pred_1 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=1234, dtrain=dtrain, dval=dval, dtest=dtest)
+  pred_2 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=2345, dtrain=dtrain, dval=dval, dtest=dtest)
+  pred_3 = trainAndTestXGB(nrounds=nrounds, depth=depth, seed=3456, dtrain=dtrain, dval=dval, dtest=dtest)
+  xgb_pred_data = (pred_1 + pred_2 + pred_3)/3
+  names(xgb_pred_data) = c("high","low","medium")
+  xgb_pred_train = xgb_pred_data[,c(1,3,2)]
+  head(xgb_pred_data)
   
-  # training LGBM
-  leaves = as.integer(length(x_cols)*0.5)
+  
+  data_star = cbind(data, xgb_pred_train)
+  real_test_star = cbind(real_test, xgb_pred_test)
+  x_cols_star = c(x_cols, c("high","low","medium"))
+  
+  
+  ## Level - 2
+  fold = as.numeric(unlist(folds[2]))
+  x_train = data_star[-fold, x_cols_star] 
+  x_val = data_star[fold, x_cols_star]    
+  y_train = y[-fold]
+  y_val = y[fold]
+
+  ltrain = lgb.Dataset(as.matrix(x_train), label=y_train)
+  lval = lgb.Dataset(as.matrix(x_val), label=y_val)
+  
+  leaves = as.integer(length(x_cols_star)*0.5)
   pred_4 = trainAndTestLGBM(nrounds=nrounds, depth=depth, leaves=leaves, seed=1234, 
-                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test[, x_cols]))
+                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test_star[,x_cols_star]))
   pred_5 = trainAndTestLGBM(nrounds=nrounds, depth=depth, leaves=leaves, seed=2345, 
-                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test[, x_cols]))
+                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test_star[,x_cols_star]))
   pred_6 = trainAndTestLGBM(nrounds=nrounds, depth=depth, leaves=leaves, seed=3456, 
-                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test[, x_cols]))
-  stack_pred_lxgb = (pred_4 + pred_5 + pred_6)/3
-  stack_pred_lxgb = cbind(stack_pred_lxgb, real_test$listing_id)
-  names(stack_pred_lxgb) = c("high","low","medium","listing_id")
-  stack_pred_lxgb = stack_pred_lxgb[,c(1,3,2,4)]
-  head(stack_pred_lxgb)
+                            ltrain=ltrain, lval=lval, ltest=as.matrix(real_test_star[,x_cols_star]))
+  pred_lxgb = (pred_4 + pred_5 + pred_6)/3
+  pred_lxgb = cbind(pred_lxgb, real_test$listing_id)
+  names(pred_lxgb) = c("high","low","medium","listing_id")
+  pred_lxgb = pred_lxgb[,c(1,3,2,4)]
+  head(pred_lxgb)
   
-  file_name = paste0("xgbl_", "x",as.String(length(x_cols)), "_l",leaves, "_r",nrounds, ".csv")
-  write.csv(stack_pred_lxgb, file_name, row.names = FALSE)
+  file_name = paste0("xstack_", "x",as.String(length(x_cols)), "_l",leaves, "_r",nrounds, ".csv")
+  write.csv(pred_lxgb, file_name, row.names = FALSE)
   
 }
