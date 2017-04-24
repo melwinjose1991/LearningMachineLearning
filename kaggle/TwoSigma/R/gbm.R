@@ -8,6 +8,8 @@ library(stringr)
 library(tm)
 library(ggmap)
 library(nnet)
+library(xgboost)
+library(caret)
 
 data = fromJSON("../data/train.json")
 real_test = fromJSON("../data/test.json")
@@ -327,7 +329,7 @@ real_test$nphotos = lengths(real_test$photos)
 real_test$photos = NULL
 
 # manager_id
-if(TRUE){
+if(FALSE){
   manager_score = list()
   ids = unique(data$manager_id)
   for(id in ids){
@@ -335,15 +337,25 @@ if(TRUE){
     high_p = sum(data$manager_id==id & data$interest_level=="high") / count
     med_p = sum(data$manager_id==id & data$interest_level=="medium") / count 
     low_p = sum(data$manager_id==id & data$interest_level=="low") / count
-    manager_score[[id]]=c(low_p, med_p, high_p)
+    manager_score[[id]]=c(low_p, med_p, high_p, count)
   }
-  data$low_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[m_id]][1])
-  data$med_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[m_id]][2])
-  data$high_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[m_id]][3])
-  data$mngr_skill = mapply(function(med,high) 2*high+med, data$high_score, data$med_score)
+  data$low_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[as.String(m_id)]][1])
+  data$med_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[as.String(m_id)]][2])
+  data$high_score = sapply(data$manager_id, FUN=function(m_id) manager_score[[as.String(m_id)]][3])
+  data$m_count = sapply(data$manager_id, FUN=function(m_id) manager_score[[as.String(m_id)]][4])
+  data$mngr_skill = mapply(function(high,med) 2*high+med, data$high_score, data$med_score)
   
-  getScore=function(id,index){
+  ranked_m = data$m_count>20
+  m_mean_high = mean(data[ranked_m & data$interest_level=="high",]$high_score)
+  m_mean_med = mean(data[ranked_m & data$interest_level=="medium",]$med_score)
+  m_mean_low = mean(data[ranked_m & data$interest_level=="low",]$low_score)
+  m_mean_skill = mean(data[ranked_m,]$mngr_skill)
+  
+  data[!ranked_m,"mngr_skill"] = m_mean_skill
+  
+  getMScore=function(id,index){
     #print(id)
+    id = as.String(id)
     if(id %in% names(manager_score)){
       manager_score[[id]][index]
     }else{
@@ -351,10 +363,14 @@ if(TRUE){
       score    
     }
   }
-  real_test$low_score = sapply(real_test$manager_id, FUN=function(m_id) getScore(m_id,1))
-  real_test$med_score = sapply(real_test$manager_id, FUN=function(m_id) getScore(m_id,2))
-  real_test$high_score = sapply(real_test$manager_id, FUN=function(m_id) getScore(m_id,3))
-  real_test$mngr_skill = mapply(function(med,high) 2*high+med, real_test$high_score, real_test$med_score)
+  real_test$low_score = sapply(real_test$manager_id, FUN=function(m_id) getMScore(m_id,1))
+  real_test$med_score = sapply(real_test$manager_id, FUN=function(m_id) getMScore(m_id,2))
+  real_test$high_score = sapply(real_test$manager_id, FUN=function(m_id) getMScore(m_id,3))
+  real_test$m_count = sapply(real_test$manager_id, FUN=function(m_id) getMScore(m_id,4))
+  real_test$mngr_skill = mapply(function(high,med) 2*high+med, real_test$high_score, real_test$med_score)
+  
+  sum(real_test$mngr_skill==0)
+  real_test[real_test$mngr_skill==0,"mngr_skill"] = m_mean_skill
   
   rm(manager_score)
   rm(ids)
@@ -656,6 +672,44 @@ for(f in freq_features){
 
 
 # building_id
+if(FALSE){
+  building_score = list()
+  ids = unique(data$building_id)
+  for(id in ids){
+    count = sum(data$building_id==id)
+    high_p = sum(data$building_id==id & data$interest_level=="high") / count
+    med_p = sum(data$building_id==id & data$interest_level=="medium") / count 
+    low_p = sum(data$building_id==id & data$interest_level=="low") / count
+    building_score[[id]]=c(low_p, med_p, high_p)
+  }
+  data$b_low_score = sapply(data$building_id, FUN=function(b_id) building_score[[as.String(b_id)]][1])
+  data$b_med_score = sapply(data$building_id, FUN=function(b_id) building_score[[as.String(b_id)]][2])
+  data$b_high_score = sapply(data$building_id, FUN=function(b_id) building_score[[as.String(b_id)]][3])
+  data$bldg_score = mapply(function(high,med) 2*high+med, data$b_high_score, data$b_med_score)
+  
+  sum(data$bldg_score==0)
+  mean_score = mean(data[data$bldg_score!=0,]$bldg_score)
+  data[data$bldg_score==0,"bldg_score"] = mean_score
+  
+  getBScore=function(id,index){
+    #print(id)
+    id = as.String(id)
+    if(id %in% names(building_score)){
+      building_score[[id]][index]
+    }else{
+      score=0
+      score    
+    }
+  }
+  real_test$b_low_score = sapply(real_test$building_id, FUN=function(b_id) getBScore(b_id,1))
+  real_test$b_med_score = sapply(real_test$building_id, FUN=function(b_id) getBScore(b_id,2))
+  real_test$b_high_score = sapply(real_test$building_id, FUN=function(b_id) getBScore(b_id,3))
+  real_test$bldg_score = mapply(function(high,med) 2*high+med, real_test$b_high_score, real_test$b_med_score)
+  real_test[real_test$bldg_score==0,"bldg_score"] = mean_score
+  
+  rm(building_score)
+  rm(ids)
+}
 data$building_id = factor(data$building_id)
 real_test$building_id = factor(real_test$building_id)
 
@@ -809,9 +863,10 @@ x = c("bathrooms", "bedrooms", "rooms", ### "bathbed",
       
       "manager_id", 
       ##"low_score","med_score","high_score"
-      #"mngr_skill",
+      ##"mngr_skill",
 
       "building_id"
+      ##"bldg_score"
       # xxx "low_bldg", "med_bldg", "high_bldg"
       )
 
@@ -821,10 +876,14 @@ x_y = c(x,y)
 
 rows = dim(data)[1]
 
+# OverSampling `high`
+#data_save = data[,]
+#data = rbind(data, data[data$interest_level=="high",])
+
 if(FALSE){
   # without ensembling GBM
-  train_rows = sample(1:rows, 0.75*rows, replace=F)
-  train = data[, x_y]
+  train_rows = sample(1:rows, 0.80*rows, replace=F)
+  train = data[train_rows, x_y]
   test = data[-train_rows, x_y]
   
   
@@ -882,165 +941,243 @@ if(TRUE){
   
   # ensemble of GBMs
   h2o.init(nthreads = -1, max_mem_size = "6G") 
-  gbm_clfs = list()
-
-  #k_1 = list("ntrees"=600, "min_rows"=100, "learn_rate"=0.0125, "sample_rate"=0.75, "col_sample_rate"=0.75)
-  #k_2 = list("ntrees"=300, "min_rows"=200, "learn_rate"=0.0250, "sample_rate"=0.50, "col_sample_rate"=0.50)
-  #k_3 = list("ntrees"=150, "min_rows"=400, "learn_rate"=0.0500, "sample_rate"=0.25, "col_sample_rate"=0.25)
-  k_1 = list("ntrees"=600, "min_rows"=200, "learn_rate"=0.025, "sample_rate"=0.50, "col_sample_rate"=0.50)
-  hyper_params = list()
-  hyper_params[[1]]=k_1
-  hyper_params[[2]]=k_1
-  #hyper_params[[3]]=k_1
-  # TODO: use different alogirthms
   
-  K=2
-  ## TRAIN - 1
-  for(i in 1:K){
-    train_rows = sample(1:rows, 0.70*nrow(data), replace=F)
-    train = data[train_rows, x_y]
-    test  = data[-train_rows, x_y]
-        
-    h2o_train = as.h2o(train)
-    h2o_test = as.h2o(test)
-    h2o_train$interest_level = as.factor(h2o_train$interest_level)
-    h2o_test$interest_level = as.factor(h2o_test$interest_level)
-    
-    model_name = paste0("gbm_",i)
-    gbm_clf <- h2o.gbm(x = x
-                       ,y = y
-                       ,training_frame = h2o_train
-                       ,distribution = "multinomial"
-                       ,stopping_metric = "logloss"
-                       ,ntrees = hyper_params[[i]][["ntrees"]]
-                       ,max_depth = length(x)
-                       ,min_rows = hyper_params[[i]][["min_rows"]]
-                       ,stopping_rounds = 10
-                       ,learn_rate = hyper_params[[i]][["learn_rate"]]
-                       ,sample_rate = hyper_params[[i]][["sample_rate"]]
-                       ,col_sample_rate = hyper_params[[i]][["col_sample_rate"]]
-                       ,model_id = model_name
-    )
-    gbm_clfs[[i]] = gbm_clf
-    
-    gbm_clf_pred = as.data.table(h2o.predict(gbm_clf, h2o_test))
-    predictions = gbm_clf_pred$predict
-    getAccuracy(predictions, as.factor(test$interest_level))
-    
-    rm(test)
-    rm(train)
-    rm(h2o_test)
-    rm(h2o_train)
-    rm(gbm_clf_pred)
-    rm(predictions)
-  }
+  train = data[, x_y]
+  h2o_train = as.h2o(train)
+  h2o_train$interest_level = as.factor(h2o_train$interest_level)
   
-  
-  
-  ## TRAIN - 2 
-  ## train a model to get weights
-  ## TODO: use neural_net
-  test_rows = sample(1:rows, 0.30*nrow(data), replace=F)
-  test_df = data[test_rows, x_y]
-  h2o_test = as.h2o(test_df)
-  h2o_test$interest_level = as.factor(h2o_test$interest_level)
-  
-  pred_df = data.frame("1_high"=rep(0,dim(test_df)[1]))
-  single_formula = "interest_level ~"
-  for(i in 1:K){
-    gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], h2o_test))
-    
-    col_name = paste("high", as.String(i), sep="")
-    single_formula = paste(single_formula, paste(col_name, "+"))
-    pred_df[,col_name] = gbm_clf_pred$high
-    
-    col_name = paste("medium", as.String(i), sep="")
-    single_formula = paste(single_formula, paste(col_name, "+"))
-    pred_df[,col_name] = gbm_clf_pred$medium
-    
-    col_name = paste("low", as.String(i),  sep="")
-    single_formula = paste(single_formula, paste(col_name, ifelse(i==K,"","+")))
-    pred_df[,col_name] = gbm_clf_pred$low
-  }
-  single_model = multinom(as.formula(single_formula), data=pred_df)
-  
-  rm(test_df)
-  rm(h2o_test)
-  rm(pred_df)
-  
-  
-  ## TEST
-  test_rows = sample(1:rows, 0.30*nrow(data), replace=F)
-  test_df = data[test_rows, x_y]
-  h2o_test = as.h2o(test_df)
-  h2o_test$interest_level = as.factor(h2o_test$interest_level)
-  
-  pred_df = data.frame("1_high"=rep(0,dim(test_df)[1]))
-  for(i in 1:K){
-    gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], h2o_test))
-    
-    col_name = paste("high", as.String(i), sep="")
-    pred_df[,col_name] = gbm_clf_pred$high
-    
-    col_name = paste("medium", as.String(i), sep="")
-    pred_df[,col_name] = gbm_clf_pred$medium
-    
-    col_name = paste("low", as.String(i),  sep="")
-    pred_df[,col_name] = gbm_clf_pred$low
-  }
-  predictions = predict(single_model, newdata = pred_df)
-  getAccuracy(predictions, as.factor(test_df$interest_level))
-  
-  rm(test_df)
-  rm(h2o_test)
-  rm(pred_df)
-  rm(predictions)
-  
-  
-  
-  ## REAL TEST
   id = unname(sapply(real_test$listing_id, `[[`, 1))
-  real_test2 = real_test[, x]
-  real_test_h2o = as.h2o(real_test2)
-  pred_df = data.frame("listing_id"=id)
-  for(i in 1:K){
-    gbm_clf_pred = as.data.table(h2o.predict(gbm_clfs[[i]], real_test_h2o))
+  h2o_test = as.h2o(real_test[, x])
     
-    col_name = paste("high", as.String(i), sep="")
-    pred_df[,col_name] = gbm_clf_pred$high
+  
+  ## Level - 1
+  # glm
+  glm_model <- h2o.glm(x = x
+                     ,y = y
+                     ,training_frame = h2o_train
+                     #,nfolds = 5L
+                     ,seed = 1
+                     ,keep_cross_validation_predictions = TRUE
+                     ,family = 'multinomial'
+                     ,alpha = 0.7
+                     ,lambda_search = TRUE
+                     #,standardize = T
+  )
+  h2o.varimp(glm_model)
+  
+  #glm_train = as.data.table(h2o.cross_validation_holdout_predictions(glm_model))
+  glm_train = as.data.table(h2o.predicti(glm_model, h2o_train))
+  glm_train = data.table(listing_id=data$listing_id, 
+                          gl_high = glm_train$high, gl_low = glm_train$low, gl_medium = glm_train$medium)
+  write.csv(glm_train, file="lvl-1_glm_train.csv", row.names = FALSE)
+  #glm_train = read.csv(file="lvl-1_glm_train.csv")
+  
+  glm_test = as.data.table(h2o.predict(glm_model, h2o_test))
+  glm_test = data.table(listing_id = id, 
+                         gl_high = glm_test$high, gl_low = glm_test$low, gl_medium = glm_test$medium)
+  write.csv(glm_test, file="lvl-1_glm_test.csv", row.names = FALSE)
+  #glm_test = read.csv(file="lvl-1_glm_test.csv")
+  
+  
+  # DeepLearning
+  dl_model <- h2o.deeplearning(x = x
+                             ,y = y
+                             ,training_frame = h2o_train
+                             #,nfolds = 5L
+                             ,keep_cross_validation_predictions = TRUE
+                             ,variable_importances = TRUE
+                             ,hidden = c(100,100)
+                             ,l2 = 0.0001
+  )
+  h2o.varimp_plot(dl_model)
+  
+  #dl_train <- as.data.table(h2o.cross_validation_holdout_predictions(dl_model))
+  dl_train <- as.data.table(h2o.predict(dl_model, h2o_train))
+  dl_train <- data.table(listing_id = data$listing_id, 
+                         dl_high = dl_train$high, dl_low = dl_train$low, dl_medium = dl_train$medium)
+  write.csv(dl_train, file="lvl-1_dl_train.csv", row.names = FALSE)
+  # dl_train = read.csv(file="lvl-1_dl_train.csv")
+  
+  dl_test <- as.data.table(h2o.predict(dl_model, h2o_test))
+  dl_test <- data.table(listing_id = id, 
+                        dl_high = dl_test$high, dl_low = dl_test$low, dl_medium = dl_test$medium)
+  write.csv(dl_test, file="lvl-1_dl_test.csv", row.names = FALSE)
+  # dl_test = read.csv(file="lvl-1_dl_test.csv")
+  
+  
+  # Random Forest
+  rf_model = h2o.randomForest(x = x
+                             ,y = y
+                             ,training_frame = h2o_train
+                             #,keep_cross_validation_predictions = TRUE
+                             #,nfolds = 5L
+                             ,ntrees = 600
+                             ,max_depth = length(x)
+                             ,min_rows = 200
+                             ,sample_rate = 0.5
+                             )
+  h2o.varimp_plot(rf_model)
+  
+  #rf_train = as.data.table(h2o.cross_validation_holdout_predictions(rf_model))
+  rf_train = as.data.table(h2o.predict(rf_model, h2o_train))
+  rf_train = data.table(listing_id = data$listing_id, 
+                         rf_high = rf_train$high, rf_low=rf_train$low, rf_medium=rf_train$medium)
+  write.csv(rf_train, file="lvl-1_rf_train.csv", row.names = FALSE)
+  # rf_train = read.csv(file="lvl-1_rf_train.csv")
+  
+  rf_test = as.data.table(h2o.predict(rf_model, h2o_test))
+  rf_test = data.table(listing_id = id, 
+                        rf_high = rf_test$high, rf_low = rf_test$low, rf_medium = rf_test$medium)
+  write.csv(rf_test, file="lvl-1_rf_test.csv", row.names = FALSE)
+  # rf_test = read.csv(file="lvl-1_rf_test.csv")
+  
+  ## GBM
+  gbm_model = h2o.gbm(x = x
+                     ,y = y
+                     ,training_frame = h2o_train
+                     #,nfolds = 5L
+                     #,keep_cross_validation_predictions = TRUE
+                     ,ntrees = 600
+                     ,max_depth = length(x)
+                     ,min_rows = 200
+                     ,stopping_rounds = 10
+                     ,learn_rate = 0.025
+                     ,sample_rate = 0.5
+                     ,col_sample_rate = 0.5
+                     )
+  
+  h2o.varimp_plot(gbm_model)
+  
+  # gbm_train = as.data.table(h2o.cross_validation_holdout_predictions(gbm_model))
+  gbm_train = as.data.table(h2o.predict(gbm_model, h2o_train))
+  gbm_train = data.table(listing_id = data$listing_id, 
+                          gbm_high = gbm_train$high, gbm_low=gbm_train$low, gbm_medium = gbm_train$medium)
+  write.csv(gbm_train, file="lvl-1_gbm_train.csv", row.names = FALSE)
+  # gbm_train = read.csv(file="lvl-1_gbm_train.csv")
+  
+  gbm_test = as.data.table(h2o.predict(gbm_model, h2o_test))
+  gbm_test = data.table(listing_id = id,
+                         gbm_high = gbm_test$high, gbm_low = gbm_test$low, gbm_medium = gbm_test$medium)
+  write.csv(gbm_test, file="lvl-1_gbm_test.csv", row.names = FALSE)
+  # gbm_test = read.csv(file="lvl-1_gbm_test.csv")
+  
+  
+  ## Level - 2
+  lvl2_train = data.table(listing_id = data$listing_id, interest_level = data$interest_level)
+  lvl2_test = data.table(listing_id = id)
+  
+  lvl2_train = glm_train[lvl2_train, on='listing_id']
+  lvl2_test = glm_test[lvl2_test, on='listing_id']
+  
+  lvl2_train <- dl_train[lvl2_train,on='listing_id']
+  lvl2_test <- dl_test[lvl2_test,on='listing_id']
+  
+  lvl2_train <- rf_train[lvl2_train, on='listing_id']
+  lvl2_test <- rf_test[lvl2_test, on='listing_id']
+  
+  lvl2_train <- gbm_train[lvl2_train, on='listing_id']
+  lvl2_test <- gbm_test[lvl2_test, on='listing_id']
+  
+  #lvl2_train[,c('high','low','price') := list(data$high, data$low, data$price)]
+  #lvl2_test[,c('high','low','price') := .(test_one$high, test_one$low, test_$price)]
+  
+  write.csv(lvl2_train,"lvl-2_train.csv", row.names = FALSE)
+  write.csv(lvl2_test,"lvl-2_test.csv", row.names = FALSE)
+  
+  
+  y = as.integer(factor(data$interest_level))
+  y = y - 1
+  d_train = xgb.DMatrix(data = as.matrix(lvl2_train[,-c('listing_id','interest_level'),with=F]), label=y)
+  d_test = xgb.DMatrix(data = as.matrix(lvl2_test[,-c('listing_id'),with=F])) 
+  
+  
+  kfolds = 10
+  folds = createFolds(y, k = kfolds, list = TRUE, returnTrain = FALSE)
+  fold = as.numeric(unlist(folds[1]))
+  d_val <- xgb.DMatrix(data = as.matrix(lvl2_train[fold,-c('listing_id','interest_level'),with=F]), 
+                        label=y[fold])
+  
+  seed=1234
+  set.seed(seed)
+  xgb_params = list(
+    colsample_bytree= 0.5,
+    subsample = 0.5,
+    eta = 0.025,
+    objective= 'multi:softprob',
+    max_depth= 6,
+    #min_child_weight= min_rows,
+    eval_metric= "mlogloss",
+    num_class = 3,
+    seed = seed
+  )
+  
+  xgb_model = xgb.train(params = xgb_params,
+                        data = d_train,
+                        nrounds = 800,
+                        watchlist = list(val = d_val),
+                        print_every_n = 25,
+                        early_stopping_rounds=50)
+  
+  imp = xgb.importance(names(d_train), model=xgb_model)
+  xgb.ggplot.importance(imp)
+  
+  xgb_pred <- as.data.table(t(matrix(predict(xgb_model, d_test), nrow=3, ncol=nrow(d_test))))
+  names(xgb_pred) = c("high","low","medium")
+  xgb_pred <- data.table(listing_id=lvl2_test$listing_id, xgb_pred[,list(high,medium,low)])
+  
+  write.csv(xgb_pred, file="lvl-2_xgb.csv", row.names = FALSE, quote = FALSE)
+
+  
+  all_class = {}
+  for (seed in c(1947,1991,2009,2013,2016,2017)){
     
-    col_name = paste("medium", as.String(i), sep="")
-    pred_df[,col_name] = gbm_clf_pred$medium
-    
-    col_name = paste("low", as.String(i),  sep="")
-    pred_df[,col_name] = gbm_clf_pred$low
+    print (seed)
+    for (subsample in c(0.2,0.4,0.6,0.8)){
+      print (subsample)
+      param <- list(  objective           = "multi:softprob", 
+                      num_class           = 3,
+                      #max_delta_step=8,
+                      booster             = "gbtree",
+                      eta                 = 0.025,
+                      max_depth           = 6,
+                      alpha=32,
+                      min_child_weight    = 50,
+                      subsample           = subsample,
+                      colsample_bytree    = 1
+      )
+      
+      print(paste("Now training the model with",seed,"and",subsample))
+      set.seed(seed)
+      clf2 <- xgb.train(   params              = param, 
+                           data                = d_train,
+                           nrounds             = 800, 
+                           verbose             = 0,
+                           early_stopping_rounds  = 20,
+                           watchlist           = list(val=d_val),
+                           maximize            = FALSE,
+                           eval_metric         = "mlogloss"
+      )
+      
+      pred_exp2 = t(matrix(predict(clf2, d_test), nrow=3, ncol=nrow(d_test)))
+      colnames(pred_exp2) <- c("high","low","medium")
+      #print(head(all_class))
+      all_class = cbind(all_class,pred_exp2)
+    }
   }
-  predictions = predict(single_model, newdata = pred_df, "probs")
-  pred_df = cbind(pred_df$listing_id, predictions[,c(1,3,2)])
-  colnames(pred_df)[1] = "listing_id"
-  head(pred_df)
+  all_class = as.data.table(all_class)
+  max_col = dim(all_class)[2]
   
-  rm(real_test2)
-  rm(real_test_h2o)
+  j_high = all_class[,seq(1,max_col,3),with=F]
+  j_low = all_class[,seq(2,max_col,3),with=F]
+  j_medium = all_class[,seq(3,max_col,3),with=F]
+    
+  j_high[,high_mean := rowMeans(.SD)]
+  j_low[,low_mean := rowMeans(.SD)]
+  j_medium[,medium_mean := rowMeans(.SD)]
   
-  write.csv(pred_df, file="gbm_xv.csv", row.names = FALSE, quote = FALSE)
-  rm(pred_df)  
-  rm(gbm_clf_pred)
-  rm(id)
+  submit <- data.table(listing_id = lvl2_test$listing_id, 
+                       high = j_high$high_mean, medium = j_medium$medium_mean, low = j_low$low_mean)
+  fwrite(submit, "stack_bagging_xgboost.csv")
   
   h2o.shutdown()
 }
-
-### Change Logs ###
-# rmvd 0 imp vars 620   200   0.xxx   0.xxx   0.xxx xxx
-# manager skill   620   200   0.773   0.840   0.655 xxx
-# manager score   620   200   0.770   0.xxx   0.653 xxx
-# outliers+log_pr 620   200   0.758   0.xxx   0.xxx
-# rmvd exp+safe   625   200   0.xxx   0.861   0.601
-# lowest 4 remvd  600   200   0.xxx   0.868   0.600 -(park_central, univ_pace, xpnsv_madison, safe_carnegie_hill, univ_city_college)
-# mean_price_diff 600   200   0.751   0.865   0.599
-# expensive+safe  600   200   0.xxx   0.xxx   0.599 
-# lowest 5 rmvd   600   200   0.749   0.874   0.600 subway_grand_central, univ_yesh, univ_city_college, univ_cuny, subway_herald_square
-# more univ       600   200   0.749   0.863   0.600 vars=47, places=25
-# lowest 5 rmvd   600   200   0.751   0.869   0.600 lowest features: private laundry, 
-#                                                     bathbed, dishwasher, cats, dogs   
