@@ -376,6 +376,16 @@ if(FALSE){
   rm(ids)
 }
 
+getFactors=function(df1_col, df2_col){
+  all_ids = unique(c(df1_col, df2_col))
+  all_factors = factor(all_ids)
+}
+
+
+m_factors = getFactors(data$manager_id, real_test$manager_id)
+data[,'manager_id_int'] = as.numeric(factor(data$manager_id, levels = m_factors))
+real_test[,'manager_id_int'] = as.numeric(factor(real_test$manager_id, levels = m_factors))
+
 data$manager_id = factor(data$manager_id)
 real_test$manager_id = factor(real_test$manager_id)
 
@@ -710,6 +720,11 @@ if(FALSE){
   rm(building_score)
   rm(ids)
 }
+
+b_factors = getFactors(data$building_id, real_test$building_id)
+data[,'building_id_int'] = as.numeric(factor(data$building_id, levels = b_factors))
+real_test[,'building_id_int'] = as.numeric(factor(real_test$building_id, levels = b_factors))
+
 data$building_id = factor(data$building_id)
 real_test$building_id = factor(real_test$building_id)
 
@@ -799,9 +814,13 @@ getNewColumn=function(df){
 }
 
 data$display_addr = getNewColumn(data)
-data$display_addr = factor(data$display_addr)
-
 real_test$display_addr = getNewColumn(real_test)
+
+addr_factors = getFactors(data$display_addr, real_test$display_addr)
+data[,'display_addr_int'] = as.numeric(factor(data$display_addr, levels = addr_factors))
+real_test[,'display_addr_int'] = as.numeric(factor(real_test$display_addr, levels = addr_factors))
+
+data$display_addr = factor(data$display_addr)
 real_test$display_addr = factor(real_test$display_addr)
 
 as.data.frame(data[sample(1:rows,50),c("display_address","display_addr") ])
@@ -996,13 +1015,13 @@ if(TRUE){
   dl_train <- data.table(listing_id = data$listing_id, 
                          dl_high = dl_train$high, dl_low = dl_train$low, dl_medium = dl_train$medium)
   write.csv(dl_train, file="lvl-1_dl_train.csv", row.names = FALSE)
-  # dl_train = read.csv(file="lvl-1_dl_train.csv")
+  #dl_train = read.csv(file="lvl-1_dl_train.csv")
   
   dl_test <- as.data.table(h2o.predict(dl_model, h2o_test))
   dl_test <- data.table(listing_id = id, 
                         dl_high = dl_test$high, dl_low = dl_test$low, dl_medium = dl_test$medium)
   write.csv(dl_test, file="lvl-1_dl_test.csv", row.names = FALSE)
-  # dl_test = read.csv(file="lvl-1_dl_test.csv")
+  #dl_test = read.csv(file="lvl-1_dl_test.csv")
   
   
   # Random Forest
@@ -1063,39 +1082,89 @@ if(TRUE){
   
   
   ## Level - 2
-  lvl2_train = data.table(listing_id = data$listing_id, interest_level = data$interest_level)
-  lvl2_test = data.table(listing_id = id)
+  if(FALSE){
+    lvl2_train = data.table(listing_id = data$listing_id, interest_level = data$interest_level)
+    lvl2_test = data.table(listing_id = id)
+    
+    lvl2_train = glm_train[lvl2_train, on='listing_id']
+    lvl2_test = glm_test[lvl2_test, on='listing_id']
+    
+    lvl2_train <- dl_train[lvl2_train,on='listing_id']
+    lvl2_test <- dl_test[lvl2_test,on='listing_id']
+    
+    lvl2_train <- rf_train[lvl2_train, on='listing_id']
+    lvl2_test <- rf_test[lvl2_test, on='listing_id']
+    
+    lvl2_train <- gbm_train[lvl2_train, on='listing_id']
+    lvl2_test <- gbm_test[lvl2_test, on='listing_id']
+  }  
   
-  lvl2_train = glm_train[lvl2_train, on='listing_id']
-  lvl2_test = glm_test[lvl2_test, on='listing_id']
+  x2 = c("bathrooms", "bedrooms", "rooms", ### "bathbed",  
+        "log_price", "price_diff_daddr", "price_diff_bedrooms", "price_diff_rooms", 
+        "bed_price", "room_price", #"price", 
+        "nphotos",
+        "latitude", "longitude", 
+        names(places),
+        "f_len",
+        freq_features ,
+        "display_addr_int",
+        "manager_id_int", 
+        "building_id_int"
+  )
+  y = c("interest_level")
+  x2_y = c(x2,y)
   
-  lvl2_train <- dl_train[lvl2_train,on='listing_id']
-  lvl2_test <- dl_test[lvl2_test,on='listing_id']
+  lvl2_train = data[,c(x2_y,"listing_id")]
+  lvl2_test = real_test[,c(x2,"listing_id")]
+
+  for(f in freq_features){
+    print(f)
+    lvl2_train[,f] = as.integer(unlist(data[,f]))
+    lvl2_test[,f] = as.integer(unlist(real_test[,f]))
+  }
+    
+  for(f in c("manager_id","building_id","display_addr")){
+    print(f)
+    lvl2_train[,f] = as.integer(unlist(data[,f]))
+    lvl2_test[,f] = as.integer(unlist(real_test[,f]))
+  }
   
-  lvl2_train <- rf_train[lvl2_train, on='listing_id']
-  lvl2_test <- rf_test[lvl2_test, on='listing_id']
+  ## Taking outputs of lvl-2
+  lvl2_train = cbind(lvl2_train, glm_train[,!(names(glm_train) %in% c("listing_id"))])
+  lvl2_test = cbind(lvl2_test, glm_test[,!(names(glm_test) %in% c("listing_id"))])
   
-  lvl2_train <- gbm_train[lvl2_train, on='listing_id']
-  lvl2_test <- gbm_test[lvl2_test, on='listing_id']
+  lvl2_train = cbind(lvl2_train, dl_train[,!(names(glm_train) %in% c("listing_id"))])
+  lvl2_test = cbind(lvl2_test, dl_test[,!(names(glm_test) %in% c("listing_id"))])
   
-  #lvl2_train[,c('high','low','price') := list(data$high, data$low, data$price)]
-  #lvl2_test[,c('high','low','price') := .(test_one$high, test_one$low, test_$price)]
+  lvl2_train = cbind(lvl2_train, rf_train[,!(names(glm_train) %in% c("listing_id"))])
+  lvl2_test = cbind(lvl2_test, rf_test[,!(names(glm_test) %in% c("listing_id"))])
   
-  write.csv(lvl2_train,"lvl-2_train.csv", row.names = FALSE)
-  write.csv(lvl2_test,"lvl-2_test.csv", row.names = FALSE)
+  lvl2_train = cbind(lvl2_train, gbm_train[,!(names(glm_train) %in% c("listing_id"))])
+  lvl2_test = cbind(lvl2_test, gbm_test[,!(names(glm_test) %in% c("listing_id"))])
+  
+  #write.csv(lvl2_train,"lvl-2_train.csv", row.names = FALSE)
+  #write.csv(lvl2_test,"lvl-2_test.csv", row.names = FALSE)
   
   
   y = as.integer(factor(data$interest_level))
   y = y - 1
-  d_train = xgb.DMatrix(data = as.matrix(lvl2_train[,-c('listing_id','interest_level'),with=F]), label=y)
-  d_test = xgb.DMatrix(data = as.matrix(lvl2_test[,-c('listing_id'),with=F])) 
+  
+  d_train = xgb.DMatrix(data=as.matrix(
+    lvl2_train[,!(names(lvl2_train) %in% c('listing_id','interest_level'))]), label=y)
+  
+  d_test = xgb.DMatrix(data = as.matrix(
+    lvl2_test[,!(names(lvl2_test) %in% c('listing_id','interest_level'))])) 
   
   
+  ## Level - 2 xgboost without CV and Looping
   kfolds = 10
   folds = createFolds(y, k = kfolds, list = TRUE, returnTrain = FALSE)
   fold = as.numeric(unlist(folds[1]))
-  d_val <- xgb.DMatrix(data = as.matrix(lvl2_train[fold,-c('listing_id','interest_level'),with=F]), 
-                        label=y[fold])
+  
+  train_one <- xgb.DMatrix(data = as.matrix(
+    lvl2_train[,!(names(lvl2_train) %in% c('listing_id','interest_level'))]), label=y[])
+  val_one <- xgb.DMatrix(data = as.matrix(
+    lvl2_train[fold,!(names(lvl2_train) %in% c('listing_id','interest_level'))]), label=y[fold])
   
   seed=1234
   set.seed(seed)
@@ -1104,19 +1173,27 @@ if(TRUE){
     subsample = 0.5,
     eta = 0.025,
     objective= 'multi:softprob',
-    max_depth= 6,
-    #min_child_weight= min_rows,
+    max_depth= as.integer(length(x2)/2),
+    min_child_weight= 100,
     eval_metric= "mlogloss",
     num_class = 3,
     seed = seed
   )
   
   xgb_model = xgb.train(params = xgb_params,
-                        data = d_train,
+                        data = train_one,
                         nrounds = 800,
-                        watchlist = list(val = d_val),
+                        watchlist = list(val = val_one),
                         print_every_n = 25,
                         early_stopping_rounds=50)
+  # val-mlogloss = 0.264 with lvl-1    min_rows=200
+  # val-mlogloss = 0.286 with lvl-1    min_rows=10
+  # val-mlogloss = 0.266 with lvl-1    min_rows=100
+  
+  # val-mlogloss = 0.569 withOUT lvl-1 min_rows=200
+  # val-mlogloss = 0.562 withOUT lvl-1 min_rows=10
+  # val-mlogloss = 0.556 withOUT lvl-1 min_rows=50
+  # val-mlogloss = 0.557 withOUT lvl-1 min_rows=100 :)
   
   imp = xgb.importance(names(d_train), model=xgb_model)
   xgb.ggplot.importance(imp)
@@ -1128,22 +1205,24 @@ if(TRUE){
   write.csv(xgb_pred, file="lvl-2_xgb.csv", row.names = FALSE, quote = FALSE)
 
   
+  
+  ## Level - 2 xgboost with CV and Looping
   all_class = {}
-  for (seed in c(1947,1991,2009,2013,2016,2017)){
+  for (seed in c(1:6)){
     
-    print (seed)
-    for (subsample in c(0.2,0.4,0.6,0.8)){
-      print (subsample)
+    #print (seed)
+    for (subsample in c(0.30,0.40,0.50,0.60,0.70)){
+      #print (subsample)
       param <- list(  objective           = "multi:softprob", 
                       num_class           = 3,
                       #max_delta_step=8,
                       booster             = "gbtree",
                       eta                 = 0.025,
-                      max_depth           = 6,
-                      alpha=32,
-                      min_child_weight    = 50,
+                      max_depth           = as.integer(length(x2)/seed),
+                      #alpha=32,
+                      min_child_weight    = 100,
                       subsample           = subsample,
-                      colsample_bytree    = 1
+                      colsample_bytree    = 0.5
       )
       
       print(paste("Now training the model with",seed,"and",subsample))
@@ -1157,6 +1236,7 @@ if(TRUE){
                            maximize            = FALSE,
                            eval_metric         = "mlogloss"
       )
+      print(clf2$best_score)
       
       pred_exp2 = t(matrix(predict(clf2, d_test), nrow=3, ncol=nrow(d_test)))
       colnames(pred_exp2) <- c("high","low","medium")
