@@ -1207,26 +1207,36 @@ if(TRUE){
   
   
   ## Level - 2 xgboost with CV and Looping
+  kfolds = 10
+  folds = createFolds(y, k = kfolds, list = TRUE, returnTrain = FALSE)
+  
+  
   all_class = {}
-  for (seed in c(1:6)){
+  for (param_1 in c(1:5)){
     
-    #print (seed)
-    for (subsample in c(0.30,0.40,0.50,0.60,0.70)){
-      #print (subsample)
+    #fold = as.numeric(unlist(folds[param_1]))
+    #train_one <- xgb.DMatrix(data = as.matrix(
+    #  lvl2_train[-fold,!(names(lvl2_train) %in% c('listing_id','interest_level'))]), label=y[-fold])
+    #val_one <- xgb.DMatrix(data = as.matrix(
+    #  lvl2_train[fold,!(names(lvl2_train) %in% c('listing_id','interest_level'))]), label=y[fold])
+    
+    #print (param_1)
+    for (param_2 in 1:4){
+      #print (param_2)
       param <- list(  objective           = "multi:softprob", 
                       num_class           = 3,
                       #max_delta_step=8,
                       booster             = "gbtree",
                       eta                 = 0.025,
-                      max_depth           = as.integer(length(x2)/seed),
+                      max_depth           = as.integer(length(x2)/param_2),
                       #alpha=32,
                       min_child_weight    = 100,
-                      subsample           = subsample,
-                      colsample_bytree    = 0.5
+                      subsample           = 0.8,
+                      colsample_bytree    = 0.50
       )
       
-      print(paste("Now training the model with",seed,"and",subsample))
-      set.seed(seed)
+      print(paste("Now training the model with",param_1,"and",param_2))
+      set.seed(param_1)
       clf2 <- xgb.train(   params              = param, 
                            data                = d_train,
                            nrounds             = 800, 
