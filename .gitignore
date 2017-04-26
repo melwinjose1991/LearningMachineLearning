@@ -7,3 +7,4 @@
 *.Rhistory
 *.tfrecord
 *.RData
+*.json
