@@ -1,15 +1,26 @@
-library(jsonlite)
-library(magrittr)
-library(dplyr)
-library(purrr)
-library(h2o)
-library(data.table)
-library(stringr)
-library(tm)
-library(ggmap)
-library(nnet)
-library(xgboost)
-library(caret)
+### README ###
+# - Internet connection is required as missing latitude and longitude are 
+#   retrived using ggmap library
+
+
+
+### Installing required packages
+reqd_packages = c("jsonlite", "magrittr", "dplyr", "purrr", "h2o", 
+                      "data.table", "stringr", "tm", "ggmap", "nnet",
+                      "xgboost", "caret")
+
+to_install = reqd_packages[!(reqd_packages %in% installed.packages()[,"Package"])]
+
+if(length(to_install)){
+  print("Some/All required packages are to be installed")
+  install.packages(to_install)
+}else{
+  print("All required packages are present in the system")
+}
+
+
+lapply(reqd_packages, require, character.only = TRUE)
+
 
 
 ## Loading train and test data
@@ -948,7 +959,7 @@ if(FALSE){
 
 
 
-if(FALSE){
+if(TRUE){
   
   ### Stacking for classification ###
   
