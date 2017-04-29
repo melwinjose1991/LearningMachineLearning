@@ -13,7 +13,10 @@ library(caret)
 
 
 ## Loading train and test data
+unzip("../data/train.json.zip", exdir="../data")
 data = fromJSON("../data/train.json")
+
+unzip("../data/test.json.zip", exdir="../data")
 real_test = fromJSON("../data/test.json")
 
 
