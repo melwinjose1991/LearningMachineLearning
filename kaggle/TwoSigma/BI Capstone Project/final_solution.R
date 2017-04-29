@@ -11,6 +11,8 @@ library(nnet)
 library(xgboost)
 library(caret)
 
+
+## Loading train and test data
 data = fromJSON("../data/train.json")
 real_test = fromJSON("../data/test.json")
 
@@ -103,10 +105,6 @@ getNFrequentWords=function(df, var_col, var_str, rows_to_use=0.50, int_lvl, N=0.
   print(rows_to_use*N)
   findFreqTerms(dtm, rows_to_use*N)
 }
-# high : 
-# medium : kitchen
-# low : 
-
 
 ## Feature Engineering
 # initial state of data
@@ -312,9 +310,6 @@ for(place in names(places)){
   coords = places[[place]]
   real_test[,place] = getDistance(real_test, coords[1], coords[2])
 }
-
-# created ???
-
 
 # feature length
 data$f_len = lengths(data$features)
