@@ -1,3 +1,7 @@
+Project Members
+	- Melwin Jose : 200150505
+	- Rohit Nambisan : 200153679
+
 - BI Capstone Project/
 	- final_submission.R : code
 	- papers/ : relevant papers
