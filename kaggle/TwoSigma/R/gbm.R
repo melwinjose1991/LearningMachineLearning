@@ -447,10 +447,6 @@ freq_features = c(
   
   #"long string"
 )
-## Adding a new feature has to have a accuracy better
-## than 0.70 with x=freq_features only and better
-## varaible importance than 25
-
 
 freq_features_map = c(
   "hardwood"="hardwood floors",
@@ -514,7 +510,7 @@ freq_features_map = c(
   "high-speed internet" = "high speed internet",
   "high speed internet available" = "high speed internet",
   
-  #"private-balcony" = "private balcony",
+  "private-balcony" = "private balcony",
   "private-balcony" = "balcony",
   "private balcony" = "balcony",
   
@@ -541,7 +537,7 @@ freq_features_map = c(
   "fire place" = "fireplace",
   "working fireplace" = "fireplace",
   
-  #"hi rise"="highrise",
+  "hi rise"="highrise",
   
   "on-site garage" = "garage",
   "common parking/garage" = "garage",
@@ -573,40 +569,40 @@ freq_features_map = c(
   
   "high ceiling" = "high ceilings",
   
-  #"walk in closet(s)" = "walk in closet",
-  #"walk-in closet" = "walk in closet",
+  "walk in closet(s)" = "walk in closet",
+  "walk-in closet" = "walk in closet",
   
-  #"closets galore!" = "closet",
-  #"closet space" = "closet",
-  #"extra closet space" = "closet",
-  #"great closet space" = "closet",
+  "closets galore!" = "closet",
+  "closet space" = "closet",
+  "extra closet space" = "closet",
+  "great closet space" = "closet",
   
-  #"marble bathroom"="marble bath",
+  "marble bathroom"="marble bath",
   
   "stainless steel appliances" = "ss",
   "stainless steel" = "ss",
   "stainless appliances" = "ss",
   "stainless steal appliances" = "ss",
-  "stainless steel kitchen" = "ss"
+  "stainless steel kitchen" = "ss",
   
-  #"wifi access" = "wifi",
+  "wifi access" = "wifi",
   
-  #"granite counter tops" = "granite kitchen",
-  #"granite countertops" = "granite kitchen",
-  #"granite counters" = "granite kitchen",
-  #"granite counter" = "granite kitchen",
+  "granite counter tops" = "granite kitchen",
+  "granite countertops" = "granite kitchen",
+  "granite counters" = "granite kitchen",
+  "granite counter" = "granite kitchen",
   
-  #"close to subway" = "subway",
+  "close to subway" = "subway",
   
-  #"actual apt. photos"="photos",
-  #"actual photos!"="photos",
+  "actual apt. photos"="photos",
+  "actual photos!"="photos",
   
-  #"childrens playroom"="playroom",
-  #"children's playroom"="playroom",
-  #"playroom/nursery"="playroom",
-  #"children's playroom"="playroom",
-  #"children playroom"="playroom",
-  #"kids playroom"="playroom"
+  "childrens playroom"="playroom",
+  "children's playroom"="playroom",
+  "playroom/nursery"="playroom",
+  "children's playroom"="playroom",
+  "children playroom"="playroom",
+  "kids playroom"="playroom"
   
 )
 
@@ -899,7 +895,7 @@ rows = dim(data)[1]
 #data_save = data[,]
 #data = rbind(data, data[data$interest_level=="high",])
 
-if(FALSE){
+if(TRUE){
   # without ensembling GBM
   train_rows = sample(1:rows, 0.80*rows, replace=F)
   train = data[train_rows, x_y]
