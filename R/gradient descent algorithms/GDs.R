@@ -78,12 +78,12 @@ sgd=function(X, y, learn_rate=0.001, niter=100, starting=c(0,0)){
       }
     }
     y_hats = f(X, betas)
-    E = (sum((y_hats - y)^2))/n
+    E = lossFunction(y, betas, X)
     print(paste("Iternation:", iter, "Error:", E))
-    
+    points3d(betas[1], betas[2], E)
   }
 
   betas
 }
 
-sgd(X, y, niter=1000, starting=c(4,1))
+sgd(X, y, learn_rate=0.0005, niter=1000, starting=c(5,1))
