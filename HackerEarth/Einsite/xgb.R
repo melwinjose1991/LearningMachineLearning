@@ -4,6 +4,10 @@ library(lubridate)
 train = read.csv("data/train.csv", header=TRUE, sep=",")
 test = read.csv("data/test.csv", header=TRUE, sep=",")
 
+# Reading the pre-computed features
+train_2 = read.csv("data/train_2.csv", header=TRUE, sep=",")
+test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
+
 
 
 ## Vendor ID
@@ -25,12 +29,12 @@ test$new_user_int = as.numeric(unlist(test[,"new_user"]))
 
 
 ## toll_price
-# Outliers ?
+# Outliers ???
 
 
 
 ## tip_amount
-# Outliers ?
+# Outliers ???
 # NA ? 0?
 train[is.na(train$tip_amount),"tip_amount"] = 0
 
@@ -40,10 +44,11 @@ test[is.na(test$tip_amount),"tip_amount"] = 0
 
 ## mta_tax
 # negative tax ???
-
+# Outliers ???
 
 
 ## time taken
+# Outliers ???
 getTimeDifference=function(t1_factor, t2_factor){
   t1_str = as.character(t1_factor)
   t2_Str = as.character(t2_factor)
@@ -58,11 +63,19 @@ getTimeDifference=function(t1_factor, t2_factor){
   as.numeric(difftime(t2, t1, units="secs"))
 }
 
-train$time_taken = mapply(getTimeDifference, train$pickup_datetime, train$dropoff_datetime)
-train[train$time_taken<0,]$time_taken = 0   # should the values be swapped ?
+if(FALSE){
+  train$time_taken = mapply(getTimeDifference, train$pickup_datetime, train$dropoff_datetime)
+  train[train$time_taken<0,]$time_taken = 0   # should the values be swapped ?
+  train_2 = data.frame(TID=train$TID, time_taken=train$time_taken)
 
-test$time_taken = mapply(getTimeDifference, test$pickup_datetime, test$dropoff_datetime)
-test[test$time_taken<0,]$time_taken = 0     # should the values be swapped ?
+  test$time_taken = mapply(getTimeDifference, test$pickup_datetime, test$dropoff_datetime)
+  test[test$time_taken<0,]$time_taken = 0     # should the values be swapped ?
+  test_2 = data.frame(TID=test$TID, time_taken=test$time_taken)
+  
+}else{
+  train$time_taken = train_2$time_taken
+  test$time_taken = test_2$time_taken
+}
 
 
 
@@ -74,18 +87,60 @@ getPartofTime=function(t_factor, func){
   func(t)
 }
 
-train$pickup_hour = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
-test$pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
+if(FALSE){
+  pickup_hour = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
+  train_2 = cbind(train_2, pickup_hour)
+  
+  pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
+  test_2 = cbind(test_2, pickup_hour)
+}else{
+  train$pickup_hour = train_2$pickup_hour
+  test$pickup_hour = test_2$pickup_hour
+}
 
+
+### rate_code
+# code | mean   | <0.25   | count   | >99.75    | count
+# 1      14.09    3.50      3036      62.10       4047
+# 2      63.24    52.50     67        78.33       79
+# 3      84.78    20        
+  
+
+
+### payment type
+# check pivot_tables with other variables for percentage of tip for fare_amount
+train$payment_type_int = as.numeric(unlist(train[,"payment_type"]))
+
+test$payment_type_int = as.numeric(unlist(test[,"payment_type"]))
+
+
+
+### surcharge
+# outliers ??? 
+# negative values ???
+train[is.na(train$surcharge),"surcharge"] = 0
+
+test[is.na(test$surcharge),"surcharge"] = 0
+
+
+
+## Saving Results of expensive operations
+#     time_taken, pickup_hour
+if(FALSE){
+  write.csv(train_2, "data/train_2.csv", row.names=FALSE, quote=FALSE)
+  write.csv(test_2, "data/test_2.csv", row.names=FALSE, quote=FALSE)
+}
 
 
 ## Factors
-x = c("vendor_id_int", "new_user_int", "tolls_amount", "tip_amount", "mta_tax", "time_taken", "pickup_hour")
+x = c("vendor_id_int", "new_user_int", "tolls_amount", "tip_amount", 
+      "mta_tax", "time_taken", "pickup_hour", "payment_type_int", 
+      "surcharge"
+      )
+
 y = c("fare_amount")
-x_y = c(x,y)
 
 train_DM <- xgb.DMatrix(data = as.matrix(train[,x]), label=train[,y])
-test_DM <- xgb.DMatrix(data = as.matrix(test[,x]))
 
 
 
@@ -152,7 +207,8 @@ model = xgb.train(   params              = param,
                      eval_metric         = "mae",
                      print_every_n = 25
 )
-# valid_DM mae = 1.71 
+# valid_DM mae = 1.71   -   98.22
+# valid_DM mae = 1.57   -   98.36
 
 
 ## Test Prediction
