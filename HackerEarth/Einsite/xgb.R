@@ -99,6 +99,40 @@ if(FALSE){
 }
 
 
+
+### Distance
+calculateDistance=function(x1,y1,x2,y2){
+    sqrt((x1-x2)^2 + (y1-y2)^2)
+}
+
+mean_pickup_lat = mean( c(train[!is.na(train$pickup_latitude),"pickup_latitude"],  
+                        test[!is.na(test$pickup_latitude),"pickup_latitude"]) )
+train[is.na(train$pickup_latitude),"pickup_latitude"] = mean_pickup_lat
+test[is.na(test$pickup_latitude),"pickup_latitude"] = mean_pickup_lat
+
+mean_pickup_lon = mean( c(train[!is.na(train$pickup_longitude),"pickup_longitude"],  
+                          test[!is.na(test$pickup_longitude),"pickup_longitude"]) )
+train[is.na(train$pickup_longitude),"pickup_longitude"] = mean_pickup_lon
+test[is.na(test$pickup_longitude),"pickup_longitude"] = mean_pickup_lon
+
+mean_dropoff_lat = mean( c(train[!is.na(train$dropoff_latitude),"dropoff_latitude"],  
+                          test[!is.na(test$dropoff_latitude),"dropoff_latitude"]) )
+train[is.na(train$dropoff_latitude),"dropoff_latitude"] = mean_dropoff_lat
+test[is.na(test$dropoff_latitude),"dropoff_latitude"] = mean_dropoff_lat
+
+mean_dropoff_lon = mean( c(train[!is.na(train$dropoff_longitude),"dropoff_longitude"],  
+                          test[!is.na(test$dropoff_longitude),"dropoff_longitude"]) )
+train[is.na(train$dropoff_longitude),"dropoff_longitude"] = mean_dropoff_lon
+test[is.na(test$dropoff_longitude),"dropoff_longitude"] = mean_dropoff_lon
+
+train$distance = mapply(calculateDistance, train$pickup_latitude, train$pickup_longitude, 
+                        train$dropoff_latitude, train$dropoff_longitude)
+
+test$distance = mapply(calculateDistance, test$pickup_latitude, test$pickup_longitude, 
+                        test$dropoff_latitude, test$dropoff_longitude)
+
+
+
 ### rate_code
 # code | mean   | <0.25   | count   | >99.75    | count
 # 1      14.09    3.50      3036      62.10       4047
@@ -134,8 +168,8 @@ if(FALSE){
 
 ## Factors
 x = c("vendor_id_int", "new_user_int", "tolls_amount", "tip_amount", 
-      "mta_tax", "time_taken", "pickup_hour", "payment_type_int", 
-      "surcharge"
+      "mta_tax", "time_taken", "passenger_count", "pickup_hour", 
+      "payment_type_int", "surcharge", "distance"
       )
 
 y = c("fare_amount")
@@ -207,8 +241,9 @@ model = xgb.train(   params              = param,
                      eval_metric         = "mae",
                      print_every_n = 25
 )
-# valid_DM mae = 1.71   -   98.22
-# valid_DM mae = 1.57   -   98.36
+# valid_DM mae = 1.54   -   98.37
+# valid_DM mae = 0.92   -   98.37
+
 
 
 ## Test Prediction
