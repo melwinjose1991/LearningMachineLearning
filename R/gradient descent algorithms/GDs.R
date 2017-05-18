@@ -67,10 +67,10 @@ sgd=function(X, y, learn_rate=0.001, niter=100, starting=c(0,0)){
         y_hat = f(matrix(X[i,], nrow=1, ncol=2), betas)
         #print(y_hat)
         
-        step = ( X[[i,j]] * (y_hat - y[i]) * cos(betas[1]*X[[i,1]]+betas[2]*X[[i,2]]) )
+        delta_J = ( X[[i,j]] * (y_hat - y[i]) * cos(betas[1]*X[[i,1]]+betas[2]*X[[i,2]]) )
         #print(step)
         
-        step = learn_rate * step
+        step = learn_rate * delta_J
         #print(step)
         
         betas[j] = betas[j] - step
@@ -80,10 +80,58 @@ sgd=function(X, y, learn_rate=0.001, niter=100, starting=c(0,0)){
     y_hats = f(X, betas)
     E = lossFunction(y, betas, X)
     print(paste("Iternation:", iter, "Error:", E))
-    points3d(betas[1], betas[2], E)
+    points3d(betas[1], betas[2], E, col="red")
   }
 
   betas
 }
 
-sgd(X, y, learn_rate=0.0005, niter=1000, starting=c(5,1))
+#plot3d(beta_1, beta_2, z,col=tim.colors(nColors)[colindex])
+sgd(X, y, learn_rate=0.0005, niter=1000, starting=c(3,3.25))
+
+
+
+### Stochastic Gradient Descent with momentum
+sgdm=function(X, y, learn_rate=0.001, niter=100, starting=c(0,0)){
+  m = 2
+  n = dim(X)[1]
+  betas = starting
+  print(betas)
+  
+  gamma = 0.9
+  v = 0
+  
+  for(iter in 1:niter){
+    for(i in 1:n){
+      for(j in 1:m){
+        y_hat = f(matrix(X[i,], nrow=1, ncol=2), betas)
+        #print(y_hat)
+        
+        delta_J = ( X[[i,j]] * (y_hat - y[i]) * cos(betas[1]*X[[i,1]]+betas[2]*X[[i,2]]) )
+        #print(step)
+        
+        step = learn_rate * delta_J
+        #print(step)
+        
+        v = (gamma*v) + step 
+        #print(v)
+        
+        betas[j] = betas[j] - v
+        #print(betas)
+      }
+    }
+    y_hats = f(X, betas)
+    E = lossFunction(y, betas, X)
+    print(paste("Iternation:", iter, "Error:", E))
+    points3d(betas[1], betas[2], E, col="black")
+  }
+  
+  betas
+}
+
+plot3d(beta_1, beta_2, z,col=tim.colors(nColors)[colindex])
+sgdm(X, y, learn_rate=0.0005, niter=1000, starting=c(3,3.25))
+# starting at 3,3.25 SGD with momentum moves faster downhill
+
+
+
