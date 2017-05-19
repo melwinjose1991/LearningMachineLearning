@@ -1,5 +1,7 @@
 library(lubridate)
 
+
+
 train = read.csv("data/train.csv", header=TRUE, sep=",")
 test = read.csv("data/test.csv", header=TRUE, sep=",")
 
@@ -88,6 +90,7 @@ if(FALSE){
   mean(abs(predict(lm_tip,newdata=valid_df)-valid_df$fare_amount))
   # 5.790
 }
+
 
 
 ## mta_tax
@@ -201,6 +204,8 @@ if(FALSE){
   # 3.306 after outliers were removed
 }
 
+
+
 ### rate_code
 
 
@@ -240,6 +245,7 @@ if(FALSE){
   write.csv(train_2, "data/train_2.csv", row.names=FALSE, quote=FALSE)
   write.csv(test_2, "data/test_2.csv", row.names=FALSE, quote=FALSE)
 }
+
 
 
 ## Factors
