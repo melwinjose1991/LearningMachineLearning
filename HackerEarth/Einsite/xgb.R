@@ -5,9 +5,11 @@ train = read.csv("data/train.csv", header=TRUE, sep=",")
 test = read.csv("data/test.csv", header=TRUE, sep=",")
 
 # Reading the pre-computed features
-train_2 = read.csv("data/train_2.csv", header=TRUE, sep=",")
-test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
-
+LOAD_SAVED=TRUE
+if(LOAD_SAVED){
+  train_2 = read.csv("data/train_2.csv", header=TRUE, sep=",")
+  test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
+}
 
 
 ## Vendor ID
@@ -30,6 +32,10 @@ test$new_user_int = as.numeric(unlist(test[,"new_user"]))
 
 ## toll_price
 # Outliers ???
+# quantile(c(train$tolls_amount, test$tolls_amount), probs=seq(0,1,by=0.00125))
+train[train$tolls_amount<0,"tolls_amount"] = 0
+
+test[test$tolls_amount<0,"tolls_amount"] = 0
 
 
 
@@ -63,7 +69,7 @@ getTimeDifference=function(t1_factor, t2_factor){
   as.numeric(difftime(t2, t1, units="secs"))
 }
 
-if(FALSE){
+if(!LOAD_SAVED){
   train$time_taken = mapply(getTimeDifference, train$pickup_datetime, train$dropoff_datetime)
   train[train$time_taken<0,]$time_taken = 0   # should the values be swapped ?
   train_2 = data.frame(TID=train$TID, time_taken=train$time_taken)
@@ -80,6 +86,13 @@ if(FALSE){
 
 
 # Hour of day
+getPOSIXTime=function(t_factor){
+  t_factor = train[20,]$pickup_datetime
+  t_str = as.character(t_factor)
+  t = strptime(t_str,"%Y-%m-%d %H:%M:%S", tz="EST")
+  t
+}
+
 getPartofTime=function(t_factor, func){
   #t_factor = train[20,]$pickup_datetime
   t_str = as.character(t_factor)
@@ -87,16 +100,41 @@ getPartofTime=function(t_factor, func){
   func(t)
 }
 
-if(FALSE){
+if(!LOAD_SAVED){
+  
   pickup_hour = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   train_2 = cbind(train_2, pickup_hour)
   
+  ## day of year ???
+  
+  pickup_week = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, week)))
+  train_2 = cbind(train_2, pickup_week)
+  
+  pickup_month = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, month)))
+  train_2 = cbind(train_2, pickup_month)
+  
+  
   pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   test_2 = cbind(test_2, pickup_hour)
+  
+  pickup_week = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, week)))
+  test_2 = cbind(test_2, pickup_week)
+  
+  pickup_month = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
+  test_2 = cbind(test_2, pickup_month)
+
 }else{
+  
   train$pickup_hour = train_2$pickup_hour
+  train$pickup_week = train_2$pickup_week
+  train$pickup_month = train_2$pickup_month
+  
   test$pickup_hour = test_2$pickup_hour
+  test$pickup_week = test_2$pickup_week
+  test$pickup_month = test_2$pickup_month
+
 }
+
 
 
 
@@ -158,18 +196,66 @@ test[is.na(test$surcharge),"surcharge"] = 0
 
 
 
+## Extra Amount
+train$extra_amt = train$tolls_amount + train$tip_amount + train$mta_tax + train$surcharge
+
+test$extra_amt = test$tolls_amount + test$tip_amount + test$mta_tax + test$surcharge
+
+
+
+## Difference from mean of passenger_count
+calculateDifferenceFromMean=function(df1, df2, column){
+  #column = "tolls_amount"
+  all_ = rbind(df1[,c("passenger_count",column)], df2[,c("passenger_count",column)])
+  form = as.formula(paste0(column,"~passenger_count"))
+  mean_value = as.data.frame(aggregate(form, all_, mean))
+  
+  mapply(function(passenger_count, value) value - mean_value[mean_value$passenger_count==passenger_count, column] , 
+         df1$passenger_count, df1[,column])
+}
+
+train$tolls_amnt_diff_pcount = calculateDifferenceFromMean(train, test, "tolls_amount")
+test$tolls_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "tolls_amount")
+
+train$tip_amnt_diff_pcount = calculateDifferenceFromMean(train, test, "tip_amount")
+test$tip_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "tip_amount")
+
+train$surcharge_diff_pcount = calculateDifferenceFromMean(train, test, "surcharge")
+test$surcharge_diff_pcount = calculateDifferenceFromMean(test, train, "surcharge")
+
+train$time_taken_diff_pcount = calculateDifferenceFromMean(train, test, "time_taken")
+test$time_taken_diff_pcount = calculateDifferenceFromMean(test, train, "time_taken")
+
+
+
 ## Saving Results of expensive operations
 #     time_taken, pickup_hour
-if(FALSE){
+if(!LOAD_SAVED){
   write.csv(train_2, "data/train_2.csv", row.names=FALSE, quote=FALSE)
   write.csv(test_2, "data/test_2.csv", row.names=FALSE, quote=FALSE)
 }
 
 
 ## Factors
-x = c("vendor_id_int", "new_user_int", "tolls_amount", "tip_amount", 
-      "mta_tax", "time_taken", "passenger_count", "pickup_hour", 
-      "payment_type_int", "surcharge", "distance"
+x = c("vendor_id_int", 
+      #"new_user_int", 
+      "tolls_amount", 
+      "tip_amount", 
+      "mta_tax", 
+      "time_taken", 
+      #"passenger_count", 
+      "pickup_hour", 
+      "pickup_week", 
+      #"pickup_month", 
+      "payment_type_int", 
+      #"surcharge", 
+      "distance", 
+      "extra_amt",
+      
+      "tolls_amnt_diff_pcount", 
+      "tip_amnt_diff_pcount",
+      #"surcharge_diff_pcount", 
+      "time_taken_diff_pcount"
       )
 
 y = c("fare_amount")
@@ -179,36 +265,42 @@ train_DM <- xgb.DMatrix(data = as.matrix(train[,x]), label=train[,y])
 
 
 ## Parameter Tunning
-for(param_1 in c(25,50,100,200)){
-  for(param_2 in c(1,2,3)){
-    
-    print(paste0("param1:", param_1, " and ", "param2:", param_2))
-    
-    param = list(  objective           = "reg:linear", 
-                   booster             = "gbtree",
-                   eta                 = 0.05, #0.025,
-                   max_depth           = as.integer(length(x)/param_2),
-                   min_child_weight    = param_1,
-                   subsample           = 0.8
-                   #colsample_bytree    = 0.50
-    )
-    
-    nrounds = 200
-    model = xgb.cv(      params              = param, 
-                         data                = train_DM,
-                         nrounds             = nrounds, 
-                         nfold               = 5,
-                         early_stopping_rounds  = 20,
-                         #watchlist           = list(val=train_DM),
-                         maximize            = FALSE,
-                         eval_metric         = "mae",
-                         verbose = FALSE
-                         #print_every_n = 25
-    )
-    print(model$evaluation_log[model$best_iteration]$test_mae_mean)
+for(param_1 in c(25,50,100,200)){       # min_child_weight
+  for(param_2 in c(1,2,3)){             # max_depth divider
+    for(param_3 in c(0.7,0.8,0.9)){     # subsample
+      for(param_4 in c(0.4,0.5,0.6)){   # colsample_bytree
+        
+        print(paste0("param1:", param_1, " and ", "param2:", param_2, 
+                     " and ", "param3:", param_3," and ", "param4:", param_4))
+        
+        param = list(  objective           = "reg:linear", 
+                       booster             = "gbtree",
+                       eta                 = 0.05, #0.025,
+                       max_depth           = as.integer(length(x)/param_2),
+                       min_child_weight    = param_1,
+                       subsample           = param_3,
+                       colsample_bytree    = param_4
+        )
+        
+        nrounds = 200
+        model = xgb.cv(      params              = param, 
+                             data                = train_DM,
+                             nrounds             = nrounds, 
+                             nfold               = 5,
+                             early_stopping_rounds  = 20,
+                             #watchlist           = list(val=train_DM),
+                             maximize            = FALSE,
+                             eval_metric         = "mae",
+                             verbose = FALSE
+                             #print_every_n = 25
+        )
+        print(model$evaluation_log[model$best_iteration]$test_mae_mean)
+      
+      }
+    }
   }
 }
-# nrounds = 200, eta = 0.05, subsample = 0.80
+# nrounds = 200, eta = 0.05
 #   depth = length(x), min_child_weight = 50 => 1.71 
 #   
 
@@ -242,7 +334,10 @@ model = xgb.train(   params              = param,
                      print_every_n = 25
 )
 # valid_DM mae = 1.54   -   98.37
-# valid_DM mae = 0.92   -   98.37
+# valid_DM mae = 0.92   -   99.03
+# valid_DM mae = 0.90   -   99.05
+# valid_DM mae = 0.88   -   99.06   (7.72, 4.17, 2.32, 1.44, 1.08)
+imp = xgb.importance(feature_names = x, model = model)
 
 
 
