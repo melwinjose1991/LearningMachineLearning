@@ -172,11 +172,14 @@ test$distance = mapply(calculateDistance, test$pickup_latitude, test$pickup_long
 
 
 ### rate_code
-# code | mean   | <0.25   | count   | >99.75    | count
-# 1      14.09    3.50      3036      62.10       4047
-# 2      63.24    52.50     67        78.33       79
-# 3      84.78    20        
+# ???
   
+
+### store_and_fwd 
+train$store_and_fwd_flag_int = as.numeric(unlist(train[,"store_and_fwd_flag"]))
+
+test$store_and_fwd_flag_int = as.numeric(unlist(test[,"store_and_fwd_flag"]))
+
 
 
 ### payment type
@@ -220,8 +223,8 @@ test$tolls_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "tolls_am
 train$tip_amnt_diff_pcount = calculateDifferenceFromMean(train, test, "tip_amount")
 test$tip_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "tip_amount")
 
-train$surcharge_diff_pcount = calculateDifferenceFromMean(train, test, "surcharge")
-test$surcharge_diff_pcount = calculateDifferenceFromMean(test, train, "surcharge")
+#train$surcharge_diff_pcount = calculateDifferenceFromMean(train, test, "surcharge")
+#test$surcharge_diff_pcount = calculateDifferenceFromMean(test, train, "surcharge")
 
 train$time_taken_diff_pcount = calculateDifferenceFromMean(train, test, "time_taken")
 test$time_taken_diff_pcount = calculateDifferenceFromMean(test, train, "time_taken")
@@ -247,6 +250,8 @@ x = c("vendor_id_int",
       "pickup_hour", 
       "pickup_week", 
       #"pickup_month", 
+      "rate_code",
+      "store_and_fwd_flag_int",
       "payment_type_int", 
       #"surcharge", 
       "distance", 
@@ -336,7 +341,8 @@ model = xgb.train(   params              = param,
 # valid_DM mae = 1.54   -   98.37
 # valid_DM mae = 0.92   -   99.03
 # valid_DM mae = 0.90   -   99.05
-# valid_DM mae = 0.88   -   99.06   (7.72, 4.17, 2.32, 1.44, 1.08)
+# valid_DM mae = 0.88   -   99.06
+# valid_DM mae = 0.80   -   99.13   (7.70, 4.14, 2.28, 1.38, 1.01)
 imp = xgb.importance(feature_names = x, model = model)
 
 
