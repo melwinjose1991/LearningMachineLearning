@@ -118,6 +118,7 @@ if(!LOAD_SAVED){
   pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   test_2 = cbind(test_2, pickup_hour)
   
+  pickup_yday = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, yday)))
   test_2 = cbind(test_2, pickup_yday)
   
   pickup_week = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, week)))
