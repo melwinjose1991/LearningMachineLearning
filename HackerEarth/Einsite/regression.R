@@ -207,7 +207,8 @@ if(FALSE){
 
 
 ### rate_code
-
+train$rate_code_c = as.factor(train$rate_code)
+test$rate_code_c = as.factor(test$rate_code)
 
 
 ### payment type - DONE
@@ -251,7 +252,7 @@ train_rows = sample(1:rows, 0.75*rows, replace=F)
 train_df = train[train_rows, ]
 valid_df = train[-train_rows, ]
 lm_all = lm(fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+
-                        tolls_amount*distance*tip_amount, 
+                        tolls_amount*distance*tip_amount + rate_code_c, 
             data=train_df)
 summary(lm_all)
 
@@ -262,11 +263,11 @@ mean(abs(predict(lm_all,newdata=valid_df)-valid_df$fare_amount))
 # 2.66 = 97.071 fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type
 # 2.66 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type+time_taken
 # 2.51 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount)
-
+# 2.48 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount) + rate_code_c
 ## Prediction
 test_pred = predict(lm_all,newdata=test)
 pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
 
 file_name = "regression.csv"
 write.csv(pred, file_name, row.names=FALSE, quote=FALSE)
-# 97.07 
+# 97.25
