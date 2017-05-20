@@ -140,34 +140,41 @@ if(!LOAD_SAVED){
 
 ### Distance
 calculateDistance=function(x1,y1,x2,y2){
+  if(is.na(x1) | x1==0 | is.na(y1) | y1==0 | is.na(x2) | x2==0 | is.na(y2) | y2==0 ){
+    0
+  }else{ 
     sqrt((x1-x2)^2 + (y1-y2)^2)
+  }
 }
-
-mean_pickup_lat = mean( c(train[!is.na(train$pickup_latitude),"pickup_latitude"],  
-                        test[!is.na(test$pickup_latitude),"pickup_latitude"]) )
-train[is.na(train$pickup_latitude),"pickup_latitude"] = mean_pickup_lat
-test[is.na(test$pickup_latitude),"pickup_latitude"] = mean_pickup_lat
-
-mean_pickup_lon = mean( c(train[!is.na(train$pickup_longitude),"pickup_longitude"],  
-                          test[!is.na(test$pickup_longitude),"pickup_longitude"]) )
-train[is.na(train$pickup_longitude),"pickup_longitude"] = mean_pickup_lon
-test[is.na(test$pickup_longitude),"pickup_longitude"] = mean_pickup_lon
-
-mean_dropoff_lat = mean( c(train[!is.na(train$dropoff_latitude),"dropoff_latitude"],  
-                          test[!is.na(test$dropoff_latitude),"dropoff_latitude"]) )
-train[is.na(train$dropoff_latitude),"dropoff_latitude"] = mean_dropoff_lat
-test[is.na(test$dropoff_latitude),"dropoff_latitude"] = mean_dropoff_lat
-
-mean_dropoff_lon = mean( c(train[!is.na(train$dropoff_longitude),"dropoff_longitude"],  
-                          test[!is.na(test$dropoff_longitude),"dropoff_longitude"]) )
-train[is.na(train$dropoff_longitude),"dropoff_longitude"] = mean_dropoff_lon
-test[is.na(test$dropoff_longitude),"dropoff_longitude"] = mean_dropoff_lon
 
 train$distance = mapply(calculateDistance, train$pickup_latitude, train$pickup_longitude, 
                         train$dropoff_latitude, train$dropoff_longitude)
 
 test$distance = mapply(calculateDistance, test$pickup_latitude, test$pickup_longitude, 
-                        test$dropoff_latitude, test$dropoff_longitude)
+                       test$dropoff_latitude, test$dropoff_longitude)
+
+mean_distance = mean(c(train[train$distance>0,"distance"], test[test$distance>0,"distance"]))
+
+train[train$distance<=0,"distance"] = mean_distance
+test[test$distance<=0,"distance"] = mean_distance
+
+
+
+### Velocity
+getVelocity = function(dist, time){
+  if(time==0){
+    0
+  }else{
+    dist/time
+  }
+}
+train$velocity = mapply(getVelocity, train$distance, train$time_taken)
+test$velocity = mapply(getVelocity, test$distance, test$time_taken)
+
+mean_velocity = mean(c(train[train$velocity>0,"velocity"], test[test$velocity>0,"velocity"]))
+
+train[train$velocity<=0,"velocity"] = mean_velocity
+test[test$velocity<=0,"velocity"] = mean_velocity
 
 
 
@@ -368,12 +375,3 @@ pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
 file_name = paste0("xgb_", "x", toString(length(x)), "_r",nrounds, ".csv")
 write.csv(pred, file_name, row.names = FALSE)
 
-getVelocity = function(dist, time){
-  if(time==0){
-    0
-  }else{
-    dist/time
-  }
-}
-train$velocity = mapply(getVelocity, train$distance, train$time_taken)
-test$velocity = mapply(getVelocity, test$distance, test$time_taken)
