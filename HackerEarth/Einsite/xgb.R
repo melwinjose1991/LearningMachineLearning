@@ -87,14 +87,14 @@ if(!LOAD_SAVED){
 
 # Hour of day
 getPOSIXTime=function(t_factor){
-  t_factor = train[20,]$pickup_datetime
+  #t_factor = train[20,]$pickup_datetime
   t_str = as.character(t_factor)
   t = strptime(t_str,"%Y-%m-%d %H:%M:%S", tz="EST")
   t
 }
 
 getPartofTime=function(t_factor, func){
-  #t_factor = train[20,]$pickup_datetime
+  t_factor = train[20,]$pickup_datetime
   t_str = as.character(t_factor)
   t = strptime(t_str,"%Y-%m-%d %H:%M:%S", tz="EST")
   func(t)
@@ -105,7 +105,8 @@ if(!LOAD_SAVED){
   pickup_hour = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   train_2 = cbind(train_2, pickup_hour)
   
-  ## day of year ???
+  pickup_yday = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, yday)))
+  train_2 = cbind(train_2, pickup_yday)
   
   pickup_week = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, week)))
   train_2 = cbind(train_2, pickup_week)
@@ -117,6 +118,8 @@ if(!LOAD_SAVED){
   pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   test_2 = cbind(test_2, pickup_hour)
   
+  test_2 = cbind(test_2, pickup_yday)
+  
   pickup_week = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, week)))
   test_2 = cbind(test_2, pickup_week)
   
@@ -126,10 +129,12 @@ if(!LOAD_SAVED){
 }else{
   
   train$pickup_hour = train_2$pickup_hour
+  train$pickup_yday = train_2$pickup_yday
   train$pickup_week = train_2$pickup_week
   train$pickup_month = train_2$pickup_month
   
   test$pickup_hour = test_2$pickup_hour
+  test$pickup_yday = test_2$pickup_yday
   test$pickup_week = test_2$pickup_week
   test$pickup_month = test_2$pickup_month
 
@@ -260,7 +265,8 @@ x = c("vendor_id_int",
       "mta_tax", 
       "time_taken", 
       #"passenger_count", 
-      "pickup_hour", 
+      "pickup_hour",
+      "pickup_yday",
       "pickup_week", 
       #"pickup_month", 
       "rate_code",
