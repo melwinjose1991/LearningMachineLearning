@@ -211,7 +211,6 @@ calculateDifferenceFromMean=function(df1, df2, column){
   #column = "tolls_amount"
   all_ = rbind(df1[,c("passenger_count",column)], df2[,c("passenger_count",column)])
   form = as.formula(paste0(column,"~passenger_count"))
-  rm(mean)
   mean_value = as.data.frame(aggregate(form, all_, mean))
   rm(all_)
   
@@ -219,6 +218,7 @@ calculateDifferenceFromMean=function(df1, df2, column){
          df1$passenger_count, df1[,column])
 }
 
+rm(mean)
 train$tolls_amnt_diff_pcount = calculateDifferenceFromMean(train, test, "tolls_amount")
 test$tolls_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "tolls_amount")
 
@@ -271,7 +271,11 @@ x = c("vendor_id_int",
 
 y = c("fare_amount")
 
-train_DM <- xgb.DMatrix(data = as.matrix(train[,x]), label=train[,y])
+rows = dim(train)[1]
+train_rows = sample(1:rows, 0.80*rows, replace=F)
+
+train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x]), label=train[train_rows,y])
+valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x]), label=train[-train_rows,y])
 
 
 
@@ -286,7 +290,7 @@ for(param_1 in c(50)){        # min_child_weight
         
         param = list(  objective           = "reg:linear", 
                        booster             = "gbtree",
-                       eta                 = 0.05, #0.025,
+                       eta                 = 0.5, #0.025,
                        max_depth           = as.integer(length(x)/param_2),
                        min_child_weight    = param_1,
                        subsample           = 0.8,
@@ -299,13 +303,13 @@ for(param_1 in c(50)){        # min_child_weight
         model = xgb.cv(      params              = param, 
                              data                = train_DM,
                              nrounds             = nrounds, 
-                             nfold               = 5,
+                             nfold               = 4,
                              early_stopping_rounds  = 20,
-                             #watchlist           = list(val=train_DM),
+                             watchlist           = list(val=valid_DM),
                              maximize            = FALSE,
                              eval_metric         = "mae",
-                             verbose = FALSE
-                             #print_every_n = 25
+                             #verbose = FALSE
+                             print_every_n       = 50
         )
         print(model$evaluation_log[model$best_iteration]$test_mae_mean)
       
@@ -313,9 +317,9 @@ for(param_1 in c(50)){        # min_child_weight
     }
   }
 }
-# nrounds = 200, eta = 0.05
-#   depth = length(x), min_child_weight = 50 => 1.71 
-#   
+# nrounds = 200, eta = 0.5
+#   depth   min_child_weight  alpha   lambda    = 50 => 1.71 
+#   1       50              
 
 
 
@@ -332,7 +336,8 @@ param = list(  objective           = "reg:linear",
                eta                 = 0.025,
                max_depth           = as.integer(length(x)),
                min_child_weight    = 50,
-               subsample           = 0.8
+               subsample           = 0.8,
+               alpha               = 0.005
                #colsample_bytree    = 0.50
 )
 
