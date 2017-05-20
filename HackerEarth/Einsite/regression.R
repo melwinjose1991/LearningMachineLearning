@@ -11,14 +11,14 @@ test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
 
 
 
-## Vendor ID
+## Vendor ID - DONE
 #levels(train$vendor_id)
 #plot(train[train$fare_amount<70,"vendor_id"], train[train$fare_amount<70,"fare_amount"])
 #quantile(train$fare_amount, probs=seq(0,1,by=0.00125))
 
 
 
-## New.User
+## New.User - DONE
 #   Some of them are "" in both train and test
 train[train$new_user=="","new_user"] = "NO"
 train$new_user = as.factor(train$new_user)
@@ -29,7 +29,7 @@ test$new_user = as.factor(test$new_user)
 
 
 
-## toll_price
+## toll_price - DONE
 # Outliers & Linear Relationship
 if(FALSE){
   quantile(train$fare_amount, probs=seq(0,1,by=0.00125))
@@ -61,7 +61,7 @@ if(FALSE){
 
 
 
-## tip_amount
+## tip_amount - DONE
 train[is.na(train$tip_amount),"tip_amount"] = 0
 test[is.na(test$tip_amount),"tip_amount"] = 0
 
@@ -93,7 +93,7 @@ if(FALSE){
 
 
 
-## mta_tax
+## mta_tax - DONE
 train$mta_tax = as.factor(train$mta_tax)
 
 test[test$mta_tax==10.41,"mta_tax"]=0.5
@@ -127,8 +127,8 @@ if(FALSE){
   test_2 = data.frame(TID=test$TID, time_taken=test$time_taken)
   
 }else{
-  train$time_taken = train_2$time_taken
-  test$time_taken = test_2$time_taken
+  train$time_taken = unlist( lapply(train$TID, function(tid){ train_2[tid,"time_taken"] }) )
+  test$time_taken = test_2$time_taken 
 }
 
 
@@ -147,14 +147,14 @@ if(FALSE){
   
   pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   test_2 = cbind(test_2, pickup_hour)
-}else{
+}else{s
   train$pickup_hour = train_2$pickup_hour
   test$pickup_hour = test_2$pickup_hour
 }
 
 
 
-### Distance
+### Distance - DONE
 calculateDistance=function(x1,y1,x2,y2){
   if(is.na(x1) | x1==0 | is.na(y1) | y1==0 | is.na(x2) | x2==0 | is.na(y2) | y2==0 ){
     0
@@ -210,11 +210,8 @@ if(FALSE){
 
 
 
-### payment type
+### payment type - DONE
 # check pivot_tables with other variables for percentage of tip for fare_amount
-train$payment_type_int = as.numeric(unlist(train[,"payment_type"]))
-
-test$payment_type_int = as.numeric(unlist(test[,"payment_type"]))
 
 
 
@@ -248,22 +245,28 @@ if(FALSE){
 
 
 
-## Factors
-x = c("vendor_id", "new_user", 
-      "tolls_amount", "tip_amount", "mta_tax"
-)
-
-y = c("fare_amount")
-
-
+## Training
 rows = dim(train)[1]
 train_rows = sample(1:rows, 0.75*rows, replace=F)
 train_df = train[train_rows, ]
 valid_df = train[-train_rows, ]
-lm_all = lm(fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c, data=train_df)
+lm_all = lm(fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+
+                        tolls_amount*distance*tip_amount, 
+            data=train_df)
 summary(lm_all)
 
 mean(abs(predict(lm_all,newdata=valid_df)-valid_df$fare_amount))
-# 5.81 = fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax
-# 2.69 = fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance
-# 2.66 = fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c
+# 5.81 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax
+# 2.69 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance
+# 2.66 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c
+# 2.66 = 97.071 fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type
+# 2.66 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type+time_taken
+# 2.51 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount)
+
+## Prediction
+test_pred = predict(lm_all,newdata=test)
+pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
+
+file_name = "regression.csv"
+write.csv(pred, file_name, row.names=FALSE, quote=FALSE)
+# 97.07 
