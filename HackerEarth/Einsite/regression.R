@@ -1,14 +1,15 @@
 library(lubridate)
-
+library(glmnet)
 
 
 train = read.csv("data/train.csv", header=TRUE, sep=",")
 test = read.csv("data/test.csv", header=TRUE, sep=",")
 
 # Reading the pre-computed features
-train_2 = read.csv("data/train_2.csv", header=TRUE, sep=",")
-test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
-
+if(FALSE){
+  train_2 = read.csv("data/train_2.csv", header=TRUE, sep=",")
+  test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
+}
 
 
 ## Vendor ID - DONE
@@ -147,7 +148,7 @@ if(FALSE){
   
   pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   test_2 = cbind(test_2, pickup_hour)
-}else{s
+}else{
   train$pickup_hour = train_2$pickup_hour
   test$pickup_hour = test_2$pickup_hour
 }
@@ -246,13 +247,13 @@ if(FALSE){
 
 
 
-## Training
+## Training - lm
 rows = dim(train)[1]
 train_rows = sample(1:rows, 0.75*rows, replace=F)
 train_df = train[train_rows, ]
 valid_df = train[-train_rows, ]
 lm_all = lm(fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+
-                        tolls_amount*distance*tip_amount + rate_code_c, 
+                        tolls_amount*distance*tip_amount, 
             data=train_df)
 summary(lm_all)
 
@@ -264,10 +265,41 @@ mean(abs(predict(lm_all,newdata=valid_df)-valid_df$fare_amount))
 # 2.66 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type+time_taken
 # 2.51 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount)
 # 2.48 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount) + rate_code_c
-## Prediction
+
 test_pred = predict(lm_all,newdata=test)
 pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
 
-file_name = "regression.csv"
+file_name = "regression_lm.csv"
 write.csv(pred, file_name, row.names=FALSE, quote=FALSE)
-# 97.25
+
+
+
+## Training - glmnet
+f = as.formula(fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+
+                        tolls_amount*distance*tip_amount+0)
+train_mat = model.matrix(f, train_df)
+valid_mat = model.matrix(f, valid_df)
+
+for(alpha in c(0, 0.2, 0.4, 0.6, 0.8, 1)){
+  g_model = glmnet(train_mat, train_df[,c("fare_amount")], alpha=alpha)
+  
+  valid_preds = predict(g_model, s=g_model$lambda,newx=valid_mat)
+  
+  results = vector('double')
+  for(i in 1:g_model$dim[2]){
+    results = c(results, mean(abs(valid_preds[,i]-valid_df$fare_amount)))
+  }
+  print(paste0(alpha,": min_lambda:",g_model$lambda[which.min(results)], 
+               ": min_MAE:", min(results)))
+}
+
+g_model = glmnet(train_mat, train_df[,c("fare_amount")], alpha=0.6)
+test = cbind(test,"fare_amount"=rep(0,dim(test)[1]))
+test_mat = model.matrix(f, test)
+test_mat = cbind(test_mat, "vendor_idDST000401"=rep(0,dim(test)[1]), "vendor_idDST000532"=rep(0,dim(test)[1]))
+test_pred = predict(g_model, s=0.0062, newx=test_mat)
+
+pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
+
+file_name = "regression_glmnet.csv"
+write.csv(pred, file_name, row.names=FALSE, quote=FALSE)
