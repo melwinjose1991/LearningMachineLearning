@@ -261,6 +261,7 @@ x = c("vendor_id_int",
       "payment_type_int", 
       #"surcharge", 
       "distance", 
+      "velocity",
       "extra_amt",
       
       "tolls_amnt_diff_pcount", 
@@ -280,10 +281,10 @@ valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x]), label=train[-tra
 
 
 ## Parameter Tunning
-for(param_1 in c(50)){        # min_child_weight
-  for(param_2 in c(1)){             # max_depth divider
-    for(param_3 in c(0.001, 0.005, 0.025, 0.125)){     # subsample
-      for(param_4 in c(1)){   # colsample_bytree
+for(param_1 in c(25,50,75,125,150,175)){                # min_child_weight
+  for(param_2 in c(1)){                 # max_depth divider
+    for(param_3 in c(0.8)){     # subsample
+      for(param_4 in c(0.6)){   # colsample_bytree
         
         print(paste0("param1:", param_1, " and ", "param2:", param_2, 
                      " and ", "param3:", param_3," and ", "param4:", param_4))
@@ -293,9 +294,9 @@ for(param_1 in c(50)){        # min_child_weight
                        eta                 = 0.5, #0.025,
                        max_depth           = as.integer(length(x)/param_2),
                        min_child_weight    = param_1,
-                       subsample           = 0.8,
-                       #colsample_bytree    = param_4,
-                       alpha               = param_3
+                       subsample           = param_3,
+                       colsample_bytree    = param_4
+                       #alpha               = param_3
                        #lambda              = param_4
         )
         
@@ -308,8 +309,8 @@ for(param_1 in c(50)){        # min_child_weight
                              watchlist           = list(val=valid_DM),
                              maximize            = FALSE,
                              eval_metric         = "mae",
-                             #verbose = FALSE
-                             print_every_n       = 50
+                             verbose             = FALSE
+                             #print_every_n       = 50
         )
         print(model$evaluation_log[model$best_iteration]$test_mae_mean)
       
@@ -318,7 +319,7 @@ for(param_1 in c(50)){        # min_child_weight
   }
 }
 # nrounds = 200, eta = 0.5
-#   depth   min_child_weight  alpha   lambda    = 50 => 1.71 
+#   depth   min_child_weight  alpha   lambda  sample  colSample 
 #   1       50              
 
 
@@ -333,12 +334,12 @@ test_DM <- xgb.DMatrix(data = as.matrix(test[,x]))
 
 param = list(  objective           = "reg:linear", 
                booster             = "gbtree",
-               eta                 = 0.025,
+               eta                 = 0.0125,
                max_depth           = as.integer(length(x)),
-               min_child_weight    = 50,
+               min_child_weight    = 75,
                subsample           = 0.8,
-               alpha               = 0.005
-               #colsample_bytree    = 0.50
+               #alpha               = 0.005
+               colsample_bytree    = 0.60
 )
 
 nrounds = 800
@@ -366,3 +367,13 @@ pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
 
 file_name = paste0("xgb_", "x", toString(length(x)), "_r",nrounds, ".csv")
 write.csv(pred, file_name, row.names = FALSE)
+
+getVelocity = function(dist, time){
+  if(time==0){
+    0
+  }else{
+    dist/time
+  }
+}
+train$velocity = mapply(getVelocity, train$distance, train$time_taken)
+test$velocity = mapply(getVelocity, test$distance, test$time_taken)
