@@ -211,7 +211,9 @@ calculateDifferenceFromMean=function(df1, df2, column){
   #column = "tolls_amount"
   all_ = rbind(df1[,c("passenger_count",column)], df2[,c("passenger_count",column)])
   form = as.formula(paste0(column,"~passenger_count"))
+  rm(mean)
   mean_value = as.data.frame(aggregate(form, all_, mean))
+  rm(all_)
   
   mapply(function(passenger_count, value) value - mean_value[mean_value$passenger_count==passenger_count, column] , 
          df1$passenger_count, df1[,column])
@@ -238,6 +240,10 @@ if(!LOAD_SAVED){
   write.csv(test_2, "data/test_2.csv", row.names=FALSE, quote=FALSE)
 }
 
+
+## TODO
+# tranform x
+# outliers
 
 ## Factors
 x = c("vendor_id_int", 
@@ -270,10 +276,10 @@ train_DM <- xgb.DMatrix(data = as.matrix(train[,x]), label=train[,y])
 
 
 ## Parameter Tunning
-for(param_1 in c(25,50,100,200)){       # min_child_weight
-  for(param_2 in c(1,2,3)){             # max_depth divider
-    for(param_3 in c(0.7,0.8,0.9)){     # subsample
-      for(param_4 in c(0.4,0.5,0.6)){   # colsample_bytree
+for(param_1 in c(50)){        # min_child_weight
+  for(param_2 in c(1)){             # max_depth divider
+    for(param_3 in c(0.001, 0.005, 0.025, 0.125)){     # subsample
+      for(param_4 in c(1)){   # colsample_bytree
         
         print(paste0("param1:", param_1, " and ", "param2:", param_2, 
                      " and ", "param3:", param_3," and ", "param4:", param_4))
@@ -283,8 +289,10 @@ for(param_1 in c(25,50,100,200)){       # min_child_weight
                        eta                 = 0.05, #0.025,
                        max_depth           = as.integer(length(x)/param_2),
                        min_child_weight    = param_1,
-                       subsample           = param_3,
-                       colsample_bytree    = param_4
+                       subsample           = 0.8,
+                       #colsample_bytree    = param_4,
+                       alpha               = param_3
+                       #lambda              = param_4
         )
         
         nrounds = 200
