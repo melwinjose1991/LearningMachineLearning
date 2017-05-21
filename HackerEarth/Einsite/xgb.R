@@ -102,6 +102,7 @@ getPartofTime=function(t_factor, func){
 
 if(!LOAD_SAVED){
   
+  #pickup
   pickup_hour = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   train_2 = cbind(train_2, pickup_hour)
   
@@ -126,9 +127,39 @@ if(!LOAD_SAVED){
   
   pickup_month = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
   test_2 = cbind(test_2, pickup_month)
+  
+  
+  
+  # dropoff
+  dropoff_hour = unlist(lapply(train$dropoff_datetime, FUN=function(x) getPartofTime(x, hour)))
+  train_2 = cbind(train_2, dropoff_hour)
+  
+  dropoff_yday = unlist(lapply(train$dropoff_datetime, FUN=function(x) getPartofTime(x, yday)))
+  train_2 = cbind(train_2, dropoff_yday)
+  
+  dropoff_week = unlist(lapply(train$dropoff_datetime, FUN=function(x) getPartofTime(x, week)))
+  train_2 = cbind(train_2, dropoff_week)
+  
+  dropoff_month = unlist(lapply(train$dropoff_datetime, FUN=function(x) getPartofTime(x, month)))
+  train_2 = cbind(train_2, dropoff_month)
+  
+  
+  dropoff_hour = unlist(lapply(test$dropoff_datetime, FUN=function(x) getPartofTime(x, hour)))
+  test_2 = cbind(test_2, dropoff_hour)
+  
+  dropoff_yday = unlist(lapply(test$dropoff_datetime, FUN=function(x) getPartofTime(x, yday)))
+  test_2 = cbind(test_2, dropoff_yday)
+  
+  dropoff_week = unlist(lapply(test$dropoff_datetime, FUN=function(x) getPartofTime(x, week)))
+  test_2 = cbind(test_2, dropoff_week)
+  
+  dropoff_month = unlist(lapply(test$dropoff_datetime, FUN=function(x) getPartofTime(x, hour)))
+  test_2 = cbind(test_2, dropoff_month)
+  
 
 }else{
   
+  # pickup
   train$pickup_hour = train_2$pickup_hour
   train$pickup_yday = train_2$pickup_yday
   train$pickup_week = train_2$pickup_week
@@ -138,7 +169,18 @@ if(!LOAD_SAVED){
   test$pickup_yday = test_2$pickup_yday
   test$pickup_week = test_2$pickup_week
   test$pickup_month = test_2$pickup_month
-
+  
+  
+  # dropoff
+  train$dropoff_hour = train_2$dropoff_hour
+  train$dropoff_yday = train_2$dropoff_yday
+  train$dropoff_week = train_2$dropoff_week
+  train$dropoff_month = train_2$dropoff_month
+  
+  test$dropoff_hour = test_2$dropoff_hour
+  test$dropoff_yday = test_2$dropoff_yday
+  test$dropoff_week = test_2$dropoff_week
+  test$dropoff_month = test_2$dropoff_month
 }
 
 
@@ -266,10 +308,17 @@ x = c("vendor_id_int",
       "mta_tax", 
       "time_taken", 
       #"passenger_count", 
+      
       "pickup_hour",
       "pickup_yday",
       "pickup_week", 
-      #"pickup_month", 
+      #"pickup_month",
+      
+      "dropoff_hour",
+      "dropoff_yday",
+      "dropoff_week", 
+      #"pickup_month",
+      
       "rate_code",
       "store_and_fwd_flag_int",
       "payment_type_int", 
@@ -340,7 +389,7 @@ for(param_1 in c(25,50,75,125,150,175)){                # min_child_weight
 
 ## Training 
 rows = dim(train)[1]
-train_rows = sample(1:rows, 0.80*rows, replace=F)
+train_rows = sample(1:rows, 0.95*rows, replace=F)
 
 train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x]), label=train[train_rows,y])
 valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x]), label=train[-train_rows,y])
