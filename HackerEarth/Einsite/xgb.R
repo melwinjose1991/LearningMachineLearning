@@ -262,29 +262,65 @@ test$extra_amt = test$tolls_amount + test$tip_amount + test$mta_tax + test$surch
 
 
 ## Difference from mean of passenger_count
-calculateDifferenceFromMean=function(df1, df2, column){
+calculateDifferenceFromMean=function(df1, df2, cat_column, column){
+  #cat_column = "passenger_count"
   #column = "tolls_amount"
-  all_ = rbind(df1[,c("passenger_count",column)], df2[,c("passenger_count",column)])
-  form = as.formula(paste0(column,"~passenger_count"))
+  #d1 = train
+  #d2 = test
+  
+  all_ = rbind(df1[,c(cat_column,column)], df2[,c(cat_column,column)])
+  form = as.formula(paste0(column,"~",cat_column))
   mean_value = as.data.frame(aggregate(form, all_, mean))
   rm(all_)
   
-  mapply(function(passenger_count, value) value - mean_value[mean_value$passenger_count==passenger_count, column] , 
-         df1$passenger_count, df1[,column])
+  mapply(function(category, value) value - mean_value[mean_value[,cat_column]==category, column] , 
+         df1[,cat_column], df1[,column])
 }
 
 rm(mean)
-train$tolls_amnt_diff_pcount = calculateDifferenceFromMean(train, test, "tolls_amount")
-test$tolls_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "tolls_amount")
+train$tolls_amnt_diff_pcount = calculateDifferenceFromMean(train, test, "passenger_count", "tolls_amount")
+test$tolls_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "passenger_count", "tolls_amount")
 
-train$tip_amnt_diff_pcount = calculateDifferenceFromMean(train, test, "tip_amount")
-test$tip_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "tip_amount")
+train$tip_amnt_diff_pcount = calculateDifferenceFromMean(train, test, "passenger_count", "tip_amount")
+test$tip_amnt_diff_pcount = calculateDifferenceFromMean(test, train, "passenger_count", "tip_amount")
 
-#train$surcharge_diff_pcount = calculateDifferenceFromMean(train, test, "surcharge")
-#test$surcharge_diff_pcount = calculateDifferenceFromMean(test, train, "surcharge")
+train$surcharge_diff_pcount = calculateDifferenceFromMean(train, test, "passenger_count", "surcharge")
+test$surcharge_diff_pcount = calculateDifferenceFromMean(test, train, "passenger_count", "surcharge")
 
-train$time_taken_diff_pcount = calculateDifferenceFromMean(train, test, "time_taken")
-test$time_taken_diff_pcount = calculateDifferenceFromMean(test, train, "time_taken")
+train$time_taken_diff_pcount = calculateDifferenceFromMean(train, test, "passenger_count", "time_taken")
+test$time_taken_diff_pcount = calculateDifferenceFromMean(test, train, "passenger_count", "time_taken")
+
+
+
+## Difference from mean of payment_type_int
+rm(mean)
+train$tolls_amnt_diff_paytype = calculateDifferenceFromMean(train, test, "payment_type_int", "tolls_amount")
+test$tolls_amnt_diff_paytype = calculateDifferenceFromMean(test, train, "payment_type_int", "tolls_amount")
+
+train$tip_amnt_diff_paytype = calculateDifferenceFromMean(train, test, "payment_type_int", "tip_amount")
+test$tip_amnt_diff_paytype = calculateDifferenceFromMean(test, train, "payment_type_int", "tip_amount")
+
+train$surcharge_diff_paytype = calculateDifferenceFromMean(train, test, "payment_type_int", "surcharge")
+test$surcharge_diff_paytype = calculateDifferenceFromMean(test, train, "payment_type_int", "surcharge")
+
+train$time_taken_diff_paytype = calculateDifferenceFromMean(train, test, "payment_type_int", "time_taken")
+test$time_taken_diff_paytype = calculateDifferenceFromMean(test, train, "payment_type_int", "time_taken")
+
+
+
+## Difference from mean of rate_code
+rm(mean)
+train$tolls_amnt_diff_ratecode = calculateDifferenceFromMean(train, test, "rate_code", "tolls_amount")
+test$tolls_amnt_diff_ratecode = calculateDifferenceFromMean(test, train, "rate_code", "tolls_amount")
+
+train$tip_amnt_diff_ratecode = calculateDifferenceFromMean(train, test, "rate_code", "tip_amount")
+test$tip_amnt_diff_ratecode = calculateDifferenceFromMean(test, train, "rate_code", "tip_amount")
+
+train$surcharge_diff_ratecode = calculateDifferenceFromMean(train, test, "rate_code", "surcharge")
+test$surcharge_diff_ratecode = calculateDifferenceFromMean(test, train, "rate_code", "surcharge")
+
+train$time_taken_diff_ratecode = calculateDifferenceFromMean(train, test, "rate_code", "time_taken")
+test$time_taken_diff_ratecode = calculateDifferenceFromMean(test, train, "rate_code", "time_taken")
 
 
 
@@ -311,16 +347,16 @@ x = c("vendor_id_int",
       
       "pickup_hour",
       "pickup_yday",
-      "pickup_week", 
+      #"pickup_week", 
       #"pickup_month",
       
       "dropoff_hour",
       "dropoff_yday",
-      "dropoff_week", 
+      #"dropoff_week", 
       #"pickup_month",
       
       "rate_code",
-      "store_and_fwd_flag_int",
+      #"store_and_fwd_flag_int",
       "payment_type_int", 
       #"surcharge", 
       "distance", 
@@ -330,7 +366,17 @@ x = c("vendor_id_int",
       "tolls_amnt_diff_pcount", 
       "tip_amnt_diff_pcount",
       #"surcharge_diff_pcount", 
-      "time_taken_diff_pcount"
+      "time_taken_diff_pcount",
+      
+      "tolls_amnt_diff_paytype", 
+      "tip_amnt_diff_paytype",
+      #"surcharge_diff_paytype", 
+      "time_taken_diff_paytype",
+      
+      "tolls_amnt_diff_ratecode", 
+      "tip_amnt_diff_ratecode",
+      #"surcharge_diff_ratecode", 
+      "time_taken_diff_ratecode"
       )
 
 y = c("fare_amount")
@@ -389,7 +435,7 @@ for(param_1 in c(25,50,75,125,150,175)){                # min_child_weight
 
 ## Training 
 rows = dim(train)[1]
-train_rows = sample(1:rows, 0.95*rows, replace=F)
+train_rows = sample(1:rows, 0.80*rows, replace=F)
 
 train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x]), label=train[train_rows,y])
 valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x]), label=train[-train_rows,y])
@@ -421,7 +467,7 @@ model = xgb.train(   params              = param,
 # valid_DM mae = 0.88   -   99.06
 # valid_DM mae = 0.80   -   99.13   (7.70, 4.14, 2.28, 1.38, 1.01)
 imp = xgb.importance(feature_names = x, model = model)
-
+imp
 
 
 ## Test Prediction
