@@ -249,7 +249,6 @@ if(FALSE){
 
 ## Training - lm
 rows = dim(train)[1]
-train_rows = sample(1:rows, 0.75*rows, replace=F)
 train_df = train[train_rows, ]
 valid_df = train[-train_rows, ]
 lm_all = lm(fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+
@@ -267,6 +266,8 @@ mean(abs(predict(lm_all,newdata=valid_df)-valid_df$fare_amount))
 # 2.48 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount) + rate_code_c
 
 test_pred = predict(lm_all,newdata=test)
+test_pred[test_pred<0] = 0
+
 pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
 
 file_name = "regression_lm.csv"
