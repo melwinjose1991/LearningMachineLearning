@@ -12,15 +12,83 @@ if(LOAD_SAVED){
 }
 
 
+
+## Rows without any NAs
+col_names = names(train)
+remove_col = c("TID", "fare_amount", "pickup_datetime", "dropoff_datetime")
+col_names = col_names[!col_names %in% remove_col]
+complete_rows_train = train[complete.cases(train[col_names]), col_names]
+dim(complete_rows_train)[1] / dim(train)[1]
+# 0.798
+
+complete_rows_test = test[complete.cases(test[col_names]), col_names]
+dim(complete_rows_test)[1] / dim(test)[1]
+# 0.796
+
+complete_rows = rbind(complete_rows_train, complete_rows_test)
+rm(complete_rows_train)
+rm(complete_rows_test)
+
+complete_rows = complete_rows[complete_rows$new_user!="",]
+
+complete_rows$vendor_id = as.numeric(unlist(complete_rows$vendor_id))
+complete_rows$new_user = as.numeric(unlist(complete_rows$new_user))
+# NO=2, YES=3
+complete_rows$payment_type = as.numeric(unlist(complete_rows$payment_type))
+complete_rows$store_and_fwd_flag = as.numeric(unlist(complete_rows$store_and_fwd_flag))
+
+
 ## Vendor ID
 train$vendor_id_int = as.numeric(unlist(train[,"vendor_id"]))
 
 test$vendor_id_int = as.numeric(unlist(test[,"vendor_id"]))
 
 
+## Impute Missing Data
+imputeCategoricalColumn=function(target_column){
+  target_column = "new_user"
+  x_col = col_names[!col_names %in% target_column]
+  y_col = target_column
+  
+  y = as.numeric(complete_rows[,target_column]) - 2
+  # NO=0, YES=1
+  
+  rows = dim(complete_rows)[1]
+  train_rows = sample(1:rows, 0.80*rows, replace=F)
+  
+  train_DM <- xgb.DMatrix(data = as.matrix(complete_rows[train_rows,x_col]), 
+                          label=y[train_rows])
+  valid_DM <- xgb.DMatrix(data = as.matrix(complete_rows[-train_rows,x_col]), 
+                          label=y[-train_rows])
+  #test_DM <- xgb.DMatrix(data = as.matrix(test[,x]))
+  
+  param = list(  objective           = "multi:softprob", 
+                 booster             = "gbtree",
+                 eta                 = 0.0125,
+                 max_depth           = as.integer(length(x)),
+                 min_child_weight    = 75,
+                 subsample           = 0.8,
+                 colsample_bytree    = 0.60,
+                 num_class           = 2
+  )
+  
+  nrounds = 800
+  model = xgb.train(   params              = param, 
+                       data                = train_DM,
+                       nrounds             = nrounds, 
+                       early_stopping_rounds  = 20,
+                       watchlist           = list(val=valid_DM),
+                       maximize            = FALSE,
+                       eval_metric         = "mlogloss",
+                       print_every_n = 25
+  )
+}
+
+
 
 ## New.User
 #   Some of them are "" in both train and test
+sum(train$new_user=="")
 train[train$new_user=="","new_user"] = "NO"
 train$new_user_int = as.numeric(unlist(train[,"new_user"]))
 
