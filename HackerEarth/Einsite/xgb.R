@@ -11,9 +11,38 @@ if(LOAD_SAVED){
   test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
 }
 
+  
+
+# Factorizing 
+getMap=function(df1_col, df2_col){
+  all_values = unique(c(unique(as.character(df1_col)),unique(as.character(df2_col))))
+  map = list()
+  index = 1
+  print(all_values)
+  for(value in all_values){
+    map[value] = index
+    index = index + 1
+  }
+  print(map)
+  map
+}
+
+getFromMap=function(key, map){
+  if(key %in% names(map)){
+    map[[key]]
+  }else{
+    NA
+  }
+}
+
+map = getMap(train$vendor_id, test$vendor_id)
+train$vendor_id_int = unlist(lapply(train$vendor_id, function(x) getFromMap(as.character(x), map)))
+test$vendor_id_int = unlist(lapply(test$vendor_id, function(x) getFromMap(as.character(x), map)))
+
 
 
 ## Rows without any NAs
+if(FALSE){
 col_names = names(train)
 remove_col = c("TID", "fare_amount", "pickup_datetime", "dropoff_datetime")
 col_names = col_names[!col_names %in% remove_col]
@@ -36,18 +65,17 @@ complete_rows$new_user = as.numeric(unlist(complete_rows$new_user))
 # NO=2, YES=3
 complete_rows$payment_type = as.numeric(unlist(complete_rows$payment_type))
 complete_rows$store_and_fwd_flag = as.numeric(unlist(complete_rows$store_and_fwd_flag))
-
-
-## Vendor ID
-train$vendor_id_int = as.numeric(unlist(train[,"vendor_id"]))
-
-test$vendor_id_int = as.numeric(unlist(test[,"vendor_id"]))
+}
 
 
 ## Impute Missing Data
 imputeCategoricalColumn=function(target_column){
   target_column = "new_user"
-  x_col = col_names[!col_names %in% target_column]
+  target = train[train$new_user=="",]
+  
+  x_col = colnames(target)[colSums(is.na(target)) == 0]
+  #x_col = col_names[!col_names %in% remove_col]
+  x_col = intersect(x_col, names(complete_rows))
   y_col = target_column
   
   y = as.numeric(complete_rows[,target_column]) - 2
@@ -60,7 +88,6 @@ imputeCategoricalColumn=function(target_column){
                           label=y[train_rows])
   valid_DM <- xgb.DMatrix(data = as.matrix(complete_rows[-train_rows,x_col]), 
                           label=y[-train_rows])
-  #test_DM <- xgb.DMatrix(data = as.matrix(test[,x]))
   
   param = list(  objective           = "multi:softprob", 
                  booster             = "gbtree",
@@ -72,7 +99,7 @@ imputeCategoricalColumn=function(target_column){
                  num_class           = 2
   )
   
-  nrounds = 800
+  nrounds = 200
   model = xgb.train(   params              = param, 
                        data                = train_DM,
                        nrounds             = nrounds, 
@@ -82,7 +109,16 @@ imputeCategoricalColumn=function(target_column){
                        eval_metric         = "mlogloss",
                        print_every_n = 25
   )
+  
+  test_DM = xgb.DMatrix(data = as.matrix(target[,x_col]))
+  predict = predict(model, test_DM)
 }
+
+
+
+## Vendor ID
+#train$vendor_id_int = as.numeric(unlist(train[,"vendor_id"]))
+#test$vendor_id_int = as.numeric(unlist(test[,"vendor_id"]))
 
 
 
@@ -122,15 +158,20 @@ test[is.na(test$tip_amount),"tip_amount"] = 0
 
 
 ## time taken
-# Outliers ???
-getTimeDifference=function(t1_factor, t2_factor){
-  t1_str = as.character(t1_factor)
-  t2_Str = as.character(t2_factor)
+getPOSIXTime=function(t_factor){
+  t_str = as.character(t_factor)
+  t = strptime(t_str,"%Y-%m-%d %H:%M:%S", tz="EST")
+  t
+}
+
+getTimeDifference=function(t1, t2){
+  #t1_str = as.character(t1_factor)
+  #t2_Str = as.character(t2_factor)
   #print(t1_str)
   #print(t2_Str)
   
-  t1 = strptime(t1_str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  t2 = strptime(t2_Str,"%Y-%m-%d %H:%M:%S", tz="EST")
+  #t1 = strptime(t1_str,"%Y-%m-%d %H:%M:%S", tz="EST")
+  #t2 = strptime(t2_Str,"%Y-%m-%d %H:%M:%S", tz="EST")
   #print(t1)
   #print(t2)
   
@@ -138,11 +179,18 @@ getTimeDifference=function(t1_factor, t2_factor){
 }
 
 if(!LOAD_SAVED){
-  train$time_taken = mapply(getTimeDifference, train$pickup_datetime, train$dropoff_datetime)
+  train$pickup_datetime_t = lapply(train$pickup_datetime, getPOSIXTime)
+  train$dropoff_datetime = lapply(train$dropoff_datetime, getPOSIXTime)
+  
+  test$pickup_datetime_t = lapply(test$pickup_datetime, getPOSIXTime)
+  test$dropoff_datetime = lapply(test$dropoff_datetime, getPOSIXTime)
+  
+  
+  train$time_taken = mapply(getTimeDifference, train$pickup_datetime_t, train$dropoff_datetime_t)
   train[train$time_taken<0,]$time_taken = 0   # should the values be swapped ?
   train_2 = data.frame(TID=train$TID, time_taken=train$time_taken)
 
-  test$time_taken = mapply(getTimeDifference, test$pickup_datetime, test$dropoff_datetime)
+  test$time_taken = mapply(getTimeDifference, test$pickup_datetime_t, test$dropoff_datetime_t)
   test[test$time_taken<0,]$time_taken = 0     # should the values be swapped ?
   test_2 = data.frame(TID=test$TID, time_taken=test$time_taken)
   
@@ -154,13 +202,6 @@ if(!LOAD_SAVED){
 
 
 # Hour of day
-getPOSIXTime=function(t_factor){
-  #t_factor = train[20,]$pickup_datetime
-  t_str = as.character(t_factor)
-  t = strptime(t_str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  t
-}
-
 getPartofTime=function(t_factor, func){
   t_factor = train[20,]$pickup_datetime
   t_str = as.character(t_factor)
@@ -299,17 +340,28 @@ test[test$velocity<=0,"velocity"] = mean_velocity
   
 
 ### store_and_fwd 
-train$store_and_fwd_flag_int = as.numeric(unlist(train[,"store_and_fwd_flag"]))
+#train$store_and_fwd_flag_int = as.numeric(unlist(train[,"store_and_fwd_flag"]))
+#test$store_and_fwd_flag_int = as.numeric(unlist(test[,"store_and_fwd_flag"]))
 
-test$store_and_fwd_flag_int = as.numeric(unlist(test[,"store_and_fwd_flag"]))
+train[train$store_and_fwd_flag=="","store_and_fwd_flag"] = "N"
+train[train$store_and_fwd_flag==" ","store_and_fwd_flag"] = "N"
+
+test[test$store_and_fwd_flag=="","store_and_fwd_flag"] = "N"
+test[test$store_and_fwd_flag==" ","store_and_fwd_flag"] = "N"
+
+map = getMap(train$store_and_fwd_flag, test$store_and_fwd_flag)
+train$store_and_fwd_flag_int = unlist(lapply(train$store_and_fwd_flag, function(x) getFromMap(as.character(x), map)))
+test$store_and_fwd_flag_int = unlist(lapply(test$store_and_fwd_flag, function(x) getFromMap(as.character(x), map)))
 
 
 
 ### payment type
-# check pivot_tables with other variables for percentage of tip for fare_amount
-train$payment_type_int = as.numeric(unlist(train[,"payment_type"]))
+#train$payment_type_int = as.numeric(unlist(train[,"payment_type"]))
+#test$payment_type_int = as.numeric(unlist(test[,"payment_type"]))
 
-test$payment_type_int = as.numeric(unlist(test[,"payment_type"]))
+map = getMap(train$payment_type, test$payment_type)
+train$payment_type_int = unlist(lapply(train$payment_type, function(x) getFromMap(as.character(x), map)))
+test$payment_type_int = unlist(lapply(test$payment_type, function(x) getFromMap(as.character(x), map)))
 
 
 
@@ -406,7 +458,7 @@ if(!LOAD_SAVED){
 
 ## Factors
 x = c("vendor_id_int", 
-      #"new_user_int", 
+      "new_user_int", 
       "tolls_amount", 
       "tip_amount", 
       "mta_tax", 
