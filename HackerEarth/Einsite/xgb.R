@@ -4,14 +4,22 @@ library(lubridate)
 train = read.csv("data/train.csv", header=TRUE, sep=",")
 test = read.csv("data/test.csv", header=TRUE, sep=",")
 
-# Reading the pre-computed features
-LOAD_SAVED=TRUE
-if(LOAD_SAVED){
-  train_2 = read.csv("data/train_2.csv", header=TRUE, sep=",")
-  test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
-}
+train_t = read.csv("data/train_pickup.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_pickup.csv", header=TRUE, sep=",")
+train = cbind(train, train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test, test_t[,!names(test_t) %in% c("TID")])
 
-  
+train_t = read.csv("data/train_dropoff.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_dropoff.csv", header=TRUE, sep=",")
+train = cbind(train, train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test, test_t[,!names(test_t) %in% c("TID")])
+
+train_t = read.csv("data/train_time_taken.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_time_taken.csv", header=TRUE, sep=",")
+train = cbind(train, time_taken=train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test, time_taken=test_t[,!names(test_t) %in% c("TID")])
+
+
 
 # Factorizing 
 getMap=function(df1_col, df2_col){
@@ -43,28 +51,28 @@ test$vendor_id_int = unlist(lapply(test$vendor_id, function(x) getFromMap(as.cha
 
 ## Rows without any NAs
 if(FALSE){
-col_names = names(train)
-remove_col = c("TID", "fare_amount", "pickup_datetime", "dropoff_datetime")
-col_names = col_names[!col_names %in% remove_col]
-complete_rows_train = train[complete.cases(train[col_names]), col_names]
-dim(complete_rows_train)[1] / dim(train)[1]
-# 0.798
-
-complete_rows_test = test[complete.cases(test[col_names]), col_names]
-dim(complete_rows_test)[1] / dim(test)[1]
-# 0.796
-
-complete_rows = rbind(complete_rows_train, complete_rows_test)
-rm(complete_rows_train)
-rm(complete_rows_test)
-
-complete_rows = complete_rows[complete_rows$new_user!="",]
-
-complete_rows$vendor_id = as.numeric(unlist(complete_rows$vendor_id))
-complete_rows$new_user = as.numeric(unlist(complete_rows$new_user))
-# NO=2, YES=3
-complete_rows$payment_type = as.numeric(unlist(complete_rows$payment_type))
-complete_rows$store_and_fwd_flag = as.numeric(unlist(complete_rows$store_and_fwd_flag))
+  col_names = names(train)
+  remove_col = c("TID", "fare_amount", "pickup_datetime", "dropoff_datetime")
+  col_names = col_names[!col_names %in% remove_col]
+  complete_rows_train = train[complete.cases(train[col_names]), col_names]
+  dim(complete_rows_train)[1] / dim(train)[1]
+  # 0.798
+  
+  complete_rows_test = test[complete.cases(test[col_names]), col_names]
+  dim(complete_rows_test)[1] / dim(test)[1]
+  # 0.796
+  
+  complete_rows = rbind(complete_rows_train, complete_rows_test)
+  rm(complete_rows_train)
+  rm(complete_rows_test)
+  
+  complete_rows = complete_rows[complete_rows$new_user!="",]
+  
+  complete_rows$vendor_id = as.numeric(unlist(complete_rows$vendor_id))
+  complete_rows$new_user = as.numeric(unlist(complete_rows$new_user))
+  # NO=2, YES=3
+  complete_rows$payment_type = as.numeric(unlist(complete_rows$payment_type))
+  complete_rows$store_and_fwd_flag = as.numeric(unlist(complete_rows$store_and_fwd_flag))
 }
 
 
@@ -119,7 +127,7 @@ imputeCategoricalColumn=function(target_column){
 ## Vendor ID
 #train$vendor_id_int = as.numeric(unlist(train[,"vendor_id"]))
 #test$vendor_id_int = as.numeric(unlist(test[,"vendor_id"]))
-
+# check `Factoring section`
 
 
 ## New.User
@@ -157,141 +165,9 @@ test[is.na(test$tip_amount),"tip_amount"] = 0
 # Outliers ???
 
 
+
 ## time taken
-getPOSIXTime=function(t_factor){
-  t_str = as.character(t_factor)
-  t = strptime(t_str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  t
-}
-
-getTimeDifference=function(t1, t2){
-  #t1_str = as.character(t1_factor)
-  #t2_Str = as.character(t2_factor)
-  #print(t1_str)
-  #print(t2_Str)
-  
-  #t1 = strptime(t1_str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  #t2 = strptime(t2_Str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  #print(t1)
-  #print(t2)
-  
-  as.numeric(difftime(t2, t1, units="secs"))
-}
-
-if(!LOAD_SAVED){
-  train$pickup_datetime_t = lapply(train$pickup_datetime, getPOSIXTime)
-  train$dropoff_datetime = lapply(train$dropoff_datetime, getPOSIXTime)
-  
-  test$pickup_datetime_t = lapply(test$pickup_datetime, getPOSIXTime)
-  test$dropoff_datetime = lapply(test$dropoff_datetime, getPOSIXTime)
-  
-  
-  train$time_taken = mapply(getTimeDifference, train$pickup_datetime_t, train$dropoff_datetime_t)
-  train[train$time_taken<0,]$time_taken = 0   # should the values be swapped ?
-  train_2 = data.frame(TID=train$TID, time_taken=train$time_taken)
-
-  test$time_taken = mapply(getTimeDifference, test$pickup_datetime_t, test$dropoff_datetime_t)
-  test[test$time_taken<0,]$time_taken = 0     # should the values be swapped ?
-  test_2 = data.frame(TID=test$TID, time_taken=test$time_taken)
-  
-}else{
-  train$time_taken = train_2$time_taken
-  test$time_taken = test_2$time_taken
-}
-
-
-
-# Hour of day
-getPartofTime=function(t_factor, func){
-  t_factor = train[20,]$pickup_datetime
-  t_str = as.character(t_factor)
-  t = strptime(t_str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  func(t)
-}
-
-if(!LOAD_SAVED){
-  
-  #pickup
-  pickup_hour = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
-  train_2 = cbind(train_2, pickup_hour)
-  
-  pickup_yday = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, yday)))
-  train_2 = cbind(train_2, pickup_yday)
-  
-  pickup_week = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, week)))
-  train_2 = cbind(train_2, pickup_week)
-  
-  pickup_month = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, month)))
-  train_2 = cbind(train_2, pickup_month)
-  
-  
-  pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
-  test_2 = cbind(test_2, pickup_hour)
-  
-  pickup_yday = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, yday)))
-  test_2 = cbind(test_2, pickup_yday)
-  
-  pickup_week = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, week)))
-  test_2 = cbind(test_2, pickup_week)
-  
-  pickup_month = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
-  test_2 = cbind(test_2, pickup_month)
-  
-  
-  
-  # dropoff
-  dropoff_hour = unlist(lapply(train$dropoff_datetime, FUN=function(x) getPartofTime(x, hour)))
-  train_2 = cbind(train_2, dropoff_hour)
-  
-  dropoff_yday = unlist(lapply(train$dropoff_datetime, FUN=function(x) getPartofTime(x, yday)))
-  train_2 = cbind(train_2, dropoff_yday)
-  
-  dropoff_week = unlist(lapply(train$dropoff_datetime, FUN=function(x) getPartofTime(x, week)))
-  train_2 = cbind(train_2, dropoff_week)
-  
-  dropoff_month = unlist(lapply(train$dropoff_datetime, FUN=function(x) getPartofTime(x, month)))
-  train_2 = cbind(train_2, dropoff_month)
-  
-  
-  dropoff_hour = unlist(lapply(test$dropoff_datetime, FUN=function(x) getPartofTime(x, hour)))
-  test_2 = cbind(test_2, dropoff_hour)
-  
-  dropoff_yday = unlist(lapply(test$dropoff_datetime, FUN=function(x) getPartofTime(x, yday)))
-  test_2 = cbind(test_2, dropoff_yday)
-  
-  dropoff_week = unlist(lapply(test$dropoff_datetime, FUN=function(x) getPartofTime(x, week)))
-  test_2 = cbind(test_2, dropoff_week)
-  
-  dropoff_month = unlist(lapply(test$dropoff_datetime, FUN=function(x) getPartofTime(x, hour)))
-  test_2 = cbind(test_2, dropoff_month)
-  
-
-}else{
-  
-  # pickup
-  train$pickup_hour = train_2$pickup_hour
-  train$pickup_yday = train_2$pickup_yday
-  train$pickup_week = train_2$pickup_week
-  train$pickup_month = train_2$pickup_month
-  
-  test$pickup_hour = test_2$pickup_hour
-  test$pickup_yday = test_2$pickup_yday
-  test$pickup_week = test_2$pickup_week
-  test$pickup_month = test_2$pickup_month
-  
-  
-  # dropoff
-  train$dropoff_hour = train_2$dropoff_hour
-  train$dropoff_yday = train_2$dropoff_yday
-  train$dropoff_week = train_2$dropoff_week
-  train$dropoff_month = train_2$dropoff_month
-  
-  test$dropoff_hour = test_2$dropoff_hour
-  test$dropoff_yday = test_2$dropoff_yday
-  test$dropoff_week = test_2$dropoff_week
-  test$dropoff_month = test_2$dropoff_month
-}
-
+#   check extract_date_time_variables.R
 
 
 
@@ -444,17 +320,11 @@ test$time_taken_diff_ratecode = calculateDifferenceFromMean(test, train, "rate_c
 
 
 
-## Saving Results of expensive operations
-#     time_taken, pickup_hour
-if(!LOAD_SAVED){
-  write.csv(train_2, "data/train_2.csv", row.names=FALSE, quote=FALSE)
-  write.csv(test_2, "data/test_2.csv", row.names=FALSE, quote=FALSE)
-}
-
-
 ## TODO
 # tranform x
 # outliers
+
+
 
 ## Factors
 x = c("vendor_id_int", 
@@ -463,39 +333,43 @@ x = c("vendor_id_int",
       "tip_amount", 
       "mta_tax", 
       "time_taken", 
-      #"passenger_count", 
+      "passenger_count", 
       
+      "pickup_min",
       "pickup_hour",
       "pickup_yday",
-      #"pickup_week", 
-      #"pickup_month",
+      "pickup_week", 
+      "pickup_month",
+      "pickup_year",
       
+      "dropoff_min",
       "dropoff_hour",
       "dropoff_yday",
-      #"dropoff_week", 
-      #"pickup_month",
+      "dropoff_week", 
+      "pickup_month",
+      "dropoff_year",
       
       "rate_code",
-      #"store_and_fwd_flag_int",
+      "store_and_fwd_flag_int",
       "payment_type_int", 
-      #"surcharge", 
+      "surcharge", 
       "distance", 
       "velocity",
       "extra_amt",
       
       "tolls_amnt_diff_pcount", 
       "tip_amnt_diff_pcount",
-      #"surcharge_diff_pcount", 
+      "surcharge_diff_pcount", 
       "time_taken_diff_pcount",
       
       "tolls_amnt_diff_paytype", 
       "tip_amnt_diff_paytype",
-      #"surcharge_diff_paytype", 
+      "surcharge_diff_paytype", 
       "time_taken_diff_paytype",
       
       "tolls_amnt_diff_ratecode", 
       "tip_amnt_diff_ratecode",
-      #"surcharge_diff_ratecode", 
+      "surcharge_diff_ratecode", 
       "time_taken_diff_ratecode"
       )
 
