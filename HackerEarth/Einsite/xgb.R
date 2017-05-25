@@ -338,15 +338,15 @@ x = c("vendor_id_int",
       "pickup_min",
       "pickup_hour",
       "pickup_yday",
-      #3"pickup_week", 
+      "pickup_week", 
       #2"pickup_month",
-      #3"pickup_year",
+      "pickup_year",
       
       "dropoff_min",
       "dropoff_hour",
       "dropoff_yday",
       #1"dropoff_week", 
-      #3"dropoff_month",
+      "dropoff_month",
       #2"dropoff_year",
       
       "rate_code",
@@ -459,10 +459,10 @@ model = xgb.train(   params              = param,
 # valid_DM mae = 0.92   -   99.03
 # valid_DM mae = 0.90   -   99.05
 # valid_DM mae = 0.88   -   99.06
-# valid_DM mae = 0.80   -   99.13   (7.70, 4.14, 2.28, 1.38, 1.01)
+# valid_DM mae = 0.80   -   99.13   
 # valid_DM mae = 0.78   -   99.19   (7.80, 4.20, 2.31, 1.40, 1.01)
 
-# 38,0,0.785 - 35,1,0.789 - 32,2,0.778 - 29,3,0.790 - 
+# 38,0,0.785 - 35,1,0.789 - 32,2,0.778 - 
 imp = xgb.importance(feature_names = x, model = model)
 imp
 
