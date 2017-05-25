@@ -328,29 +328,29 @@ test$time_taken_diff_ratecode = calculateDifferenceFromMean(test, train, "rate_c
 
 ## Factors
 x = c("vendor_id_int", 
-      "new_user_int", 
+      #1"new_user_int", 
       "tolls_amount", 
       "tip_amount", 
       "mta_tax", 
       "time_taken", 
-      "passenger_count", 
+      #2"passenger_count", 
       
       "pickup_min",
       "pickup_hour",
       "pickup_yday",
-      "pickup_week", 
-      "pickup_month",
-      "pickup_year",
+      #3"pickup_week", 
+      #2"pickup_month",
+      #3"pickup_year",
       
       "dropoff_min",
       "dropoff_hour",
       "dropoff_yday",
-      "dropoff_week", 
-      "pickup_month",
-      "dropoff_year",
+      #1"dropoff_week", 
+      #3"dropoff_month",
+      #2"dropoff_year",
       
       "rate_code",
-      "store_and_fwd_flag_int",
+      #1"store_and_fwd_flag_int",
       "payment_type_int", 
       "surcharge", 
       "distance", 
@@ -460,6 +460,9 @@ model = xgb.train(   params              = param,
 # valid_DM mae = 0.90   -   99.05
 # valid_DM mae = 0.88   -   99.06
 # valid_DM mae = 0.80   -   99.13   (7.70, 4.14, 2.28, 1.38, 1.01)
+# valid_DM mae = 0.78   -   99.19   (7.80, 4.20, 2.31, 1.40, 1.01)
+
+# 38,0,0.785 - 35,1,0.789 - 32,2,0.778 - 29,3,0.790 - 
 imp = xgb.importance(feature_names = x, model = model)
 imp
 
