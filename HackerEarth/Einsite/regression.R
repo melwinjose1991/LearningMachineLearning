@@ -1,15 +1,27 @@
 library(lubridate)
-library(glmnet)
 
 
 train = read.csv("data/train.csv", header=TRUE, sep=",")
 test = read.csv("data/test.csv", header=TRUE, sep=",")
 
-# Reading the pre-computed features
-if(FALSE){
-  train_2 = read.csv("data/train_2.csv", header=TRUE, sep=",")
-  test_2 = read.csv("data/test_2.csv", header=TRUE, sep=",")
-}
+train_t = read.csv("data/train_pickup.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_pickup.csv", header=TRUE, sep=",")
+train = cbind(train, train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test, test_t[,!names(test_t) %in% c("TID")])
+
+train_t = read.csv("data/train_dropoff.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_dropoff.csv", header=TRUE, sep=",")
+train = cbind(train, train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test, test_t[,!names(test_t) %in% c("TID")])
+
+train_t = read.csv("data/train_time_taken.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_time_taken.csv", header=TRUE, sep=",")
+train = cbind(train, time_taken=train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test, time_taken=test_t[,!names(test_t) %in% c("TID")])
+
+rm(train_t)
+rm(test_t)
+
 
 
 ## Vendor ID - DONE
@@ -103,56 +115,59 @@ test$mta_tax = as.factor(test$mta_tax)
 
 
 ## time taken
-# Outliers ???
-getTimeDifference=function(t1_factor, t2_factor){
-  t1_str = as.character(t1_factor)
-  t2_Str = as.character(t2_factor)
-  #print(t1_str)
-  #print(t2_Str)
+#   check extract_date_time_variables.R
+
+cor(train$fare_amount, train$time_taken)
+# 0.08
+if(FALSE){
+  quantile(train$time_taken, probs=seq(0,1,by=0.00125))
+  x = train[train$time_taken>0 & train$time_taken<5000, c("time_taken","fare_amount")]
+  dim(x)[1] / dim(train)[1]
+  # 0.996
   
-  t1 = strptime(t1_str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  t2 = strptime(t2_Str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  #print(t1)
-  #print(t2)
-  
-  as.numeric(difftime(t2, t1, units="secs"))
+  plot(x$time_taken, x$fare_amount)
+  cor(x$time_taken, x$fare_amount) 
+  # 0.838, cor without outliers removed is 0.08
 }
+train = train[train$time_taken>0 & train$time_taken<5000,]
+
+
+
+# Parts of time
+## <<< TO-DO >>>
+train$pickup_min_c = as.factor(train$pickup_min)
+test$pickup_min_c = as.factor(test$pickup_min)
+
+train$pickup_hour_c = as.factor(train$pickup_hour)
+test$pickup_hour_c = as.factor(test$pickup_hour)
+
+train$pickup_yday_c = as.factor(train$pickup_yday)
+test$pickup_yday_c = as.factor(test$pickup_yday)
+
+train$pickup_week_c = as.factor(train$pickup_week)
+test$pickup_week_c = as.factor(test$pickup_week)
+
+train$pickup_month_c = as.factor(train$pickup_month)
+test$pickup_month_c = as.factor(test$pickup_month)
 
 if(FALSE){
-  train$time_taken = mapply(getTimeDifference, train$pickup_datetime, train$dropoff_datetime)
-  train[train$time_taken<0,]$time_taken = 0   # should the values be swapped ?
-  train_2 = data.frame(TID=train$TID, time_taken=train$time_taken)
+  rows = dim(train)[1]
+  train_rows = sample(1:rows, 0.75*rows, replace=F)
+  train_df = train[train_rows, 
+                   c("pickup_min_c", "pickup_hour_c", "pickup_yday_c", 
+                     "pickup_week_c", "pickup_month_c", "fare_amount")]
+  valid_df = train[-train_rows, 
+                   c("pickup_min_c", "pickup_hour_c", "pickup_yday_c", 
+                     "pickup_week_c", "pickup_month_c", "fare_amount")]
   
-  test$time_taken = mapply(getTimeDifference, test$pickup_datetime, test$dropoff_datetime)
-  test[test$time_taken<0,]$time_taken = 0     # should the values be swapped ?
-  test_2 = data.frame(TID=test$TID, time_taken=test$time_taken)
+  lm_pickup = lm(fare_amount~pickup_hour_c, 
+                 data=train_df)
+  summary(lm_pickup)
   
-}else{
-  train$time_taken = unlist( lapply(train$TID, function(tid){ train_2[tid,"time_taken"] }) )
-  test$time_taken = test_2$time_taken 
+  mean(abs(predict(lm_pickup,newdata=valid_df)-valid_df$fare_amount))
+  # 7.607 = min, hour
+  #       = min, hour, week, month
 }
-
-
-
-# Hour of day
-getPartofTime=function(t_factor, func){
-  #t_factor = train[20,]$pickup_datetime
-  t_str = as.character(t_factor)
-  t = strptime(t_str,"%Y-%m-%d %H:%M:%S", tz="EST")
-  func(t)
-}
-
-if(FALSE){
-  pickup_hour = unlist(lapply(train$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
-  train_2 = cbind(train_2, pickup_hour)
-  
-  pickup_hour = unlist(lapply(test$pickup_datetime, FUN=function(x) getPartofTime(x, hour)))
-  test_2 = cbind(test_2, pickup_hour)
-}else{
-  train$pickup_hour = train_2$pickup_hour
-  test$pickup_hour = test_2$pickup_hour
-}
-
 
 
 ### Distance - DONE
@@ -238,69 +253,54 @@ test$surcharge_c = createSurchargeBuckets(test)
 
 
 
-## Saving Results of expensive operations
-#     time_taken, pickup_hour
-if(FALSE){
-  write.csv(train_2, "data/train_2.csv", row.names=FALSE, quote=FALSE)
-  write.csv(test_2, "data/test_2.csv", row.names=FALSE, quote=FALSE)
-}
-
-
-
 ## Training - lm
-rows = dim(train)[1]
-train_df = train[train_rows, ]
-valid_df = train[-train_rows, ]
-lm_all = lm(fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+
-                        tolls_amount*distance*tip_amount, 
-            data=train_df)
-summary(lm_all)
-
-mean(abs(predict(lm_all,newdata=valid_df)-valid_df$fare_amount))
-# 5.81 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax
-# 2.69 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance
-# 2.66 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c
-# 2.66 = 97.071 fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type
-# 2.66 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type+time_taken
-# 2.51 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount)
-# 2.48 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount) + rate_code_c
-
-test_pred = predict(lm_all,newdata=test)
-test_pred[test_pred<0] = 0
-
-pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
-
-file_name = "regression_lm.csv"
-write.csv(pred, file_name, row.names=FALSE, quote=FALSE)
-
-
-
-## Training - glmnet
-f = as.formula(fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+
-                        tolls_amount*distance*tip_amount+0)
-train_mat = model.matrix(f, train_df)
-valid_mat = model.matrix(f, valid_df)
-
-for(alpha in c(0, 0.2, 0.4, 0.6, 0.8, 1)){
-  g_model = glmnet(train_mat, train_df[,c("fare_amount")], alpha=alpha)
+for(i in c(1,2,3)){
   
-  valid_preds = predict(g_model, s=g_model$lambda,newx=valid_mat)
+  print(paste0("Round#",i))
   
-  results = vector('double')
-  for(i in 1:g_model$dim[2]){
-    results = c(results, mean(abs(valid_preds[,i]-valid_df$fare_amount)))
-  }
-  print(paste0(alpha,": min_lambda:",g_model$lambda[which.min(results)], 
-               ": min_MAE:", min(results)))
+  rows = dim(train)[1]
+  train_rows = sample(1:rows, 0.75*rows, replace=F)
+  train_df = train[train_rows, ]
+  valid_df = train[-train_rows, ]
+  lm_all = lm( fare_amount ~ vendor_id + new_user + surcharge_c + payment_type + mta_tax +
+                          tolls_amount*distance*tip_amount*time_taken, 
+              data=train_df)
+  #summary(lm_all)
+  
+  pred = predict(lm_all,newdata=valid_df)
+  
+  #quantile(train$fare_amount, probs=seq(0,1,by=0.00125))
+  sum(pred<0)
+  pred[pred<0]=0
+  
+  sum(pred>100)
+  pred[pred>100]=100
+  
+  print(mean(abs(pred-valid_df$fare_amount)))
+  # 5.81 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax
+  # 2.69 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance
+  # 2.66 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c
+  # 2.66 = 97.071 fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type
+  # 2.66 =        fare_amount~vendor_id+new_user+tolls_amount+tip_amount+mta_tax+distance+surcharge_c+payment_type+time_taken
+  # 2.51 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount)
+  # 2.48 = 97.246 fare_amount~vendor_id+new_user+surcharge_c+payment_type+mta_tax+ (tolls_amount*distance*tip_amount) + rate_code_c
+  # 1.32 = 98.xxx fare_amount ~ vendor_id + new_user + surcharge_c + payment_type + mta_tax + tolls_amount*distance*tip_amount + time_taken
+  # 1.27 = 98.501 fare_amount ~ vendor_id + new_user + surcharge_c + payment_type + mta_tax + tolls_amount*distance*tip_amount*time_taken
+  #               (^ without extrpolation & averaging)
+  
+  test_pred = predict(lm_all,newdata=test)
+  sum(test_pred<0)
+  test_pred[test_pred<0] = 0
+  
+  sum(test_pred>100)
+  test_pred[test_pred>100] = 100
+  
+  pred_i = paste0("pred_",i)
+  assign(pred_i, test_pred)
+
 }
 
-g_model = glmnet(train_mat, train_df[,c("fare_amount")], alpha=0.6)
-test = cbind(test,"fare_amount"=rep(0,dim(test)[1]))
-test_mat = model.matrix(f, test)
-test_mat = cbind(test_mat, "vendor_idDST000401"=rep(0,dim(test)[1]), "vendor_idDST000532"=rep(0,dim(test)[1]))
-test_pred = predict(g_model, s=0.0062, newx=test_mat)
+pred = data.frame("TID"=test$TID, "fare_amount"=(pred_1+pred_2+pred_3)/3)
 
-pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
-
-file_name = "regression_glmnet.csv"
+file_name = "lm_final.csv"
 write.csv(pred, file_name, row.names=FALSE, quote=FALSE)
