@@ -346,7 +346,7 @@ x = c("vendor_id_int",
       "dropoff_hour",
       "dropoff_yday",
       #1"dropoff_week", 
-      "dropoff_month",
+      #"dropoff_month",
       #2"dropoff_year",
       
       "rate_code",
@@ -435,14 +435,15 @@ train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x]), label=train[train
 valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x]), label=train[-train_rows,y])
 test_DM <- xgb.DMatrix(data = as.matrix(test[,x]))
 
+seed_used = 3456
 param = list(  objective           = "reg:linear", 
                booster             = "gbtree",
                eta                 = 0.0125,
                max_depth           = as.integer(length(x)),
                min_child_weight    = 75,
-               subsample           = 0.8,
-               #alpha               = 0.005
-               colsample_bytree    = 0.60
+               subsample           = 0.80,
+               colsample_bytree    = 0.60,
+               seed                = seed_used
 )
 
 nrounds = 800
@@ -462,7 +463,6 @@ model = xgb.train(   params              = param,
 # valid_DM mae = 0.80   -   99.13   
 # valid_DM mae = 0.78   -   99.19   (7.80, 4.20, 2.31, 1.40, 1.01)
 
-# 38,0,0.785 - 35,1,0.789 - 32,2,0.778 - 
 imp = xgb.importance(feature_names = x, model = model)
 imp
 
@@ -471,6 +471,20 @@ imp
 test_pred = predict(model, test_DM)
 pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
 
-file_name = paste0("xgb_", "x", toString(length(x)), "_r",nrounds, ".csv")
+file_name = paste0("xgb_", "x", toString(length(x)), "_s",seed_used, ".csv")
 write.csv(pred, file_name, row.names = FALSE)
 
+
+
+## Averaging the predictions
+pred_1 = pred
+pred_2 = pred
+pred_3 = pred
+
+pred_final = data.frame(TID=pred_1$TID, 
+                        fare_amount=(pred_1$fare_amount+pred_2$fare_amount+pred_3$fare_amount)/3)
+pred[pred_final$fare_amount<0,]$fare_amount = 0
+
+
+file_name = "xgb_final.csv"
+write.csv(pred_final, file_name, row.names = FALSE, quote = FALSE)
