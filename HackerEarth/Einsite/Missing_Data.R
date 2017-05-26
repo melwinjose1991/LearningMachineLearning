@@ -27,9 +27,6 @@ test = cbind(test, fare_amount)
 rm(train_t)
 rm(test_t)
 
-all_ = rbind(train[,order(names(train))], test[,order(names(test))])
-
-
 
 
 ### Converting factors into numeric
@@ -58,14 +55,13 @@ map = getMap(train$vendor_id, test$vendor_id)
 train$vendor_id = unlist(lapply(train$vendor_id, function(x) getFromMap(as.character(x), map)))
 test$vendor_id = unlist(lapply(test$vendor_id, function(x) getFromMap(as.character(x), map)))
 
-all_$vendor_id = unlist(lapply(all_$vendor_id, function(x) getFromMap(as.character(x), map)))
-
-
 map = getMap(train$payment_type, test$payment_type)
 train$payment_type = unlist(lapply(train$payment_type, function(x) getFromMap(as.character(x), map)))
 test$payment_type = unlist(lapply(test$payment_type, function(x) getFromMap(as.character(x), map)))
 
-all_$payment_type = unlist(lapply(all_$payment_type, function(x) getFromMap(as.character(x), map)))
+
+
+all_ = rbind(train[,order(names(train))], test[,order(names(test))])
 
 
 
@@ -118,10 +114,11 @@ non_missing_cols
 length(non_missing_cols) # 17 both for train and all_
 
 
-# Imputing for quantitative fields
-imputeCategoricalColumn=function(df_non_missing, df_missing, missing_col){
+
+### Imputing for quantitative fields
+imputeColumn=function(df_non_missing, df_missing, missing_col){
   ### 
-  
+  '
   missing_col = "pickup_longitude"
 
     # train
@@ -137,11 +134,9 @@ imputeCategoricalColumn=function(df_non_missing, df_missing, missing_col){
   dim(df_non_missing)[1] / dim(all_)[1]
   df_missing = all_[is.na(all_[,missing_col]) | all_[,missing_col]==0, ]
   dim(all_)[1] == dim(df_missing)[1] + dim(df_non_missing)[1]
-  
+  '
   ###
   
-  x_cols = names(df_non_missing)
-
   rows = dim(df_non_missing)[1]
   train_rows = sample(1:rows, 0.80*rows, replace=F)
   
@@ -159,7 +154,7 @@ imputeCategoricalColumn=function(df_non_missing, df_missing, missing_col){
                  colsample_bytree    = 0.60
   )
   
-  nrounds = 800
+  nrounds = 10
   model = xgb.train(   params              = param, 
                        data                = train_DM,
                        nrounds             = nrounds, 
@@ -174,6 +169,15 @@ imputeCategoricalColumn=function(df_non_missing, df_missing, missing_col){
   
   test_DM = xgb.DMatrix(data=as.matrix(df_missing[,non_missing_cols]))
   predict = predict(model, test_DM)
+  predict
 }
 
-### pickup_longitude
+
+
+missing_col = "pickup_longitude"
+missing_exp = is.na(train[,missing_col]) | train[,missing_col]==0
+non_missing_exp = !is.na(train[,missing_col]) & train[,missing_col]!=0
+df_non_missing = train[ non_missing_exp , ]
+df_missing = train[ missing_exp , ]
+
+train[ missing_exp, missing_col ] = imputeColumn(df_non_missing, df_missing, missing_col)
