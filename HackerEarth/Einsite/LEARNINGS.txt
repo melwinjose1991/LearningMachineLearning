@@ -1,0 +1,23 @@
+- Missing Data (missing.R)
+	- use the column subset of the data with no missing values 
+	  to impute the missing values in other columns. Combine the 
+	  train and test+predicted values so that you have more data.
+	  
+- Feature Engineering (feature_engineering.R)
+	- Have a separate script for working on the features
+	- Save the engineered features
+	- Verify if the categorical variables that are converted 
+	  into numeric have the same mapping in test and train
+	
+- Model Creation (<model>.R)
+	- Use the saved data. Don't impute or engineer features here
+	- Regression
+		- Removing the <0.01 and >99.99 improved
+		  the correlation and thus the model accuracy
+		- Interactions !!!
+	- XGBoost
+		- 
+	- Prediction
+		- Check for predictions which are not sensible
+			ex: negative price . And translate them into
+		  least/maximum possible values

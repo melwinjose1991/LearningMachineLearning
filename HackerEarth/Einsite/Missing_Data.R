@@ -20,12 +20,16 @@ test_t = read.csv("data/test_time_taken.csv", header=TRUE, sep=",")
 train = cbind(train, time_taken=train_t[,!names(train_t) %in% c("TID")])
 test = cbind(test, time_taken=test_t[,!names(test_t) %in% c("TID")])
 
+test_t = read.csv("xgb_final.csv", header=TRUE, sep=",")
+fare_amount = test_t[,"fare_amount"]
+test = cbind(test, fare_amount)
+
 rm(train_t)
 rm(test_t)
 
+all_ = rbind(train[,order(names(train))], test[,order(names(test))])
 
 
-# TODO : Merge train and test
 
 
 ### Converting factors into numeric
@@ -52,15 +56,20 @@ getFromMap=function(key, map){
 
 map = getMap(train$vendor_id, test$vendor_id)
 train$vendor_id = unlist(lapply(train$vendor_id, function(x) getFromMap(as.character(x), map)))
+test$vendor_id = unlist(lapply(test$vendor_id, function(x) getFromMap(as.character(x), map)))
+
+all_$vendor_id = unlist(lapply(all_$vendor_id, function(x) getFromMap(as.character(x), map)))
+
 
 map = getMap(train$payment_type, test$payment_type)
 train$payment_type = unlist(lapply(train$payment_type, function(x) getFromMap(as.character(x), map)))
+test$payment_type = unlist(lapply(test$payment_type, function(x) getFromMap(as.character(x), map)))
+
+all_$payment_type = unlist(lapply(all_$payment_type, function(x) getFromMap(as.character(x), map)))
+
+
 
 ### Find columns without NAs, NULLs, "", etc
-cols = names(train)
-non_missing_cols = vector('character')
-missing_cols = vector('character')
-
 hasMissing=function(df, column){
   #df = train
   #column = "TID"
@@ -84,9 +93,12 @@ hasMissing=function(df, column){
   
 }
 
+cols = names(train)
+non_missing_cols = vector('character')
+missing_cols = vector('character')
 for(col in cols ){
   print(cat("\n===",col,"==="))
-  ret = hasMissing(train, col)
+  ret = hasMissing(all_, col)
   if(ret>0){
     print(cat("\t","has missing values"))
     missing_cols = c(missing_cols, col)
@@ -103,17 +115,30 @@ not_required = c("TID", "dropoff_week", "dropoff_week", "dropoff_month", "dropof
                  "pickup_datetime","dropoff_datetime")
 non_missing_cols = non_missing_cols[!non_missing_cols %in% not_required]
 non_missing_cols
-
+length(non_missing_cols) # 17 both for train and all_
 
 
 # Imputing for quantitative fields
 imputeCategoricalColumn=function(df_non_missing, df_missing, missing_col){
+  ### 
+  
   missing_col = "pickup_longitude"
+
+    # train
   df_non_missing = train[ !is.na(train[,missing_col]) & train[,missing_col]!=0 , ]
   dim(df_non_missing)[1] / dim(train)[1]
   df_missing = train[is.na(train[,missing_col]) | train[,missing_col]==0, ]
   dim(train)[1] == dim(df_missing)[1] + dim(df_non_missing)[1]
   
+  ## OR 
+  
+  # all_
+  df_non_missing = all_[ !is.na(all_[,missing_col]) & all_[,missing_col]!=0 , ]
+  dim(df_non_missing)[1] / dim(all_)[1]
+  df_missing = all_[is.na(all_[,missing_col]) | all_[,missing_col]==0, ]
+  dim(all_)[1] == dim(df_missing)[1] + dim(df_non_missing)[1]
+  
+  ###
   
   x_cols = names(df_non_missing)
 
@@ -144,6 +169,8 @@ imputeCategoricalColumn=function(df_non_missing, df_missing, missing_col){
                        eval_metric         = "mae",
                        print_every_n = 25
   )
+  # all_  : 0.020
+  # train :
   
   test_DM = xgb.DMatrix(data=as.matrix(df_missing[,non_missing_cols]))
   predict = predict(model, test_DM)
