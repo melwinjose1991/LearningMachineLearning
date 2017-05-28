@@ -19,6 +19,13 @@ test_t = read.csv("data/test_time_taken.csv", header=TRUE, sep=",")
 train = cbind(train, time_taken=train_t[,!names(train_t) %in% c("TID")])
 test = cbind(test, time_taken=test_t[,!names(test_t) %in% c("TID")])
 
+train_t = read.csv("data/train_coordinates.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_coordinates.csv", header=TRUE, sep=",")
+train = cbind(train[,!names(train) %in% c("pickup_latitude","pickup_longitude","dropoff_latitude","dropoff_longitude")], 
+              train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test[,!names(test) %in% c("pickup_latitude","pickup_longitude","dropoff_latitude","dropoff_longitude")], 
+              test_t[,!names(test_t) %in% c("TID")])
+
 
 
 # Factorizing 
@@ -49,85 +56,11 @@ test$vendor_id_int = unlist(lapply(test$vendor_id, function(x) getFromMap(as.cha
 
 
 
-## Rows without any NAs
-if(FALSE){
-  col_names = names(train)
-  remove_col = c("TID", "fare_amount", "pickup_datetime", "dropoff_datetime")
-  col_names = col_names[!col_names %in% remove_col]
-  complete_rows_train = train[complete.cases(train[col_names]), col_names]
-  dim(complete_rows_train)[1] / dim(train)[1]
-  # 0.798
-  
-  complete_rows_test = test[complete.cases(test[col_names]), col_names]
-  dim(complete_rows_test)[1] / dim(test)[1]
-  # 0.796
-  
-  complete_rows = rbind(complete_rows_train, complete_rows_test)
-  rm(complete_rows_train)
-  rm(complete_rows_test)
-  
-  complete_rows = complete_rows[complete_rows$new_user!="",]
-  
-  complete_rows$vendor_id = as.numeric(unlist(complete_rows$vendor_id))
-  complete_rows$new_user = as.numeric(unlist(complete_rows$new_user))
-  # NO=2, YES=3
-  complete_rows$payment_type = as.numeric(unlist(complete_rows$payment_type))
-  complete_rows$store_and_fwd_flag = as.numeric(unlist(complete_rows$store_and_fwd_flag))
-}
-
-
-## Impute Missing Data
-imputeCategoricalColumn=function(target_column){
-  target_column = "new_user"
-  target = train[train$new_user=="",]
-  
-  x_col = colnames(target)[colSums(is.na(target)) == 0]
-  #x_col = col_names[!col_names %in% remove_col]
-  x_col = intersect(x_col, names(complete_rows))
-  y_col = target_column
-  
-  y = as.numeric(complete_rows[,target_column]) - 2
-  # NO=0, YES=1
-  
-  rows = dim(complete_rows)[1]
-  train_rows = sample(1:rows, 0.80*rows, replace=F)
-  
-  train_DM <- xgb.DMatrix(data = as.matrix(complete_rows[train_rows,x_col]), 
-                          label=y[train_rows])
-  valid_DM <- xgb.DMatrix(data = as.matrix(complete_rows[-train_rows,x_col]), 
-                          label=y[-train_rows])
-  
-  param = list(  objective           = "multi:softprob", 
-                 booster             = "gbtree",
-                 eta                 = 0.0125,
-                 max_depth           = as.integer(length(x)),
-                 min_child_weight    = 75,
-                 subsample           = 0.8,
-                 colsample_bytree    = 0.60,
-                 num_class           = 2
-  )
-  
-  nrounds = 200
-  model = xgb.train(   params              = param, 
-                       data                = train_DM,
-                       nrounds             = nrounds, 
-                       early_stopping_rounds  = 20,
-                       watchlist           = list(val=valid_DM),
-                       maximize            = FALSE,
-                       eval_metric         = "mlogloss",
-                       print_every_n = 25
-  )
-  
-  test_DM = xgb.DMatrix(data = as.matrix(target[,x_col]))
-  predict = predict(model, test_DM)
-}
-
-
-
 ## Vendor ID
 #train$vendor_id_int = as.numeric(unlist(train[,"vendor_id"]))
 #test$vendor_id_int = as.numeric(unlist(test[,"vendor_id"]))
 # check `Factoring section`
+
 
 
 ## New.User
@@ -174,6 +107,7 @@ test[is.na(test$tip_amount),"tip_amount"] = 0
 ### Distance
 calculateDistance=function(x1,y1,x2,y2){
   if(is.na(x1) | x1==0 | is.na(y1) | y1==0 | is.na(x2) | x2==0 | is.na(y2) | y2==0 ){
+    print("SHIT")
     0
   }else{ 
     sqrt((x1-x2)^2 + (y1-y2)^2)
@@ -185,11 +119,6 @@ train$distance = mapply(calculateDistance, train$pickup_latitude, train$pickup_l
 
 test$distance = mapply(calculateDistance, test$pickup_latitude, test$pickup_longitude, 
                        test$dropoff_latitude, test$dropoff_longitude)
-
-mean_distance = mean(c(train[train$distance>0,"distance"], test[test$distance>0,"distance"]))
-
-train[train$distance<=0,"distance"] = mean_distance
-test[test$distance<=0,"distance"] = mean_distance
 
 
 
@@ -216,9 +145,6 @@ test[test$velocity<=0,"velocity"] = mean_velocity
   
 
 ### store_and_fwd 
-#train$store_and_fwd_flag_int = as.numeric(unlist(train[,"store_and_fwd_flag"]))
-#test$store_and_fwd_flag_int = as.numeric(unlist(test[,"store_and_fwd_flag"]))
-
 train[train$store_and_fwd_flag=="","store_and_fwd_flag"] = "N"
 train[train$store_and_fwd_flag==" ","store_and_fwd_flag"] = "N"
 
@@ -333,21 +259,26 @@ x = c("vendor_id_int",
       "tip_amount", 
       "mta_tax", 
       "time_taken", 
-      #2"passenger_count", 
+      #1"passenger_count", 
+      
+      "pickup_latitude",
+      "pickup_longitude",
+      "dropoff_latitude",
+      "dropoff_longitude",
       
       "pickup_min",
       "pickup_hour",
       "pickup_yday",
-      "pickup_week", 
-      #2"pickup_month",
-      "pickup_year",
+      #1"pickup_week", 
+      #1"pickup_month",
+      #1"pickup_year",
       
       "dropoff_min",
       "dropoff_hour",
       "dropoff_yday",
-      #1"dropoff_week", 
+      #"dropoff_week", 
       #"dropoff_month",
-      #2"dropoff_year",
+      #"dropoff_year",
       
       "rate_code",
       #1"store_and_fwd_flag_int",
@@ -435,7 +366,7 @@ train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x]), label=train[train
 valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x]), label=train[-train_rows,y])
 test_DM <- xgb.DMatrix(data = as.matrix(test[,x]))
 
-seed_used = 3456
+seed_used = 1234
 param = list(  objective           = "reg:linear", 
                booster             = "gbtree",
                eta                 = 0.0125,
@@ -446,7 +377,7 @@ param = list(  objective           = "reg:linear",
                seed                = seed_used
 )
 
-nrounds = 800
+nrounds = 1000
 model = xgb.train(   params              = param, 
                      data                = train_DM,
                      nrounds             = nrounds, 
@@ -462,6 +393,9 @@ model = xgb.train(   params              = param,
 # valid_DM mae = 0.88   -   99.06
 # valid_DM mae = 0.80   -   99.13   
 # valid_DM mae = 0.78   -   99.19   (7.80, 4.20, 2.31, 1.40, 1.01)
+# valid_DM mae = 0.69   -   99.28   (7.80, 4.20, 2.31, 1.40, 1.01)
+
+# 0,0.69 - 1,0.69 - 2, 
 
 imp = xgb.importance(feature_names = x, model = model)
 imp
@@ -470,6 +404,7 @@ imp
 ## Test Prediction
 test_pred = predict(model, test_DM)
 pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
+pred[pred$fare_amount<0,]$fare_amount = 0
 
 file_name = paste0("xgb_", "x", toString(length(x)), "_s",seed_used, ".csv")
 write.csv(pred, file_name, row.names = FALSE)
