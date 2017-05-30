@@ -173,6 +173,7 @@ imputeColumn=function(df_non_missing, df_missing, missing_col){
 }
 
 
+
 ## Co-ordinates
 for(missing_col in c("pickup_longitude","pickup_latitude","dropoff_longitude","dropoff_latitude")){
 
@@ -206,3 +207,41 @@ for(missing_col in c("pickup_longitude","pickup_latitude","dropoff_longitude","d
 }
 write.csv(test[,c("TID","pickup_longitude", "pickup_latitude", "dropoff_longitude", "dropoff_latitude")], 
           "data/test_coordinates.csv", row.names = FALSE, quote = FALSE)
+
+
+
+### surcharge
+for(missing_col in c("surcharge")){
+  
+  missing_exp = is.na(train[,missing_col])
+  non_missing_exp = !is.na(all_[,missing_col])
+  
+  df_non_missing = all_[ non_missing_exp , ]
+  df_missing = train[ missing_exp , ]
+  
+  print(sum(missing_exp)) #missing entries
+  
+  train[ missing_exp, missing_col ] = imputeColumn(df_non_missing, df_missing, missing_col)
+  sum(is.na(train[,missing_col]))
+  sum(!is.na(train[,missing_col])) == dim(train)[1]
+  
+}
+write.csv(train[,c("TID","surcharge")], "data/train_surcharge.csv", row.names = FALSE, quote = FALSE)
+
+
+for(missing_col in c("surcharge")){
+  
+  missing_exp = is.na(test[,missing_col]) | test[,missing_col]==0
+  non_missing_exp = !is.na(all_[,missing_col]) & all_[,missing_col]!=0
+  
+  df_non_missing = all_[ non_missing_exp , ]
+  df_missing = test[ missing_exp , ]
+  
+  print(sum(missing_exp)) #missing entries
+  
+  test[ missing_exp, missing_col ] = imputeColumn(df_non_missing, df_missing, missing_col)
+  sum(is.na(test[,missing_col]) | test[,missing_col]==0)
+  sum(!is.na(test[,missing_col]) & test[,missing_col]!=0) == dim(test)[1]
+  
+}
+write.csv(test[,c("TID","surcharge")], "data/test_surcharge.csv", row.names = FALSE, quote = FALSE)

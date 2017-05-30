@@ -19,6 +19,13 @@ test_t = read.csv("data/test_time_taken.csv", header=TRUE, sep=",")
 train = cbind(train, time_taken=train_t[,!names(train_t) %in% c("TID")])
 test = cbind(test, time_taken=test_t[,!names(test_t) %in% c("TID")])
 
+train_t = read.csv("data/train_coordinates.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_coordinates.csv", header=TRUE, sep=",")
+train = cbind(train[,!names(train) %in% c("pickup_latitude","pickup_longitude","dropoff_latitude","dropoff_longitude")], 
+              train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test[,!names(test) %in% c("pickup_latitude","pickup_longitude","dropoff_latitude","dropoff_longitude")], 
+             test_t[,!names(test_t) %in% c("TID")])
+
 rm(train_t)
 rm(test_t)
 
@@ -185,10 +192,9 @@ train$distance = mapply(calculateDistance, train$pickup_latitude, train$pickup_l
 test$distance = mapply(calculateDistance, test$pickup_latitude, test$pickup_longitude, 
                        test$dropoff_latitude, test$dropoff_longitude)
 
-mean_distance = mean(c(train[train$distance>0,"distance"], test[test$distance>0,"distance"]))
-
-train[train$distance<=0,"distance"] = mean_distance
-test[test$distance<=0,"distance"] = mean_distance
+#mean_distance = mean(c(train[train$distance>0,"distance"], test[test$distance>0,"distance"]))
+#train[train$distance<=0,"distance"] = mean_distance
+#test[test$distance<=0,"distance"] = mean_distance
 
 if(FALSE){
   quantile(train[train$distance>0,]$distance, probs=seq(0,1,by=0.00125))

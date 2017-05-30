@@ -26,6 +26,11 @@ train = cbind(train[,!names(train) %in% c("pickup_latitude","pickup_longitude","
 test = cbind(test[,!names(test) %in% c("pickup_latitude","pickup_longitude","dropoff_latitude","dropoff_longitude")], 
               test_t[,!names(test_t) %in% c("TID")])
 
+train_t = read.csv("data/train_surcharge.csv", header=TRUE, sep=",")
+test_t = read.csv("data/test_surcharge.csv", header=TRUE, sep=",")
+train = cbind(train[,!names(train) %in% c("surcharge")], surcharge=train_t[,!names(train_t) %in% c("TID")])
+test = cbind(test[,!names(test) %in% c("surcharge")], surcharge=test_t[,!names(test_t) %in% c("TID")])
+
 
 
 # Factorizing 
@@ -86,9 +91,10 @@ test[test$tolls_amount<0,"tolls_amount"] = 0
 
 ## tip_amount
 # Outliers ???
-# NA ? 0?
+sum(is.na(train$tip_amount))
 train[is.na(train$tip_amount),"tip_amount"] = 0
 
+sum(is.na(test$tip_amount))
 test[is.na(test$tip_amount),"tip_amount"] = 0
 
 
@@ -170,6 +176,7 @@ test$payment_type_int = unlist(lapply(test$payment_type, function(x) getFromMap(
 ### surcharge
 # outliers ??? 
 # negative values ???
+sum(is.na(train$surcharge))
 train[is.na(train$surcharge),"surcharge"] = 0
 
 test[is.na(test$surcharge),"surcharge"] = 0
@@ -359,65 +366,70 @@ for(param_1 in c(25,50,75,125,150,175)){                # min_child_weight
 
 
 ## Training 
-rows = dim(train)[1]
-train_rows = sample(1:rows, 0.80*rows, replace=F)
-
-train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x]), label=train[train_rows,y])
-valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x]), label=train[-train_rows,y])
 test_DM <- xgb.DMatrix(data = as.matrix(test[,x]))
+seeds = c(1234,2345,3456)
 
-seed_used = 1234
-param = list(  objective           = "reg:linear", 
-               booster             = "gbtree",
-               eta                 = 0.0125,
-               max_depth           = as.integer(length(x)),
-               min_child_weight    = 75,
-               subsample           = 0.80,
-               colsample_bytree    = 0.60,
-               seed                = seed_used
-)
-
-nrounds = 1000
-model = xgb.train(   params              = param, 
-                     data                = train_DM,
-                     nrounds             = nrounds, 
-                     early_stopping_rounds  = 20,
-                     watchlist           = list(val=valid_DM),
-                     maximize            = FALSE,
-                     eval_metric         = "mae",
-                     print_every_n = 25
-)
-# valid_DM mae = 1.54   -   98.37
-# valid_DM mae = 0.92   -   99.03
-# valid_DM mae = 0.90   -   99.05
-# valid_DM mae = 0.88   -   99.06
-# valid_DM mae = 0.80   -   99.13   
-# valid_DM mae = 0.78   -   99.19   (7.80, 4.20, 2.31, 1.40, 1.01)
-# valid_DM mae = 0.69   -   99.28   (7.80, 4.20, 2.31, 1.40, 1.01)
-
-# 0,0.69 - 1,0.69 - 2, 
-
-imp = xgb.importance(feature_names = x, model = model)
-imp
-
-
-## Test Prediction
-test_pred = predict(model, test_DM)
-pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
-pred[pred$fare_amount<0,]$fare_amount = 0
-
-file_name = paste0("xgb_", "x", toString(length(x)), "_s",seed_used, ".csv")
-write.csv(pred, file_name, row.names = FALSE)
+for(i in c(1,2,3)){
+  
+  rows = dim(train)[1]
+  train_rows = sample(1:rows, 0.80*rows, replace=F)
+  
+  train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x]), label=train[train_rows,y])
+  valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x]), label=train[-train_rows,y])
+  
+  seed_used = seeds[i]
+  param = list(  objective           = "reg:linear", 
+                 booster             = "gbtree",
+                 eta                 = 0.0125,
+                 max_depth           = as.integer(length(x)),
+                 min_child_weight    = 75,
+                 subsample           = 0.80,
+                 colsample_bytree    = 0.60,
+                 seed                = seed_used
+  )
+  
+  nrounds = 1000
+  print(paste0("Round#", i, " with seed:", seed_used))
+  
+  model = xgb.train(   params              = param, 
+                       data                = train_DM,
+                       nrounds             = nrounds, 
+                       early_stopping_rounds  = 20,
+                       watchlist           = list(val=valid_DM),
+                       maximize            = FALSE,
+                       eval_metric         = "mae",
+                       print_every_n = 25
+  )
+  # valid_DM mae = 1.54   -   98.37
+  # valid_DM mae = 0.92   -   99.03
+  # valid_DM mae = 0.90   -   99.05
+  # valid_DM mae = 0.88   -   99.06
+  # valid_DM mae = 0.80   -   99.13   
+  # valid_DM mae = 0.78   -   99.19   (7.80, 4.20, 2.31, 1.40, 1.01)
+  # valid_DM mae = 0.69   -   99.28   (7.80, 4.20, 2.31, 1.40, 1.01)
+  
+  # 0,0.69 - 1,0.69 - 2, 
+  
+  #imp = xgb.importance(feature_names = x, model = model)
+  #imp
+  
+  
+  ## Test Prediction
+  test_pred = predict(model, test_DM)
+  pred = data.frame("TID"=test$TID, "fare_amount"=test_pred)
+  pred[pred$fare_amount<0,]$fare_amount = 0
+  
+  file_name = paste0("xgb_", "x", toString(length(x)), "_s",seed_used, ".csv")
+  write.csv(pred, file_name, row.names = FALSE)
+  
+  pred_i = paste0("pred_",i)
+  assign(pred_i, test_pred)
+}
 
 
 
 ## Averaging the predictions
-pred_1 = pred
-pred_2 = pred
-pred_3 = pred
-
-pred_final = data.frame(TID=pred_1$TID, 
-                        fare_amount=(pred_1$fare_amount+pred_2$fare_amount+pred_3$fare_amount)/3)
+pred_final = data.frame(TID=test$TID, fare_amount=(pred_1+pred_2+pred_3)/3)
 pred[pred_final$fare_amount<0,]$fare_amount = 0
 
 
