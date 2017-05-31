@@ -39,6 +39,50 @@ test$life_sq_fraction = test$life_sq/test$full_sq
 
 
 
+# product_type
+train$product_type_int = as.numeric(train$product_type)
+
+test[is.na(test$product_type),"product_type"] = "Investment"
+test[test$product_type=="Investment",]$product_type_int = 1
+test[test$product_type=="OwnerOccupier",]$product_type_int = 2
+
+
+
+# sub_area
+## Do we need to add other sub-area specific
+## properties ???
+getMap=function(df1_col, df2_col){
+  all_values = unique(c(unique(as.character(df1_col)),unique(as.character(df2_col))))
+  map = list()
+  index = 1
+  print(all_values)
+  for(value in all_values){
+    map[value] = index
+    index = index + 1
+  }
+  print(map)
+  map
+}
+
+getFromMap=function(key, map){
+  if(key %in% names(map)){
+    map[[key]]
+  }else{
+    NA
+  }
+}
+
+map = getMap(train$sub_area, test$sub_area)
+train$sub_area_int = unlist(lapply(train$sub_area, function(x) getFromMap(as.character(x), map)))
+test$sub_area_int = unlist(lapply(test$sub_area, function(x) getFromMap(as.character(x), map)))
+
+
+
+# area_m, full_all, pop_density_m
+train$pop_density_m = train$full_all/train$area_m
+test$pop_density_m = test$full_all/test$area_m
+
+
 # variables
 x = c(
   "year",
@@ -47,7 +91,13 @@ x = c(
   
   "full_sq",
   "life_sq",
-  "life_sq_fraction"
+  "life_sq_fraction",
+  
+  "product_type_int",
+  "sub_area_int",
+  "area_m",
+  "full_all",
+  "pop_density_m"
 )
 
 y = c("price_doc")
@@ -78,9 +128,11 @@ model = xgb.train(   params              = param,
                      early_stopping_rounds  = 20,
                      watchlist           = list(val=valid_DM),
                      maximize            = FALSE,
-                     eval_metric         = "mae",
+                     eval_metric         = "rmse",
                      print_every_n = 25
 )
+#   3223106.250000 - 0.361
+#   2786899.750000 - 0.345
  
 imp = xgb.importance(feature_names = x, model = model)
 imp
