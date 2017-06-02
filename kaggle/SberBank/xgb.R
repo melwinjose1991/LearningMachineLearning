@@ -42,8 +42,8 @@ test$life_sq_fraction = test$life_sq/test$full_sq
 # product_type
 train$product_type_int = as.numeric(train$product_type)
 
-test[is.na(test$product_type),"product_type"] = "Investment"
-test[test$product_type=="Investment",]$product_type_int = 1
+test[is.na(test$product_type),"product_type"] = rep("Investment",sum(is.na(test$product_type)))
+test$product_type_int = rep(1,dim(test)[1])
 test[test$product_type=="OwnerOccupier",]$product_type_int = 2
 
 
@@ -83,6 +83,49 @@ train$pop_density_m = train$full_all/train$area_m
 test$pop_density_m = test$full_all/test$area_m
 
 
+
+# metro_km_
+# _avto : No NAs
+# _walk : NAs in both test and train
+med_km_walk = median(c(train$metro_km_walk, test$metro_km_walk), na.rm = TRUE)
+train[is.na(train$metro_km_walk),"metro_km_walk"] = med_km_walk
+test[is.na(test$metro_km_walk),"metro_km_walk"] = med_km_walk
+
+
+
+# 500mts
+n = names(train)
+all_500 = n[grepl("count_500$",n)]
+# what about cafe_count_500_* ???
+for(c in all_500){
+  if( sum(is.na(train[,c]))>0 | sum(is.na(test[,c]))>0 ){
+    print(c)
+    med = median(c(train[,c],test[,c]), na.rm=TRUE)
+    train[is.na(train[,c]),c] = med
+    test[is.na(test[,c]),c] = med
+  }
+}
+
+
+
+# km
+n = names(train)
+all_km = n[grepl("km$",n)]
+for(km in all_km){
+  if( sum(is.na(train[,km]))>0 | sum(is.na(test[,km]))>0 ){
+    print(km)
+    med = median(c(train[,km],test[,km]), na.rm=TRUE)
+    train[is.na(train[,km]),km] = med
+    test[is.na(test[,km]),km] = med
+  }
+}
+
+
+
+names(train)[train[1,]!=train[8,]]
+
+
+
 # variables
 x = c(
   "year",
@@ -97,7 +140,13 @@ x = c(
   "sub_area_int",
   "area_m",
   "full_all",
-  "pop_density_m"
+  "pop_density_m",
+  
+  "metro_km_avto",
+  "metro_km_walk",
+  
+  all_500,
+  all_km
 )
 
 y = c("price_doc")
@@ -116,7 +165,7 @@ param = list(  objective           = "reg:linear",
                booster             = "gbtree",
                eta                 = 0.0125,
                max_depth           = as.integer(length(x)),
-               min_child_weight    = 50,
+               min_child_weight    = 25,
                subsample           = 0.8,
                colsample_bytree    = 0.60
 )
@@ -132,7 +181,8 @@ model = xgb.train(   params              = param,
                      print_every_n = 25
 )
 #   3223106.250000 - 0.361
-#   2786899.750000 - 0.345
+#   2786899.750000 - 0.345 
+#   2690190.000000 - 0.337 50/73
  
 imp = xgb.importance(feature_names = x, model = model)
 imp
