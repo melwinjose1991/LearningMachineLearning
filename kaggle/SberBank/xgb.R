@@ -3,6 +3,7 @@ library(xgboost)
 train = read.csv("data/train.csv", header=TRUE, sep=",")
 test = read.csv("data/test.csv", header=TRUE, sep=",")
 
+macro = read.csv("data/macro.csv", header=TRUE, sep=",")
 
 
 # timestamp
@@ -126,6 +127,28 @@ names(train)[train[1,]!=train[8,]]
 
 
 
+## macro
+macro$timestamp_str = unlist(lapply(macro$timestamp, as.character))
+train$timestamp_str = unlist(lapply(train$timestamp, as.character))
+test$timestamp_str = unlist(lapply(test$timestamp, as.character))
+
+macros = c("usdrub", "eurrub", "income_per_cap", "salary")
+
+for(m in macros){
+  print(paste0("Now ",m))
+  if( sum(is.na(macro[,m]))>0 ){
+    print(paste0("Has NAs ",m))
+    med = median(macro[,m], na.rm=TRUE)
+    macro[is.na(macro[,m]),m] = med
+  }
+}
+
+train[,"usdrub"] = lapply(train$timestamp_str, FUN=function(x) 
+  macro[macro$timestamp_str==x, "usdrub"])
+test[,"usdrub"] = lapply(test$timestamp_str, FUN=function(x) 
+  macro[macro$timestamp_str==x, "usdrub"])  
+
+
 # variables
 x = c(
   "year",
@@ -146,7 +169,9 @@ x = c(
   "metro_km_walk",
   
   all_500,
-  all_km
+  all_km,
+  
+  macros
 )
 
 y = c("price_doc")
