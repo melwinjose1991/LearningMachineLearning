@@ -2,50 +2,51 @@ library(FredR)
 
 
 
+## Parameters
 api.key = "b96673bc1d92a335c6306c864e046827"
 date_start = "2013-01-01"
 date_end = "2016-12-31"
 
+main_category_id = 1
+sub_category_id = 32436
+#sa_OR_nsa = "Not Seasonally Adjusted" 
+sa_OR_nsa = "Seasonally Adjusted Annual Rate"
+
+
+
+## Fetching Data
+#   source : https://fred.stlouisfed.org/categories
+
 fred = FredR(api.key)
 
+sub_category = fred$category.series(category_id=sub_category_id)
+sub_category
 
-
-## Sample Code
-main_category = fred$category.children(category_id=1)
-# 1 : Production & Business Activity
-
-sub_category = fred$category.series(category_id=32436)
-# 32436 : Construction
-
-# Series that are have monthly reading and
-# that are not Not Seasonally Adjusted
-series_nsa = sub_category[sub_category$frequency=="Monthly" 
-             & sub_category$seasonal_adjustment=="Not Seasonally Adjusted", c("id","title") ]
-
-
-# Fetching the values for 
-series_nsa[1,"id"]
-series = fred$series.observations(series_id=series_nsa[1,"id"], 
-                                      observation_start = date_start,
-                                      observation_end = date_end)
-series
-
-
-
-## Construction
-sub_category = fred$category.series(category_id=32436)
-
-series_nsa = sub_category[ sub_category$frequency=="Monthly" 
-                           & sub_category$seasonal_adjustment=="Not Seasonally Adjusted", 
+series_id_title = sub_category[ sub_category$frequency=="Monthly" 
+                           & sub_category$seasonal_adjustment==sa_OR_nsa, 
                            c("id","title") ]
+series_id_title
 
-df = data.frame(date=series$date)
-for(id in series_id_nsa$id){
+for(id in series_id_title$id){
+  
   print(paste0("Fetching ",id))
   series = fred$series.observations(series_id=id, 
                                     observation_start = date_start,
                                     observation_end = date_end)
-  df[,id]=series$value
+  if(exists("df_series")){
+    df_series[,id]=series$value
+  }else{
+    df_series = data.frame(date=series$date)
+  }
+  
 }
-write.csv(df, "../Production and Business Activity/Construction.csv", 
+
+
+## Writing into CSV
+if(sa_OR_nsa=="Not Seasonally Adjusted"){
+  write.csv(df_series, "../../Data/Production and Business Activity/Construction_nsa.csv", 
           quote=FALSE, row.names=FALSE)
+}else{
+  write.csv(df_series, "../../Data/Production and Business Activity/Construction_sa.csv", 
+            quote=FALSE, row.names=FALSE)
+}

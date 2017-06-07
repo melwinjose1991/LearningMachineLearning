@@ -7,7 +7,7 @@ source("../Common/Utils.R")
 
 # Loading Data
 data_revenue = read.csv("../../Data/2401_Revenue.csv", header=TRUE, sep=",")
-data_vars = read.csv("../../Data/Production and Business Activity/Construction.csv", header=TRUE, sep=",")
+data_vars = read.csv("../../Data/Production and Business Activity/Construction_nsa.csv", header=TRUE, sep=",")
 
 data = cbind(data_revenue[,c("orders_rcvd","month")], data_vars)
 data$month = as.factor(data$month)
@@ -51,9 +51,12 @@ leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=no_vars, method=me
 coef(leaps,id=best_model)
 
 # best model with the least CV'd MAE - limited to nvmax=5
-# forward    : PBPWRCON
-# exhaustive : PBPWRCON  
-
+# Not Seasonally Adjusted
+#   forward    : PBPWRCON : 3581
+#   exhaustive : PBPWRCON : 3581
+# Seasonally Adjusted Annual Rate
+#   forward    : TLWSCONS : 3441
+#   exhaustive : TLWSCONS : 3441
 
 
 ## Leaps' Model Selection
