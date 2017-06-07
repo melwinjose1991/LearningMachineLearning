@@ -27,7 +27,7 @@ cvSubsetSelection = function(df, no_vars, method="forward"){
       #i=1
       #print(i)
       pred = predict_func(best.fit, df[folds==j,], id=i)
-      cv.errors[j, i] = mean( (df$orders_rcvd[folds==j]-pred)^2 )
+      cv.errors[j, i] = mean( abs(df$orders_rcvd[folds==j]-pred) )
     }
     
     id = which.min(cv.errors[j,])

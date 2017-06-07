@@ -20,27 +20,20 @@ corrplot.mixed(cor(data[,!names(data) %in% c("month")]), upper="circle", lower="
 # Highest Correlation : 0.410 : PBPWRCON : Total Public Construction Spending: Power
 
 # Removing highly correlated variables
-tmp = cor(data[,!names(data) %in% c("month","order_rcvd")])
+data_num_var = data[,!names(data) %in% c("month","orders_rcvd")]
+tmp = cor(data_num_var)
 tmp[!lower.tri(tmp)] = 0
-data.new = data[,!apply(tmp,2,function(x) any(x > 0.99))]
-names(data.new)
+uncorrelated_vars = names(data_num_var[,!apply(tmp,2,function(x) any(x > 0.95))])
+uncorrelated_vars
 
-if(FALSE){
-  correlation = cor(data[,!names(data) %in% c("month")])[1,]
-  correlation = correlation[2:length(correlation)]
-  related_cols = correlation[correlation>0.25]
-  related_cols_name = names(related_cols)
-  related_cols_name
-  
-  corrplot.mixed(cor(data[,related_cols_name]), upper="circle", lower="number")
-  related_cols_name = related_cols_name[!related_cols_name %in% c("PBPSCON","PBWSCON")]
-}
+corrplot.mixed(cor(data[,uncorrelated_vars]), upper="circle", lower="number")
+data.new = data[,c("orders_rcvd","month",uncorrelated_vars)]
 
 
 
 ## Parameters
-no_vars = 5
-method = "forward" # exhaustive, forward
+no_vars = 10 #dim(data.new)[2]/2
+method = "exhaustive" # exhaustive, forward
 var_cols = names(data.new)
 
 
@@ -56,9 +49,9 @@ best_model
 leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=no_vars, method=method)
 coef(leaps,id=best_model)
 
-# best model with the least CV'd MSE - limited to nvmax=5
+# best model with the least CV'd MAE - limited to nvmax=5
 # forward    : PBPWRCON
-# exhaustive : TLCADCON + TLCOMCON + TLEDUCON  
+# exhaustive : PBPWRCON  
 
 
 
@@ -66,16 +59,17 @@ coef(leaps,id=best_model)
 #leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=length(var_cols), method="forward", 
 #                   force.in=1:11)
 #leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=length(var_cols)+11, method="forward")
-leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=no_vars, method="forward")
+leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=no_vars, method=method)
 plot(leaps)
 
 leaps_summary = summary(leaps)
+
 best_model = which.min(leaps_summary$bic)
 coef(leaps,id=best_model)
 
-best_model = which.max(leaps_summary$rsq)
+best_model = which.max(leaps_summary$adjr2)
 coef(leaps,id=best_model)
 
-# best model with the least CV'd MSE - limited to nvmax=5
-# forward    : PBPWRCON
-# exhaustive : TLCADCON + TLCOMCON + TLEDUCON  
+# best model with regsubsets Adj-R2 - limited to nvmax=5
+# forward    : month4 + month10 + month11 + PBPWRCON + TLWSCON 
+# exhaustive : PBSWGCON + TLCADCON + TLCOMCON + TLEDUCON + TLSWDCON
