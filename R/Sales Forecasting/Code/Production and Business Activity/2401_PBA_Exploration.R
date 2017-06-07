@@ -20,7 +20,7 @@ corrplot.mixed(cor(data[,!names(data) %in% c("month")]), upper="circle", lower="
 # Highest Correlation : 0.410 : PBPWRCON : Total Public Construction Spending: Power
 
 # Removing highly correlated variables
-tmp = cor(data[,!names(data) %in% c("month")])
+tmp = cor(data[,!names(data) %in% c("month","order_rcvd")])
 tmp[!lower.tri(tmp)] = 0
 data.new = data[,!apply(tmp,2,function(x) any(x > 0.99))]
 names(data.new)
@@ -38,23 +38,44 @@ if(FALSE){
 
 
 
-## Cross-Validated Subset Selection
-mean_errors = cvSubsetSelection(data.new)
-## TO DO : re-write the above function
-
-
-## Forward Selection
+## Parameters
+no_vars = 5
+method = "forward" # exhaustive, forward
 var_cols = names(data.new)
-leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=length(var_cols), method="forward", 
-                   force.in=1:11)
-leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=length(var_cols), method="forward")
+
+
+
+## Cross-Validated Model Selection
+source("../Common/Utils.R")
+
+mean_errors = cvSubsetSelection(data.new, no_vars=no_vars, method=method)
+mean_errors
+best_model = which.min(mean_errors)
+best_model
+
+leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=no_vars, method=method)
+coef(leaps,id=best_model)
+
+# best model with the least CV'd MSE - limited to nvmax=5
+# forward    : PBPWRCON
+# exhaustive : TLCADCON + TLCOMCON + TLEDUCON  
+
+
+
+## Leaps' Model Selection
+#leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=length(var_cols), method="forward", 
+#                   force.in=1:11)
+#leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=length(var_cols)+11, method="forward")
+leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=no_vars, method="forward")
 plot(leaps)
 
 leaps_summary = summary(leaps)
-leaps_summary
-
 best_model = which.min(leaps_summary$bic)
-leaps_summary$outmat[best_model,]
 coef(leaps,id=best_model)
 
-# FINAL : month + TLWSCON
+best_model = which.max(leaps_summary$rsq)
+coef(leaps,id=best_model)
+
+# best model with the least CV'd MSE - limited to nvmax=5
+# forward    : PBPWRCON
+# exhaustive : TLCADCON + TLCOMCON + TLEDUCON  

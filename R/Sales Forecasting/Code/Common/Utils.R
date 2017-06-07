@@ -6,20 +6,21 @@ predict_func = function(fit, newdata, id){
   mat[, xvars]%*%coefs
 }
 
-cvSubsetSelection = function(df){
+cvSubsetSelection = function(df, no_vars, method="forward"){
   #df = data
+  #no_vars = dim(df)[2]+11
+  
   rows = nrow(df)
-  no_vars = dim(model.matrix(as.formula("orders_rcvd~."), df))[2]-1
   print(paste0("Variables:", no_vars))
   
   k=10
-  #set.seed(1)
+  set.seed(1)
   folds = sample(1:k, rows, replace=TRUE)
   cv.errors = matrix(NA, k, no_vars)
   
   for(j in 1:k){
     #j=1
-    best.fit = regsubsets(orders_rcvd~., data=df[folds!=j,], nvmax=no_vars)
+    best.fit = regsubsets(orders_rcvd~., data=df[folds!=j,], nvmax=no_vars, method=method)
     
     no_of_models = length(summary(best.fit)$rss)
     for(i in 1:no_of_models){
