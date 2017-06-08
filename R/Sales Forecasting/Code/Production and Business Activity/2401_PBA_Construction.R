@@ -1,5 +1,6 @@
 library(corrplot)
 library(leaps)
+library(glmnet)
 
 source("../Common/Utils.R")
 
@@ -59,6 +60,7 @@ coef(leaps,id=best_model)
 #   exhaustive : TLWSCONS : 3441
 
 
+
 ## Leaps' Model Selection
 #leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=length(var_cols), method="forward", 
 #                   force.in=1:11)
@@ -77,3 +79,30 @@ coef(leaps,id=best_model)
 # best model with regsubsets Adj-R2 - limited to nvmax=5
 # forward    : month4 + month10 + month11 + PBPWRCON + TLWSCON 
 # exhaustive : PBAMUSCON + TLCADCON + TLEDUCON + TLOFCON + TLSWDCON
+
+
+
+## LASSO Regression
+grid = 2.71828^seq(0.001, 10, length=10000)
+
+x = model.matrix(orders_rcvd~., data)[,-1]
+y = data$orders_rcvd
+
+cv.l2.fit = cv.glmnet(x, y, alpha=1, type.measure="mae", lambda=grid)
+plot(cv.l2.fit)
+
+best_lambda = cv.l2.fit$lambda.min
+best_lambda
+best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
+best_lambda_index
+
+cv.l2.fit$cvm[best_lambda_index]
+
+l2.fit = glmnet(x, y, alpha=1, lambda=best_lambda)
+coef(l2.fit)
+
+# run#   MAE       month8 + month10 + month11 + PBPWRCON
+#    1   3557         *                  *         *
+#    2   3568         *                  *         *
+#    3   3505         *                  *         *
+#    4   3554                                      *
