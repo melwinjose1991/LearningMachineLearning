@@ -1,3 +1,5 @@
+library(forecast)
+
 predict_func = function(fit, newdata, id){
   form = as.formula("orders_rcvd~.")
   mat = model.matrix(form, newdata)
@@ -40,4 +42,32 @@ cvSubsetSelection = function(df, no_vars, method="forward"){
   par(mfrow=c(1,1))
   plot(mean.cv.errors, type='b')
   mean.cv.errors
+}
+
+
+getBenchmarkResults=function(y, h=6){
+  # Source : https://www.otexts.org/fpp/2/3
+
+  train_indices = 1:(length(y)-h)
+  y_actual = y[-train_indices]
+
+  ## Average Method
+  mean_y = mean(y[train_indices])
+  mae = mean(abs(y_actual-mean_y))
+  print(paste0("Prediction MAE for Average Method : ", mae))
+  
+  ## Naive Method
+  predictions = naive(y[train_indices], h)$mean
+  mae = mean( abs( prediction - y_actual) )
+  print(paste0("Prediction MAE for Naive Method : ", mae))
+
+  ## Seasonal Naive Method
+  predictions = snaive(ts(y[train_indices],frequency = 12),h)$mean
+  mae = mean( abs( predictions - y_actual) )
+  print(paste0("Prediction MAE for Seasonal Naive Method : ", mae))
+  
+  ## Drift Method
+  predictions = rwf(ts(y[train_indices],frequency = 12), h, drift=TRUE)$mean
+  mae = mean( abs( predictions - y_actual) )
+  print(paste0("Prediction MAE for Drift Method : ", mae))
 }

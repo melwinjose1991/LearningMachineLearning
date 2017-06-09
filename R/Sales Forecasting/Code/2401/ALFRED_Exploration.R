@@ -1,5 +1,6 @@
 library(corrplot)
 library(leaps)
+library(glmnet)
 
 source("../Common/Utils.R")
 
@@ -49,7 +50,7 @@ corrplot.mixed(cor(data[,!names(data) %in% c("month")]), upper="circle", lower="
 data_num_var = data[,!names(data) %in% c("month","orders_rcvd")]
 tmp = cor(data_num_var)
 tmp[!lower.tri(tmp)] = 0
-uncorrelated_vars = names(data_num_var[,!apply(tmp,2,function(x) any(x > 0.95))])
+uncorrelated_vars = names(data_num_var[,!apply(tmp,2,function(x) any(x > 0.98))])
 uncorrelated_vars
 corrplot.mixed(cor(data[,uncorrelated_vars]), upper="circle", lower="number")
 
@@ -124,7 +125,8 @@ best_lambda_index
 cv.l2.fit$cvm[best_lambda_index]
 
 l2.fit = glmnet(x, y, alpha=1, lambda=best_lambda)
-coef(l2.fit)
+coefs = coef(l2.fit)[,1]
+coefs[coefs!=0]
 
 # run#   MAE       month8 + month10 + month11 + PBPWRCON
 #    1   3557         *                  *         *
