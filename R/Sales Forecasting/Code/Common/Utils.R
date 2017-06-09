@@ -47,27 +47,38 @@ cvSubsetSelection = function(df, no_vars, method="forward"){
 
 getBenchmarkResults=function(y, h=6){
   # Source : https://www.otexts.org/fpp/2/3
-
+  
+  t = ts(y, frequency=12)
+  plot(t)
+  t_window = window(t, end=4+((12-(h+1))/12))
+  
   train_indices = 1:(length(y)-h)
   y_actual = y[-train_indices]
 
   ## Average Method
-  mean_y = mean(y[train_indices])
-  mae = mean(abs(y_actual-mean_y))
+  predictions = meanf(t_window, h)$mean
+  lines(predictions, col=2, lwd=2, lty=2)
+  mae = mean( abs(predictions - y_actual) )
   print(paste0("Prediction MAE for Average Method : ", mae))
   
   ## Naive Method
-  predictions = naive(y[train_indices], h)$mean
-  mae = mean( abs( prediction - y_actual) )
+  predictions = naive(t_window, h)$mean
+  lines(predictions, col=3, lwd=2, lty=2)
+  mae = mean( abs( predictions - y_actual) )
   print(paste0("Prediction MAE for Naive Method : ", mae))
 
   ## Seasonal Naive Method
-  predictions = snaive(ts(y[train_indices],frequency = 12),h)$mean
+  predictions = snaive(t_window, h)$mean
+  lines(predictions, col=4, lwd=2, lty=2)
   mae = mean( abs( predictions - y_actual) )
   print(paste0("Prediction MAE for Seasonal Naive Method : ", mae))
   
   ## Drift Method
-  predictions = rwf(ts(y[train_indices],frequency = 12), h, drift=TRUE)$mean
+  predictions = rwf(t_window, h, drift=TRUE)$mean
+  lines(predictions, col=5, lwd=2, lty=2)
   mae = mean( abs( predictions - y_actual) )
   print(paste0("Prediction MAE for Drift Method : ", mae))
+
+  legend("topleft", lwd=2, lty=2, col=c(2,3,4,5),
+         legend=c("Mean","Naive","Seasonal Naive","Drift"))
 }
