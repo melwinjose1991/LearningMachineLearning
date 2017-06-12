@@ -1,5 +1,7 @@
 library(forecast)
 
+
+
 predict_func = function(fit, newdata, id){
   form = as.formula("orders_rcvd~.")
   mat = model.matrix(form, newdata)
@@ -7,6 +9,8 @@ predict_func = function(fit, newdata, id){
   xvars = names(coefs)
   mat[, xvars]%*%coefs
 }
+
+
 
 cvSubsetSelection = function(df, no_vars, method="forward"){
   #df = data
@@ -43,6 +47,8 @@ cvSubsetSelection = function(df, no_vars, method="forward"){
   plot(mean.cv.errors, type='b')
   mean.cv.errors
 }
+
+
 
 
 getBenchmarkResults=function(y, h=6){
