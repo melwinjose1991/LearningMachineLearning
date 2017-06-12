@@ -17,7 +17,7 @@ sa_OR_nsa = "Not Seasonally Adjusted"
 
 # Loading Data
 data_revenue = read.csv(revenue_file, header=TRUE, sep=",")
-data = data_revenue[,c("orders_rcvd","month")]
+data = data_revenue[,c("orders_rcvd","month","t")]
 data$month = as.factor(data$month)
 
 for(sub_category_id in config_data$sub_category_id){
@@ -47,14 +47,14 @@ corrplot.mixed(cor(data[,!names(data) %in% c("month")]), upper="circle", lower="
 # Highest Correlation : 0.410 : PBPWRCON : Total Public Construction Spending: Power
 
 # Removing highly correlated variables
-data_num_var = data[,!names(data) %in% c("month","orders_rcvd")]
+data_num_var = data[,!names(data) %in% c("month","orders_rcvd","t")]
 tmp = cor(data_num_var)
 tmp[!lower.tri(tmp)] = 0
 uncorrelated_vars = names(data_num_var[,!apply(tmp,2,function(x) any(x > 0.98))])
 uncorrelated_vars
 corrplot.mixed(cor(data[,uncorrelated_vars]), upper="circle", lower="number")
 
-data.new = data[,c("orders_rcvd","month",uncorrelated_vars)]
+data.new = data[,c("orders_rcvd","month", "t", uncorrelated_vars)]
 corrplot.mixed(cor(data.new[,!names(data.new) %in% c("month")]), upper="circle", lower="number")
 
 
