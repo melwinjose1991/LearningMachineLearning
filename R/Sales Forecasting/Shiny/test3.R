@@ -4,6 +4,7 @@ library(shiny)
 # actionButton()
 # observe()
 # eventReactive()
+# reactiveValues()
 
 
 ui = fluidPage(
@@ -23,14 +24,21 @@ ui = fluidPage(
   
 )
 
+# TIP: Code outside the server function will be run
+# once per R session (worker)
 
 server = function(input, output){
+  
+  # TIP: Code inside the server function will be run
+  # once per end user (connection)
   
   data = eventReactive(input$button_update, {
                     rnorm(input$num)
                   })
   
   output$out_hist = renderPlot({
+    # TIP: code inside a reactive function will be run
+    # once per reaction
     hist( data(), main=isolate(input$title) )
   })
   
@@ -47,3 +55,5 @@ server = function(input, output){
 
 
 shinyApp(ui=ui, server=server)
+
+# 1:32:40
