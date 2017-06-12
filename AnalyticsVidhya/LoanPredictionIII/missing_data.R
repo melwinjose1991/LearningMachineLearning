@@ -81,17 +81,27 @@ test[is.na(test$LoanAmount),"LoanAmount"] = median_loan_amt
 ## Loan_Amount_Term
 summary(train$Loan_Amount_Term)
 # 14 NA's
+median_loan_term = median(c(train$Loan_Amount_Term, test$Loan_Amount_Term), na.rm=TRUE)
+train[is.na(train$Loan_Amount_Term),"Loan_Amount_Term"] = median_loan_term
 
 summary(test$Loan_Amount_Term)
 # 6 NA's
+test[is.na(test$Loan_Amount_Term),"Loan_Amount_Term"] = median_loan_term
+
 
 
 ## Credit History
 summary(train$Credit_History)
 # 50 NA's
+median_credit_hist = median(c(train$Credit_History, test$Credit_History), na.rm=TRUE)
+train[is.na(train$Credit_History),"Credit_History"] = median_credit_hist
+train$Credit_History = as.factor(train$Credit_History)
 
 summary(test$Credit_History)
 # 29 NA's
+test[is.na(test$Credit_History),"Credit_History"] = median_credit_hist
+test$Credit_History = as.factor(test$Credit_History)
+
 
 
 ## Property_Area
