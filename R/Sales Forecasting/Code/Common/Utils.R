@@ -51,7 +51,10 @@ cvSubsetSelection = function(df, no_vars, method="forward"){
 
 
 
-getBenchmarkResults=function(y, h=6){
+getBenchmarkResults=function(y, model_predictions, h=6, 
+                             mean_model=TRUE, naive_model=TRUE, snaive_model=TRUE,
+                             drift_model=TRUE){
+  
   # Source : https://www.otexts.org/fpp/2/3
   
   t = ts(y, frequency=12)
@@ -62,29 +65,43 @@ getBenchmarkResults=function(y, h=6){
   y_actual = y[-train_indices]
 
   ## Average Method
-  predictions = meanf(t_window, h)$mean
-  lines(predictions, col=2, lwd=2, lty=2)
-  mae = mean( abs(predictions - y_actual) )
-  print(paste0("Prediction MAE for Average Method : ", mae))
+  if(mean_model){
+    predictions = meanf(t_window, h)$mean
+    lines(predictions, col=2, lwd=2, lty=2)
+    mae = mean( abs(predictions - y_actual) )
+    print(paste0("Prediction MAE for Average Method : ", mae))
+  }
   
   ## Naive Method
-  predictions = naive(t_window, h)$mean
-  lines(predictions, col=3, lwd=2, lty=2)
-  mae = mean( abs( predictions - y_actual) )
-  print(paste0("Prediction MAE for Naive Method : ", mae))
-
+  if(naive_model){
+    predictions = naive(t_window, h)$mean
+    lines(predictions, col=3, lwd=2, lty=2)
+    mae = mean( abs( predictions - y_actual) )
+    print(paste0("Prediction MAE for Naive Method : ", mae))
+  }
+  
   ## Seasonal Naive Method
-  predictions = snaive(t_window, h)$mean
-  lines(predictions, col=4, lwd=2, lty=2)
-  mae = mean( abs( predictions - y_actual) )
-  print(paste0("Prediction MAE for Seasonal Naive Method : ", mae))
+  if(snaive_model){
+    predictions = snaive(t_window, h)$mean
+    lines(predictions, col=4, lwd=2, lty=2)
+    mae = mean( abs( predictions - y_actual) )
+    print(paste0("Prediction MAE for Seasonal Naive Method : ", mae))
+  }
   
   ## Drift Method
-  predictions = rwf(t_window, h, drift=TRUE)$mean
-  lines(predictions, col=5, lwd=2, lty=2)
-  mae = mean( abs( predictions - y_actual) )
-  print(paste0("Prediction MAE for Drift Method : ", mae))
+  if(drift_model){
+    predictions = rwf(t_window, h, drift=TRUE)$mean
+    lines(predictions, col=5, lwd=2, lty=2)
+    mae = mean( abs( predictions - y_actual) )
+    print(paste0("Prediction MAE for Drift Method : ", mae))
+  }
 
-  legend("topleft", lwd=2, lty=2, col=c(2,3,4,5),
-         legend=c("Mean","Naive","Seasonal Naive","Drift"))
+  # Predictions by your model
+  t_pred = ts(model_predictions, frequency = 12, start=4+((12-h)/12))
+  lines(t_pred, col=6, lwd=2, lty=2)
+  mae = mean( abs( model_predictions - y_actual) )
+  print(paste0("Prediction MAE for ModelX : ", mae))
+  
+  legend("topleft", lwd=2, lty=2, col=c(2,3,4,5,9),
+         legend=c("Mean","Naive","Seasonal Naive","Drift","ModelX"))
 }

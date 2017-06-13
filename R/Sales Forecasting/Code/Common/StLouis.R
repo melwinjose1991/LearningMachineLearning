@@ -5,6 +5,22 @@ library(FredR)
 ## Reading configuration file
 config_fetch_data = read.csv("../../Config/fetch_data.csv", header=TRUE, sep=",")
 config_fetch_data = config_fetch_data[config_fetch_data$fetch=="yes",]
+print(paste0("To Fetch : ",config_fetch_data$sub_category_name))
+
+
+## Helper functions
+isSeriesOKAY=function(series){
+  
+  if(dim(series)[1]!=no_of_data_obs){
+    return(paste0(" has ",dim(series)[1]," observations, required ",no_of_data_obs))
+  }
+  
+  if(sum(series$value==".")>0){
+    return(paste0(" has some observations == '.' "))
+  }
+  
+  return("yes")
+}
 
 
 
@@ -38,8 +54,8 @@ for(sub_category_id in config_fetch_data$sub_category_id){
                              & sub_category$seasonal_adjustment==sa_OR_nsa, 
                              c("id","title") ]
   #series_id_title
-  
-  
+
+  print(paste0("Fetching #",dim(series_id_title)[1]," series"))  
   for(id in series_id_title$id){
     
     print(paste0("Fetching series : ",id))
@@ -73,18 +89,4 @@ for(sub_category_id in config_fetch_data$sub_category_id){
 
   rm(df_series)
 
-}
-
-
-isSeriesOKAY=function(series){
-  
-  if(dim(series)[1]!=no_of_data_obs){
-    return(paste0(" has ",dim(series)[1]," observations, required ",no_of_data_obs))
-  }
-  
-  if(sum(series$value==".")>0){
-    return(paste0(" has some observations == '.' "))
-  }
-  
-  return("yes")
 }
