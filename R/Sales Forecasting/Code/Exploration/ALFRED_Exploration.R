@@ -6,7 +6,7 @@ source("../Common/Utils.R")
 
 
 ## Config file
-config_data = read.csv("../../Config/fetch_data.csv", header=TRUE, sep=",")
+config_data = read.csv("../../Config/2401/external_data_config.csv", header=TRUE, sep=",")
 config_data = config_data[config_data$explore=="yes",]
 
 

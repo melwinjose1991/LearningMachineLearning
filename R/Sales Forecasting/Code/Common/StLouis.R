@@ -1,11 +1,11 @@
 library(FredR)
 
-
+product = "2401"
 
 ## Reading configuration file
-config_fetch_data = read.csv("../../Config/fetch_data.csv", header=TRUE, sep=",")
+config_fetch_data = read.csv("../../Config/2401/external_data_config.csv", header=TRUE, sep=",")
 config_fetch_data = config_fetch_data[config_fetch_data$fetch=="yes",]
-print(paste0("To Fetch : ",config_fetch_data$sub_category_name))
+print(paste0("To Fetch : ",unlist(config_fetch_data$sub_category_name)))
 
 
 ## Helper functions
@@ -36,10 +36,16 @@ sa_OR_nsa = "Not Seasonally Adjusted"
 #   source : https://fred.stlouisfed.org/categories
 fred = FredR(api.key)
 
-
+meta_data = data.frame(category_id=integer(),
+                       category_name=character(),
+                       sub_category_id=integer(),
+                       sub_category_name=character(),
+                       series_id=integer(),
+                       series_name=character())
 
 for(sub_category_id in config_fetch_data$sub_category_id){
   
+  category_id = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,"category_id"]
   category_name = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,"category_name"]
   sub_category_name = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,"sub_category_name"]
   
@@ -56,29 +62,37 @@ for(sub_category_id in config_fetch_data$sub_category_id){
   #series_id_title
 
   print(paste0("Fetching #",dim(series_id_title)[1]," series"))  
-  for(id in series_id_title$id){
+  for(series_id in series_id_title$id){
     
-    print(paste0("Fetching series : ",id))
-    series = fred$series.observations(series_id=id, 
+    series_name = series_id_title[series_id_title$id==series_id, "title"]
+    
+    print(paste0("Fetching series : ", series_id))
+    series = fred$series.observations(series_id=series_id, 
                                       observation_start = date_start,
                                       observation_end = date_end)
     
     is_okay = isSeriesOKAY(series)
     if(is_okay == "yes"){
       if(exists("df_series")){
-        df_series[,id]=series$value
+        df_series[,series_id]=series$value
       }else{
         df_series = data.frame(date=series$date)
       }
     }else{
-      print(paste0(id,is_okay))
+      print(paste0(series_id,is_okay))
     }
+    
+    meta = data.frame(category_id=category_id, category_name=category_name,
+                       sub_category_id=sub_category_id, sub_category_name,
+                       series_id=series_id, series_name=series_name)
+    
+    meta_data = rbind(meta_data, meta)
     
   }
   
   
   ## Writing Series into CSV
-  file = paste0("../../Data/" ,as.character(category_name), "/", as.character(sub_category_name) )
+  file = paste0("../../Data/", product, "/" ,as.character(category_name), "/", as.character(sub_category_name) )
   if(sa_OR_nsa=="Not Seasonally Adjusted"){
     file = paste0(file, "_nsa.csv")
   }else{
@@ -90,3 +104,7 @@ for(sub_category_id in config_fetch_data$sub_category_id){
   rm(df_series)
 
 }
+
+file = paste0("../../Data/", product, "/meta_data.csv" )
+write.csv(meta_data, file, quote=FALSE, row.names=FALSE)
+
