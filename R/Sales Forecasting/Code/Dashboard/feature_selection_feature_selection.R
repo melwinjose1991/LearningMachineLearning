@@ -1,0 +1,125 @@
+library(glmnet)
+
+
+
+## Globals
+featureSelection_prefix = paste0(feature_selection_prefix,"featureSelection_")
+
+data_folder = "../../Data/"
+revenue_file = paste0(data_folder, product, "/", product, "_Revenue.csv")
+sa_OR_nsa = "Not Seasonally Adjusted"
+
+
+
+## UI Elements
+featureSelection_buttonLASSO = actionButton(inputId = paste0(featureSelection_prefix,"buttonLASSO"),
+                                            label="do LASSO")
+
+featureSelection_tabFeatureSelection = tabPanel(title="Feature Selection", 
+                                                featureSelection_buttonLASSO,
+                                                uiOutput(paste0(featureSelection_prefix,"outputLASSO"))
+)
+
+
+## Helper Functions
+readData = function(inputs){
+  print("Feature Selection :: Feature Selection :: readData() :: INIT")
+  
+  #inputs = inputs[lapply(inputs, is.logical)==TRUE]
+  selected_vars = vector('character')
+  for(key in names(inputs)){
+    if(is.logical(inputs[[key]]) & inputs[[key]]==TRUE ){
+      selected_vars = c(selected_vars, unlist(strsplit(key,"\\|"))[2])
+    }
+  }
+  print(selected_vars)
+
+  config_data = meta_data[meta_data$series_id %in% selected_vars,]
+    
+  # Y
+  data_revenue = read.csv(revenue_file, header=TRUE, sep=",")
+  data = data_revenue[,c("orders_rcvd","month","t")]
+  data$month = as.factor(data$month)
+  
+  # X
+  for(sub_category_id in unique(config_data$sub_category_id)){
+    
+    category_name = unique(config_data[config_data$sub_category_id==sub_category_id,"category_name"])
+    sub_category_name = unique(config_data[config_data$sub_category_id==sub_category_id,"sub_category_name"])
+    
+    
+    file = paste0(data_folder, product, "/", as.character(category_name), "/", 
+                  as.character(sub_category_name))
+    
+    if(sa_OR_nsa=="Not Seasonally Adjusted"){
+      file = paste0(file, "_nsa.csv")
+    }else{
+      file = paste0(file, "_sa.csv")
+    }
+    print(paste0("Reading file : ",file))
+    data_vars = read.csv(file, header=TRUE, sep=",")
+    
+    data_vars = data_vars[,!names(data_vars) %in% c("date")]
+    data = cbind(data, data_vars)
+    
+  }
+  
+  print("Feature Selection :: Feature Selection :: readData() :: EXIT")
+  filterFeatures(data)
+
+}
+
+
+
+filterFeatures = function(data){  
+  print("Feature Selection :: Feature Selection :: filterFeatures() :: INIT")
+    
+  # Removing columns whose values don't change
+  data = data[sapply(data, function(x) length(unique(x))>1)]
+  
+  # Removing highly correlated variables
+  data_num_var = data[,!names(data) %in% c("month","orders_rcvd","t")]
+  tmp = cor(data_num_var)
+  tmp[!lower.tri(tmp)] = 0
+  uncorrelated_vars = names(data_num_var[,!apply(tmp,2,function(x) any(x > 0.98))])
+  print(uncorrelated_vars)
+  
+  data.new = data[,c("orders_rcvd","month", "t", uncorrelated_vars)]
+
+  print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
+  doLASSO(data.new)
+}
+
+
+
+doLASSO = function(data){
+  print("Feature Selection :: Feature Selection :: doLASSO() :: INIT")
+  
+  grid = 2.71828^seq(0.001, 10, length=1000)
+  
+  x = model.matrix(orders_rcvd~., data)[,-1]
+  y = data$orders_rcvd
+  
+  cv.l2.fit = cv.glmnet(x, y, alpha=1, type.measure="mae", lambda=grid)
+  #plot(cv.l2.fit)
+  
+  best_lambda = cv.l2.fit$lambda.min
+  best_lambda
+  best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
+  best_lambda_index
+  
+  cv.l2.fit$cvm[best_lambda_index]
+  
+  l2.fit = glmnet(x, y, alpha=1, lambda=best_lambda)
+  coefs = coef(l2.fit)[,1]
+  coefs = coefs[coefs!=0]
+  
+  ret = list()
+  for(var in names(coefs)){
+    #print(coefs[var])
+    ret[var] = paste0(var, coefs[[var]])
+  }
+  ret
+  
+  #names(coefs[coefs!=0])
+}

@@ -1,11 +1,30 @@
 print("Feature Selection :: All Features :: Init")
 
 
+## Globals
+features_prefix = paste0(feature_selection_prefix,"features_")
+
 file = paste0("../../Data/", product, "/meta_data.csv")
 meta_data = read.csv(file, header=TRUE, sep=",")
 
 
 
+## UI Elements
+features_buttonShow = actionButton(inputId = paste0(features_prefix,"buttonShow"),
+                                    label="Show")
+
+features_buttonSelect = actionButton(inputId = paste0(features_prefix,"buttonSelect"),
+                                    label="Select Checked")
+
+featureSelection_tabAllFeatures = tabPanel(title="Features", 
+                                        features_buttonShow,
+                                        features_buttonSelect,
+                                        uiOutput("all_features_box")
+)
+
+
+
+## Helper Function
 getCheckBoxInput = function(i){
   
   series_id = meta_data[i,]$series_id
@@ -13,7 +32,7 @@ getCheckBoxInput = function(i){
   sub_category_name = meta_data[i,]$sub_category_name
   var_name = meta_data[i,]$title
 
-  id = paste0("all_features_", series_id)
+  id = paste0(features_prefix, "fId|", series_id)
   
   checkboxInput(inputId=id, label=var_name, value=TRUE)
   
@@ -31,7 +50,5 @@ getGroupCheckBoxInput = function(group){
        )
   
 }
-
-
 
 

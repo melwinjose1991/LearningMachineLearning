@@ -1,25 +1,21 @@
+feature_selection_prefix = "featureSelection_"
+
 source("feature_selection_all_features.R")
-#source("feature_selection_filter_features.R")
+source("feature_selection_feature_selection.R")
 
 
-feature_selection_all_features = tabPanel(title="Features", 
-                                          actionButton(inputId="all_features_show", label="Show"),
-                                          actionButton(inputId="all_features_select", label="Select Checked"),
-                                          uiOutput("all_features_box")
-                                          )
 
-feature_selection_filter_features = tabPanel(title="Filter Features","...")
+## UI Elements
+featureSelection_tabFilterFeatures = tabPanel(title="Filter Feature","...")
 
-feature_selection_selection = tabPanel(title="Feature Selection","...")
-
-feature_selection_final = tabPanel(title="Final Features","...")
+featureSelection_tabFinalFeatures = tabPanel(title="Final Features","...")
 
 
 feature_selection_navbar = navlistPanel(
   well=FALSE,
   widths=c(2,8), 
-  feature_selection_all_features,
-  feature_selection_filter_features,
-  feature_selection_selection,
-  feature_selection_final
+  featureSelection_tabAllFeatures,
+  featureSelection_tabFilterFeatures,
+  featureSelection_tabFeatureSelection,
+  featureSelection_tabFinalFeatures
 )
