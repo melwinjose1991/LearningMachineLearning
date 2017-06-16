@@ -40,7 +40,7 @@ initFeatureSelectionUI = function() {
   text_lambda_lengths = column(
     row_1_col_width,
     textInput(
-      paste0(featureSelection_prefix, "lambda_lengths"),
+      paste0(featureSelection_prefix, "lambda_length"),
       "lengths",
       value = "100",
       width = row_1_textInput_width
@@ -94,7 +94,7 @@ readData = function(inputs) {
   print("All features that were selected")
   print(selected_vars)
   
-  config_data = meta_data[meta_data$series_id %in% selected_vars, ]
+  config_data = meta_data[meta_data$series_id %in% selected_vars,]
   
   # Y
   data_revenue = read.csv(revenue_file, header = TRUE, sep = ",")
@@ -123,21 +123,23 @@ readData = function(inputs) {
       file = paste0(file, "_sa.csv")
     }
     print(paste0("Reading file : ", file))
-    data_vars = read.csv(file, header = TRUE, sep = ",")
+    data_series = read.csv(file, header = TRUE, sep = ",")
     
-    data_vars = data_vars[, !names(data_vars) %in% c("date")]
-    data = cbind(data, data_vars)
+    #data_series = data_series[, !names(data_series) %in% c("date")]
+    series_vars = intersect(names(data_series), selected_vars)
+    
+    data = cbind(data, data_series[, series_vars])
     
   }
   
   print("Feature Selection :: Feature Selection :: readData() :: EXIT")
-  filterFeatures(data)
+  filterFeatures(data, inputs)
   
 }
 
 
 
-filterFeatures = function(data) {
+filterFeatures = function(data, inputs) {
   print("Feature Selection :: Feature Selection :: filterFeatures() :: INIT")
   
   # Removing columns whose values don't change
@@ -145,10 +147,10 @@ filterFeatures = function(data) {
     length(unique(x)) > 1)]
   
   # Removing highly correlated variables
-  data_num_var = data[, !names(data) %in% c("month", "orders_rcvd", "t")]
+  data_num_var = data[,!names(data) %in% c("month", "orders_rcvd", "t")]
   tmp = cor(data_num_var)
   tmp[!lower.tri(tmp)] = 0
-  uncorrelated_vars = names(data_num_var[, !apply(tmp, 2, function(x)
+  uncorrelated_vars = names(data_num_var[,!apply(tmp, 2, function(x)
     any(x > 0.99))])
   print("UnCorrelated Vars")
   print(uncorrelated_vars)
@@ -156,17 +158,21 @@ filterFeatures = function(data) {
   data.new = data[, c("orders_rcvd", "month", "t", uncorrelated_vars)]
   
   print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
-  doLASSO(data.new)
+  doLASSO(data.new, inputs)
 }
 
 
 
-doLASSO = function(data) {
+doLASSO = function(data, inputs) {
   print("Feature Selection :: Feature Selection :: doLASSO() :: INIT")
   
-  grid = 2.71828 ^ seq(0.001, 10, length = 1000)
+  lambda_start = as.numeric(inputs[paste0(featureSelection_prefix, "lambda_start")])
+  lambda_end = as.numeric(inputs[paste0(featureSelection_prefix, "lambda_end")])
+  lambda_length = as.integer(inputs[paste0(featureSelection_prefix, "lambda_length")])
   
-  x = model.matrix(orders_rcvd ~ ., data)[, -1]
+  grid = 2.71828 ^ seq(lambda_start, lambda_end, length = lambda_length)
+  
+  x = model.matrix(orders_rcvd ~ ., data)[,-1]
   y = data$orders_rcvd
   
   cv.l2.fit = cv.glmnet(x,
