@@ -23,7 +23,7 @@ initFeatureSelectionUI = function() {
     row_1_col_width,
     textInput(
       paste0(featureSelection_prefix, "lambda_start"),
-      "starting value",
+      "lambda start",
       value = "0.001",
       width = row_1_textInput_width
     )
@@ -32,7 +32,7 @@ initFeatureSelectionUI = function() {
     row_1_col_width,
     textInput(
       paste0(featureSelection_prefix, "lambda_end"),
-      "ending value",
+      "lambda end value",
       value = "10",
       width = row_1_textInput_width
     )
@@ -46,13 +46,22 @@ initFeatureSelectionUI = function() {
       width = row_1_textInput_width
     )
   )
+  select_error_type =  column(row_1_col_width, selectInput(
+    paste0(featureSelection_prefix, "selectErrorType"),
+    "Error Type:",
+    c(
+      "Mean Square Error" = "mse",
+      "Mean Absolute Error" = "mae"
+    )
+  ))
   
   row_1 = fluidRow(
     text_advanced_text,
-    text_lambda,
+    #text_lambda,
     text_lambda_start,
     text_lambda_end,
-    text_lambda_lengths
+    text_lambda_lengths,
+    select_error_type
   )
   
   # row 2
@@ -94,7 +103,7 @@ readData = function(inputs) {
   print("All features that were selected")
   print(selected_vars)
   
-  config_data = meta_data[meta_data$series_id %in% selected_vars,]
+  config_data = meta_data[meta_data$series_id %in% selected_vars, ]
   
   # Y
   data_revenue = read.csv(revenue_file, header = TRUE, sep = ",")
@@ -147,10 +156,10 @@ filterFeatures = function(data, inputs) {
     length(unique(x)) > 1)]
   
   # Removing highly correlated variables
-  data_num_var = data[,!names(data) %in% c("month", "orders_rcvd", "t")]
+  data_num_var = data[, !names(data) %in% c("month", "orders_rcvd", "t")]
   tmp = cor(data_num_var)
   tmp[!lower.tri(tmp)] = 0
-  uncorrelated_vars = names(data_num_var[,!apply(tmp, 2, function(x)
+  uncorrelated_vars = names(data_num_var[, !apply(tmp, 2, function(x)
     any(x > 0.99))])
   print("UnCorrelated Vars")
   print(uncorrelated_vars)
@@ -169,16 +178,17 @@ doLASSO = function(data, inputs) {
   lambda_start = as.numeric(inputs[paste0(featureSelection_prefix, "lambda_start")])
   lambda_end = as.numeric(inputs[paste0(featureSelection_prefix, "lambda_end")])
   lambda_length = as.integer(inputs[paste0(featureSelection_prefix, "lambda_length")])
+  error_type = as.character(inputs[paste0(featureSelection_prefix, "selectErrorType")])
   
   grid = 2.71828 ^ seq(lambda_start, lambda_end, length = lambda_length)
   
-  x = model.matrix(orders_rcvd ~ ., data)[,-1]
+  x = model.matrix(orders_rcvd ~ ., data)[, -1]
   y = data$orders_rcvd
   
   cv.l2.fit = cv.glmnet(x,
                         y,
                         alpha = 1,
-                        type.measure = "mae",
+                        type.measure = error_type,
                         lambda = grid)
   
   best_lambda = cv.l2.fit$lambda.min

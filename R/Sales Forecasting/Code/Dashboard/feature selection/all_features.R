@@ -45,11 +45,19 @@ getGroupCheckBoxInput = function(group) {
   
   type_rows = which(meta_data$sub_category_name == group)
   
+  id = paste0(features_prefix, group, "SelectAll")
+  select_all = checkboxInput(inputId = id,
+                             label = "Select All",
+                             value = TRUE)
+  
+  vars_columns = lapply(
+    type_rows,
+    FUN = function(row_index)
+      column(width = 2, getCheckBoxInput(row_index))
+  )
+  
   list(title = tags$h4(group),
-       lapply(
-         type_rows,
-         FUN = function(row_index)
-           column(width = 2, getCheckBoxInput(row_index))
-       ))
+       select_all,
+       tags$div(id = group, vars_columns))
   
 }
