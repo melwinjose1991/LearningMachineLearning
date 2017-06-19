@@ -93,15 +93,15 @@ initFeatureSelectionUI = function() {
 readData = function(inputs) {
   print("Feature Selection :: Feature Selection :: readData() :: INIT")
   
-  #inputs = inputs[lapply(inputs, is.logical)==TRUE]
   selected_vars = vector('character')
   for (key in names(inputs)) {
-    if (is.logical(inputs[[key]]) & inputs[[key]] == TRUE) {
-      selected_vars = c(selected_vars, unlist(strsplit(key, "\\|"))[2])
+    print(key)
+    if (grepl("_fId",key) & inputs[[key]] == TRUE) {
+      selected_vars = c(selected_vars, unlist(strsplit(key, "\\|"))[3])
     }
   }
-  print("All features that were selected")
-  print(selected_vars)
+  #print("All features that were selected")
+  #print(selected_vars)
   
   config_data = meta_data[meta_data$series_id %in% selected_vars, ]
   
@@ -167,6 +167,7 @@ filterFeatures = function(data, inputs) {
   data.new = data[, c("orders_rcvd", "month", "t", uncorrelated_vars)]
   
   print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
+  print(names(data.new))
   doLASSO(data.new, inputs)
 }
 

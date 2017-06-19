@@ -1,4 +1,7 @@
 library(shiny)
+library(shinyjs)
+
+if(TRUE){
 
 product = "2401"
 
@@ -19,6 +22,7 @@ tab_forecast = tabPanel(title = "Forecast", "...")
 
 
 ui = fluidPage(
+  useShinyjs(),
   tabsetPanel(
     tab_extract_data,
     tab_feature_selection,
@@ -29,3 +33,5 @@ ui = fluidPage(
 )
 
 shinyApp(ui = ui, server = server)
+
+}
