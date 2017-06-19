@@ -197,17 +197,22 @@ doLASSO = function(data, inputs) {
   best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
   #best_lambda_index
   
-  cv.l2.fit$cvm[best_lambda_index]
+  best_error = cv.l2.fit$cvm[best_lambda_index]
   
   l2.fit = glmnet(x, y, alpha = 1, lambda = best_lambda)
   coefs = coef(l2.fit)[, 1]
   coefs = coefs[coefs != 0]
   
-  ret = list()
+  result = list()
+  id = paste0(featureSelection_prefix, "error")
+  text = textInput(id, label = error_type, value = best_error)
+  result[[error_type]] = column(width = 2, text)
   for (var in names(coefs)) {
-    #print(coefs[var])
-    ret[var] = paste0(var, coefs[[var]], "<br>")
+    fId = paste0(featureSelection_prefix, "fid|", var)
+    text = textInput(fId, label = var, value = coefs[[var]])
+    result[[var]] = column(width = 2, text)
   }
-  list(fit = cv.l2.fit, coefs = ret)
+  
+  list(fit = cv.l2.fit, coefs = result)
   
 }
