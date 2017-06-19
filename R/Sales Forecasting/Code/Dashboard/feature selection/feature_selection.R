@@ -3,7 +3,7 @@ library(glmnet)
 
 
 ## Globals
-featureSelection_prefix = paste0(feature_selection_prefix, "featureSelection_")
+feature_selection_prefix = paste0(features_prefix, "featureSelection_")
 
 data_folder = "../../Data/"
 revenue_file = paste0(data_folder, product, "/", product, "_Revenue.csv")
@@ -22,7 +22,7 @@ initFeatureSelectionUI = function() {
   text_lambda_start = column(
     row_1_col_width,
     textInput(
-      paste0(featureSelection_prefix, "lambda_start"),
+      paste0(feature_selection_prefix, "lambda_start"),
       "lambda start",
       value = "0.001",
       width = row_1_textInput_width
@@ -31,7 +31,7 @@ initFeatureSelectionUI = function() {
   text_lambda_end = column(
     row_1_col_width,
     textInput(
-      paste0(featureSelection_prefix, "lambda_end"),
+      paste0(feature_selection_prefix, "lambda_end"),
       "lambda end value",
       value = "10",
       width = row_1_textInput_width
@@ -40,14 +40,14 @@ initFeatureSelectionUI = function() {
   text_lambda_lengths = column(
     row_1_col_width,
     textInput(
-      paste0(featureSelection_prefix, "lambda_length"),
+      paste0(feature_selection_prefix, "lambda_length"),
       "lengths",
       value = "100",
       width = row_1_textInput_width
     )
   )
   select_error_type =  column(row_1_col_width, selectInput(
-    paste0(featureSelection_prefix, "selectErrorType"),
+    paste0(feature_selection_prefix, "selectErrorType"),
     "Error Type:",
     c(
       "Mean Square Error" = "mse",
@@ -65,24 +65,29 @@ initFeatureSelectionUI = function() {
   )
   
   # row 2
-  button_run_LASSO = actionButton(inputId = paste0(featureSelection_prefix, "buttonLASSO"),
+  button_run_LASSO = actionButton(inputId = paste0(feature_selection_prefix, "buttonLASSO"),
                                   label = "Run LASSO")
   row_2 = fluidRow(button_run_LASSO)
   
   # row 3
-  output_graph = plotOutput(paste0(featureSelection_prefix, "outputLASSOGraph"))
+  output_graph = plotOutput(paste0(feature_selection_prefix, "outputLASSOGraph"))
   row_3 = fluidRow(output_graph)
   
   # row 4
-  output_coefs = uiOutput(paste0(featureSelection_prefix, "outputLASSOCoefs"))
+  output_coefs = uiOutput(paste0(feature_selection_prefix, "outputLASSOCoefs"))
   row_4 = fluidRow(output_coefs)
   
+  # row 5
+  button_select_them = actionButton(paste0(feature_selection_prefix, "buttonSelectThem"),
+                                    label = "Select Them")
+  row_5 = fluidRow(button_select_them)
   
   tabFeatureSelection = tabPanel(title = "Feature Selection",
                                  row_1,
                                  row_2,
                                  row_3,
-                                 row_4)
+                                 row_4,
+                                 row_5)
   
   tabFeatureSelection
 }
@@ -176,10 +181,10 @@ filterFeatures = function(data, inputs) {
 doLASSO = function(data, inputs) {
   print("Feature Selection :: Feature Selection :: doLASSO() :: INIT")
   
-  lambda_start = as.numeric(inputs[paste0(featureSelection_prefix, "lambda_start")])
-  lambda_end = as.numeric(inputs[paste0(featureSelection_prefix, "lambda_end")])
-  lambda_length = as.integer(inputs[paste0(featureSelection_prefix, "lambda_length")])
-  error_type = as.character(inputs[paste0(featureSelection_prefix, "selectErrorType")])
+  lambda_start = as.numeric(inputs[paste0(feature_selection_prefix, "lambda_start")])
+  lambda_end = as.numeric(inputs[paste0(feature_selection_prefix, "lambda_end")])
+  lambda_length = as.integer(inputs[paste0(feature_selection_prefix, "lambda_length")])
+  error_type = as.character(inputs[paste0(feature_selection_prefix, "selectErrorType")])
   
   grid = 2.71828 ^ seq(lambda_start, lambda_end, length = lambda_length)
   
@@ -204,15 +209,15 @@ doLASSO = function(data, inputs) {
   coefs = coefs[coefs != 0]
   
   result = list()
-  id = paste0(featureSelection_prefix, "error")
+  id = paste0(feature_selection_prefix, "error")
   text = textInput(id, label = error_type, value = best_error)
   result[[error_type]] = column(width = 2, text)
   for (var in names(coefs)) {
-    fId = paste0(featureSelection_prefix, "fid|", var)
+    fId = paste0(feature_selection_prefix, "fid|", var)
     text = textInput(fId, label = var, value = coefs[[var]])
     result[[var]] = column(width = 2, text)
   }
   
-  list(fit = cv.l2.fit, coefs = result)
+  list(fit = cv.l2.fit, coefs_ui = result, coefs_names=names(coefs))
   
 }

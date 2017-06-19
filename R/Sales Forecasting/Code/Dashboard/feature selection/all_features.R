@@ -2,7 +2,7 @@ print("Feature Selection :: All Features :: Init")
 
 
 ## Globals
-features_prefix = paste0(feature_selection_prefix, "features_")
+all_features_prefix = paste0(features_prefix, "features_")
 
 file = paste0("../../Data/", product, "/meta_data.csv")
 meta_data = read.csv(file, header = TRUE, sep = ",")
@@ -22,7 +22,7 @@ getCheckBoxInput = function(i, group) {
   sub_category_name = meta_data[i,]$sub_category_name
   var_name = meta_data[i,]$title
   
-  id = paste0(features_prefix, "fId|", group, "|", series_id)
+  id = paste0(all_features_prefix, "fId|", group, "|", series_id)
   
   checkboxInput(inputId = id,
                 label = var_name,
@@ -37,12 +37,12 @@ getGroupCheckBoxInput = function(group) {
   
   type_rows = which(meta_data$sub_category_name == group)
   
-  select_all_id = paste0(features_prefix, "selectAllId|", group)
+  select_all_id = paste0(all_features_prefix, "selectAllId|", group)
   select_all = checkboxInput(inputId = select_all_id,
                              label = "Select All",
                              value = TRUE)
   
-  show_button_id = paste0(features_prefix, "showButtonId|", group)
+  show_button_id = paste0(all_features_prefix, "showButtonId|", group)
   show_button = actionButton(show_button_id, label="Hide")
   
   vars_columns = lapply(
@@ -51,7 +51,7 @@ getGroupCheckBoxInput = function(group) {
       column(width = 2, getCheckBoxInput(row_index, group))
   )
   
-  group_div_id = paste0(features_prefix, "divId_", group)
+  group_div_id = paste0(all_features_prefix, "divId_", group)
   list(title = tags$h4(group),
        select_all,
        show_button,

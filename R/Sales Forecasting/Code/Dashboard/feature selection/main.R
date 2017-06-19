@@ -1,4 +1,4 @@
-feature_selection_prefix = "featureSelection_"
+features_prefix = "featureSelection_"
 
 source("feature selection/all_features.R")
 source("feature selection/feature_selection.R")

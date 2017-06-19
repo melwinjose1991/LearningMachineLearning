@@ -4,6 +4,7 @@ product = "2401"
 
 server = function(input, output, session) {
   
+  reactive_vars = reactiveValues()
   
   ### Feature Selection > Features
   output$all_features_box = renderUI({
@@ -16,8 +17,8 @@ server = function(input, output, session) {
   
   groups = unique(meta_data$sub_category_name)
   lapply(groups, function(group) {
-    select_all_id = paste0(features_prefix, "selectAllId|", group)
-    show_button_id = paste0(features_prefix, "showButtonId|", group)
+    select_all_id = paste0(all_features_prefix, "selectAllId|", group)
+    show_button_id = paste0(all_features_prefix, "showButtonId|", group)
     
     observeEvent(input[[select_all_id]], {
       all_features = vector('character')
@@ -42,10 +43,10 @@ server = function(input, output, session) {
     observeEvent(input[[show_button_id]], {
       print(paste0("button : ", input[[show_button_id]]))
       if (input[[show_button_id]] %% 2 == 0) {
-        showElement(paste0(features_prefix, "divId_", group))
+        showElement(paste0(all_features_prefix, "divId_", group))
         updateActionButton(session, show_button_id, label = "Hide")
       } else{
-        hideElement(paste0(features_prefix, "divId_", group))
+        hideElement(paste0(all_features_prefix, "divId_", group))
         updateActionButton(session, show_button_id, label = "Show")
       }
     })
@@ -55,20 +56,27 @@ server = function(input, output, session) {
   
   
   ### Feature Selection > Feature Selection
-  featureSelection_LASSO = paste0(featureSelection_prefix, "buttonLASSO")
+  featureSelection_LASSO = paste0(feature_selection_prefix, "buttonLASSO")
   observeEvent(input[[featureSelection_LASSO]], {
     fit_and_coefs = readData(reactiveValuesToList(input))
     
-    output_LASSOgraph = paste0(featureSelection_prefix, "outputLASSOGraph")
+    output_LASSOgraph = paste0(feature_selection_prefix, "outputLASSOGraph")
     output[[output_LASSOgraph]] = renderPlot({
       plot(fit_and_coefs[["fit"]])
     })
     
-    output_LASSOcoefs = paste0(featureSelection_prefix, "outputLASSOCoefs")
+    output_LASSOcoefs = paste0(feature_selection_prefix, "outputLASSOCoefs")
     output[[output_LASSOcoefs]] = renderUI({
-      fit_and_coefs["coefs"]
+      fit_and_coefs["coefs_ui"]
     })
     
+    reactive_vars[['selected_vars']] = fit_and_coefs['coefs_names']
+    
+  })
+  
+  button_select_them = paste0(feature_selection_prefix, "buttonSelectThem")
+  observeEvent(input[[button_select_them]], {
+    print(reactive_vars[['selected_vars']])
   })
   
   
