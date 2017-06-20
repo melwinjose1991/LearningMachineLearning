@@ -70,16 +70,50 @@ server = function(input, output, session) {
       fit_and_coefs["coefs_ui"]
     })
     
-    reactive_vars[['selected_vars']] = fit_and_coefs['coefs_names']
+    reactive_vars[['selected_vars']] = fit_and_coefs[['coefs_names']]
     
   })
   
   button_select_them = paste0(feature_selection_prefix, "buttonSelectThem")
   observeEvent(input[[button_select_them]], {
-    print(reactive_vars[['selected_vars']])
+    
+    table_varaibles = paste0(regression_prefix, "selectedVariables")
+    output[[table_varaibles]] = renderUI({
+      createVariableTable(reactive_vars[['selected_vars']])
+    })
+    
   })
   
   
+  
+  ### Models > Regression
+  regression_build_regression = paste0(regression_prefix, "buttonBuildRegression")
+  observeEvent(input[[regression_build_regression]], {
+    fit = doRegression(reactive_vars[['selected_vars']])
+    
+    output_regression_graph_1 = paste0(regression_prefix, "graphResidualVsFitted")
+    output[[output_regression_graph_1]] = renderPlot({
+      plot(fit[["regression"]], which=1)
+    })
+    
+    output_regression_graph_2 = paste0(regression_prefix, "graphQQ")
+    output[[output_regression_graph_2]] = renderPlot({
+      plot(fit[["regression"]], which=2)
+    })
+    
+    output_regression_graph_3 = paste0(regression_prefix, "graphStdResVsFitted")
+    output[[output_regression_graph_3]] = renderPlot({
+      plot(fit[["regression"]], which=3)
+    })
+    
+    output_regression_graph_4 = paste0(regression_prefix, "graphStdResVsLeverage")
+    output[[output_regression_graph_4]] = renderPlot({
+      plot(fit[["regression"]], which=4)
+    })
+
+    fillVariableTable(session, fit[['regression']])
+    
+  })
   
 }
 

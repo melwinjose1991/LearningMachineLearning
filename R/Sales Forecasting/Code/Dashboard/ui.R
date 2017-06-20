@@ -17,8 +17,6 @@ tab_feature_selection = tabPanel(title = "Feature Selection >", tags$hr(), featu
 
 tab_models = tabPanel(title = "Models >", tags$hr(), models_navbar)
 
-tab_benchmark = tabPanel(title = "Benchmark >", "...")
-
 tab_forecast = tabPanel(title = "Forecast", "...")
 
 
@@ -28,7 +26,6 @@ ui = fluidPage(
     tab_extract_data,
     tab_feature_selection,
     tab_models,
-    tab_benchmark,
     tab_forecast
   )
 )
