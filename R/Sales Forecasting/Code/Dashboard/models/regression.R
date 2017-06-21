@@ -76,8 +76,14 @@ getData = function(vars_id, y_name){
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
     
-    series_vars = intersect(names(data_series), selected_vars)
-    data = cbind(data, data_series[, series_vars])
+    series_vars = intersect(names(data_series), vars_id)
+    if(is.null(dim(data_series[, series_vars]))){
+      ## there is just one column from the series
+      data[,series_vars] = data_series[, series_vars]
+    }else{
+      data = cbind(data, data_series[, series_vars])  
+    }
+    
     
   }
   
