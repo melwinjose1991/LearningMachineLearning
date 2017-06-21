@@ -96,7 +96,7 @@ getData = function(vars_id, y_name){
 
 
 
-doRegression = function(selected_vars, y_name="orders_rcvd") {
+doRegression = function(selected_vars, y_name="orders_rcvd", h=0) {
   
   print(selected_vars)
   variables = vector('character')
@@ -112,10 +112,20 @@ doRegression = function(selected_vars, y_name="orders_rcvd") {
   data = getData(variables, y_name)
   
   form = as.formula(paste0(y_name,"~",paste(variables, collapse="+")))
-  fit = lm(form, data=as.data.frame(data))
-  
-  list(regression=fit)
-  
+
+  if(h==0){
+    
+    fit = lm(form, data=as.data.frame(data))
+    list(regression=fit)
+    
+  }else{
+    
+    train_till = dim(data)[1] - h
+    fit = lm(form, data=as.data.frame(data[1:train_till,]))
+    pred = predict(fit, newdata=as.data.frame(data[(train_till+1):dim(data)[1],]) )
+    list(regression=fit, forecast=pred)
+    
+  }
 }
 
 createVariableTable = function(variables){

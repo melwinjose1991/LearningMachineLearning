@@ -1,13 +1,14 @@
 models_prefix = "models_"
 
 source("models/regression.R")
+source("models/benchmark.R")
 
 
 
 ## UI Elements
 models_tab_regression = getRegressionUI()
 models_tab_timeSeries = tabPanel(title = "Time Series", "...")
-models_tab_benchmark = tabPanel(title = "Benchmark", "...")
+models_tab_benchmark = getBenchmarkUI()
 
 models_navbar = navlistPanel(
   well = FALSE,
