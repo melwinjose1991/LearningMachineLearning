@@ -84,7 +84,7 @@ server = function(input, output, session) {
     
     table_forecast_varaibles = paste0(forecast_prefix, "forecastVariables")
     output[[table_forecast_varaibles]] = renderUI({
-      createForecastVariableTable(reactive_vars[['selected_vars']])
+      createForecastVariableTable(reactive_vars[['selected_vars']], input, output, session)
     })
     
   })

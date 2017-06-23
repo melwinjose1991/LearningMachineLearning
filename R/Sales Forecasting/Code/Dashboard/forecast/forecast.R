@@ -33,49 +33,147 @@ getForecastUI = function(){
 
 
 ## Server Functions
-createForecastVariableTable = function(variables){
+createForecastVariableTable = function(variables, input, output, session){
   
+  print(paste0("forecast :: createForecastVariableTable :: START"))
+  
+  column_width_var_name = 1
+  column_width_graph = 6
+  column_width_var_value = 2
+  column_width_method = 2
+  column_width_params = 1
+    
   vars_titles = list(
     fluidRow(
-      column(width=2, tags$h5("Variable")),
-      column(width=2, tags$h5("Value")),
-      column(width=2, tags$h5("Method")),
-      column(width=2, tags$h5("Parameters")),
-      column(width=2, tags$h5("Select"))
+      column(width=column_width_var_name, tags$h5("Variable")),
+      column(width=column_width_graph, tags$h5("Graph")),
+      column(width=column_width_var_value, tags$h5("Value")),
+      column(width=column_width_method, tags$h5("Method")),
+      column(width=column_width_params, tags$h5("Params"))
     )
   )
   
+  variables = variables[!grepl("(Intercept)",variables)]
   vars_rows = lapply(variables, function(var){
     
-    var_id = paste0(regression_prefix, "varId|", var)
+    is_var_numerical = ifelse(grepl("month", var), FALSE, TRUE)
     
-    id = paste0(forecast_prefix, "varId|", var, "|value")
-    input_text_var_value = textInput(id, label=NULL, placeholder="Enter or Select")
+    var_id = paste0(forecast_prefix, "varId|", var)
     
-    id = paste0(forecast_prefix, "varId|", var, "|method")
-    input_select_method = selectInput(id, label=NULL, 
-                                  c("User Entered" = "user",
-                                    "Use Mean" = "mean",
-                                    "Use Last Value" = "last_value",
-                                    "Time-Series" = "time_series"
-                                  ))
-    
-    id = paste0(forecast_prefix, "varId|", var, "|parameters")
-    input_method_params = tags$div(id=id, "params")
-    
-    id = paste0(regression_prefix, "varId|", var, "use")
-    input_button_use_value = actionButton(id, label="Use")
-    
-    fluidRow(
-      column(width=2, tags$h5(var)),
-      column(width=2, input_text_var_value),
-      column(width=2, input_select_method),
-      column(width=2, input_method_params),
-      column(width=2, input_button_use_value)
-    )
+    if(is_var_numerical){
+      
+      # Value to use
+      var_value_id = paste0(var_id, "|value")
+      input_text_var_value = textInput(var_value_id, label=NULL, placeholder="Enter or Select")
+      
+      # Graph
+      output_var_graph_id = paste0(var_id, "|graph")
+      output_var_graph = plotOutput(output_var_graph_id)
+      output[[output_var_graph_id]] = renderPlot({
+        #print(getSeries(var))
+        plot(getSeries(var), ylab=var)
+      })
+        
+      # Method
+      var_method_id = paste0(var_id, "|method")
+      input_select_method = selectInput(var_method_id, label=NULL, 
+                                    c("User Entered" = "user",
+                                      "Use Mean" = "mean",
+                                      "Use Last Value" = "last_value",
+                                      "Time-Series x" = "time_series"
+                                    ))
+  
+      observeEvent(input[[var_method_id]], {
+        variable_id = unlist(strsplit(var_method_id,"\\|"))[2]
+        var_series = getSeries(variable_id)
+        print(paste0("forecast :: createForecastVariableTable :: triggered var ",variable_id))      
+        
+        method = input[[var_method_id]]
+        print(paste0("forecast :: createForecastVariableTable :: method=",method))
+        if(method=="user"){
+          value = input[[var_value_id]]
+        }else if(method=="mean"){
+          value = mean(var_series)
+        }else if(method=="last_value"){
+          value = tail(var_series, n=1)
+        }else{
+          value = 0
+        }
+        print(paste0("forecast :: createForecastVariableTable :: value=",value))
+        
+        var_value_id = paste0(forecast_prefix, "varId|", variable_id, "|value")
+        updateTextInput(session, var_value_id, value=value)
+      })
+      
+      # Method Params
+      var_method_params_id = paste0(var_id, "|parameters")
+      input_method_params = tags$div(id=var_method_params_id, "params")
+      
+      # Rows
+      fluidRow(
+        column(width=column_width_var_name, tags$h5(var)),
+        column(width=column_width_graph, output_var_graph),
+        column(width=column_width_var_value, input_text_var_value),
+        column(width=column_width_method, input_select_method),
+        column(width=column_width_params, input_method_params)
+      )
+      
+    }else{
+      
+      # Value to use
+      # NOTE : need to generalized to categorical variables with 
+      #        more number of values
+      var_value_id = paste0(var_id, "|value")
+      input_select_var_value = checkboxInput(var_value_id, label=NULL)
+      
+      fluidRow(
+        column(width=column_width_var_name, tags$h5(var)),
+        column(width=column_width_graph),
+        column(width=column_width_var_value, input_select_var_value)
+      )
+      
+    }
     
   })
   
+  print(paste0("forecast :: createForecastVariableTable :: END"))
   list(vars_titles, vars_rows)
+  
+}
+
+
+
+getSeries = function(var_id){
+  
+  print(paste0("forecast :: getSeries :: START"))
+  print(paste0("forecast :: getSeries :: params(",var_id,")"))
+    
+  config_data = meta_data[meta_data$series_id %in% var_id, ]
+  
+  # X
+  if(length(unique(config_data$sub_category_id)) == 1) {
+    sub_category_id = unique(config_data$sub_category_id)
+    
+    category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "category_name"])
+    sub_category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "sub_category_name"])
+    
+    file = paste0(
+      data_folder,product,"/",as.character(category_name),
+      "/",as.character(sub_category_name)
+    )
+    
+    if (sa_OR_nsa == "Not Seasonally Adjusted") {
+      file = paste0(file, "_nsa.csv")
+    } else{
+      file = paste0(file, "_sa.csv")
+    }
+    print(paste0("Reading file : ", file))
+    series_df = read.csv(file, header = TRUE, sep = ",")
+    
+    series_df[,var_id]
+    
+  }else{
+    print(paste0("forecast :: getSeries :: requested series ", var_id," doesn't exists OR duplicates exists"))
+  }
   
 }
