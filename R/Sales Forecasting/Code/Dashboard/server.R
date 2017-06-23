@@ -77,9 +77,14 @@ server = function(input, output, session) {
   button_select_them = paste0(feature_selection_prefix, "buttonSelectThem")
   observeEvent(input[[button_select_them]], {
     
-    table_varaibles = paste0(regression_prefix, "selectedVariables")
-    output[[table_varaibles]] = renderUI({
+    table_regression_varaibles = paste0(regression_prefix, "selectedVariables")
+    output[[table_regression_varaibles]] = renderUI({
       createVariableTable(reactive_vars[['selected_vars']])
+    })
+    
+    table_forecast_varaibles = paste0(forecast_prefix, "forecastVariables")
+    output[[table_forecast_varaibles]] = renderUI({
+      createForecastVariableTable(reactive_vars[['selected_vars']])
     })
     
   })

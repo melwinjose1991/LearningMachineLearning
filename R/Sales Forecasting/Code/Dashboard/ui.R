@@ -7,6 +7,7 @@ product = "2401"
 
 source("feature selection/main.R")
 source("models/main.R")
+source("forecast/main.R")
 source("server.R")
 
 
@@ -17,7 +18,7 @@ tab_feature_selection = tabPanel(title = "Feature Selection >", tags$hr(), featu
 
 tab_models = tabPanel(title = "Models >", tags$hr(), models_navbar)
 
-tab_forecast = tabPanel(title = "Forecast", "...")
+tab_forecast = tabPanel(title = "Forecast", tags$hr(), forecast_navbar)
 
 
 ui = fluidPage(
