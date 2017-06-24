@@ -1,0 +1,43 @@
+library(ISLR)
+
+attach(Wage)
+
+
+
+## 7.8.1 Polynomial Regression and Step Functions
+fit = lm(wage~poly(age,4), data=Wage)
+
+agelims = range(age)
+age.grid = seq(from=agelims[1], to=agelims[2])
+
+preds = predict(fit, newdata=list(age=age.grid), se=TRUE)
+se.bands = cbind(preds$fit+2*preds$se.fit, preds$fit-2*preds$se.fit)
+
+par(mfrow =c(1,2) ,mar=c(4.5 ,4.5 ,1 ,1) ,oma=c(0,0,4,0))
+plot(age, wage, xlim=agelims, cex =.5, col =" darkgrey ")
+title (" Degree -4 Polynomial ", outer =T)
+lines(age.grid, preds$fit, lwd=2, col=" blue")
+
+# Plot the columns of one matrix against the columns of another.
+matlines (age.grid, se.bands, lwd =1, col =" blue", lty =3)
+
+
+# Ploynomial Logistic Regression
+fit = glm( I(wage>250)~poly(age,4), data=Wage, family=binomial )
+preds = predict( fit, newdata=list(age=age.grid), se=T )
+pfit = exp(preds$fit) / ( 1+exp(preds$fit) )
+se.bands.logit = cbind( preds$fit+2*preds$se.fit, preds$fit-2*preds$se.fit )
+se.bands = exp(se.bands.logit) / ( 1+exp(se.bands.logit) )
+
+plot( age, I(wage >250), xlim=agelims, type ="n", ylim=c(0 ,.2) )
+points( jitter(age), I((wage >250)/5), cex =.5, pch ="|", col =" darkgrey ")
+lines(age.grid, pfit, lwd =2, col =" blue")
+matlines(age.grid, se.bands, lwd=1, col=" blue", lty=3)
+
+
+# Step Function
+table(cut(age,4))
+
+fit = lm(wage~cut(age,4), data=Wage)
+coef(summary(fit))
+

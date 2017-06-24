@@ -8,5 +8,7 @@
 *.tfrecord
 *.RData
 *.json
-HackerEarth/ML-1/R/h2o-GBMBooklet.pdf
 *.zip
+*.Rproj
+
+R/Sales Forecasting/.Rproj.user/*
