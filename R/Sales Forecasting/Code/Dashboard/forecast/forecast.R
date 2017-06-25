@@ -178,7 +178,7 @@ getSeries = function(var_id){
   
 }
 
-getForecastResults=function(y_name="orders_rcvd", forecast_model, variable_values, h=1, 
+getForecastResults=function(y_name="orders_rcvd", forecast_model, input_variables, h=1, 
                              mean_model=TRUE, naive_model=TRUE, snaive_model=TRUE,
                              drift_model=TRUE){
   
@@ -224,8 +224,10 @@ getForecastResults=function(y_name="orders_rcvd", forecast_model, variable_value
   }
   
   # Predictions by your model
-  model_predictions = c(tail(y,n=1),25000)
-  predictions = ts(model_predictions, frequency = 12, start=5-0.0833)
+  predictions = predict(forecast_model, newdata=input_variables)
+  predictions = c(tail(y,n=1), predictions)
+  print(predictions)
+  predictions = ts(predictions, frequency = 12, start=5-0.0833)
   lines(predictions, col=6, lwd=2, lty=2)
   
   results[['line_modelX']] = predictions

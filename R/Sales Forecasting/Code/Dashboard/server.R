@@ -95,7 +95,7 @@ server = function(input, output, session) {
   regression_build_regression = paste0(regression_prefix, "buttonBuildRegression")
   observeEvent(input[[regression_build_regression]], {
     fit = doRegression(reactive_vars[['selected_vars']])
-    reactive_vars[['forecast_model']] = fit
+    reactive_vars[['forecast_model']] = fit[['regression']]
     
     output_regression_graph_1 = paste0(regression_prefix, "graphResidualVsFitted")
     output[[output_regression_graph_1]] = renderPlot({
@@ -206,10 +206,22 @@ server = function(input, output, session) {
     drift_model = FALSE #input[[paste0(forecast_prefix,"methodId|drift")]]
     
     forecast_model = reactive_vars[['forecast_model']]
+    for(var in reactive_vars[['selected_vars']]){
+      if(!exists("variable_values")){
+        variable_values = data.frame(row=1:h)
+      }
+      var_id = paste0(forecast_prefix, "varId|", var, "|value")
+      if(is.logical(input[[var_id]])){
+        variable_values[,var] = ifelse(input[[var_id]],1,0)
+      }else{
+        variable_values[,var] = as.numeric(input[[var_id]])
+      }
+    }
     
-    results = getForecastResults(forecast_model=forecast_model, h = h,
-                                  mean_model=mean_model, naive_model=naive_model,
-                                  snaive_model=snaive_model, drift_model=drift_model)
+    results = getForecastResults(forecast_model=forecast_model, 
+                                 input_variables=variable_values, 
+                                 h=h, mean_model=mean_model, naive_model=naive_model,
+                                 snaive_model=snaive_model, drift_model=drift_model)
     
     
     ## Plotting graphs
