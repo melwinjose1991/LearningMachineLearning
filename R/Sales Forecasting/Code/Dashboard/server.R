@@ -95,6 +95,7 @@ server = function(input, output, session) {
   regression_build_regression = paste0(regression_prefix, "buttonBuildRegression")
   observeEvent(input[[regression_build_regression]], {
     fit = doRegression(reactive_vars[['selected_vars']])
+    reactive_vars[['forecast_model']] = fit
     
     output_regression_graph_1 = paste0(regression_prefix, "graphResidualVsFitted")
     output[[output_regression_graph_1]] = renderPlot({
@@ -186,6 +187,54 @@ server = function(input, output, session) {
         
       }
       summary_text
+      
+    })
+    
+  })
+  
+  
+  
+  ### Forecast > forecast
+  forecast_do_forecast = paste0(forecast_prefix, "buttonForecast")
+  observeEvent(input[[forecast_do_forecast]], {
+    print(">>> Forecasting <<<")
+    
+    h = 1 # Has to be user entered
+    mean_model = FALSE #input[[paste0(forecast_prefix,"methodId|mean")]]
+    naive_model = FALSE #input[[paste0(forecast_prefix,"methodId|naive")]]
+    snaive_model = FALSE #input[[paste0(forecast_prefix,"methodId|snaive")]]
+    drift_model = FALSE #input[[paste0(forecast_prefix,"methodId|drift")]]
+    
+    forecast_model = reactive_vars[['forecast_model']]
+    
+    results = getForecastResults(forecast_model=forecast_model, h = h,
+                                  mean_model=mean_model, naive_model=naive_model,
+                                  snaive_model=snaive_model, drift_model=drift_model)
+    
+    
+    ## Plotting graphs
+    output_graph_forecast = paste0(forecast_prefix, "graphForeCast")
+    output[[output_graph_forecast]] = renderPlot({
+      
+      plot(results[["t"]])
+      
+      models = vector('character')
+      colors = c(2,3,4,5,9)
+      index = 1
+      for(result in names(results)){
+        
+        if(grepl("line_", result)){
+          lines(results[[result]], col=colors[index], lwd=2, lty=2)
+          
+          model = unlist(strsplit(result,"_"))[2]
+          models = c(models, model)
+          
+          index = index + 1
+        }
+        
+      }
+      
+      legend("topleft", lwd=2, lty=2, col=colors, legend=models)
       
     })
     
