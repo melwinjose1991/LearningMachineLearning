@@ -36,6 +36,9 @@ sa_OR_nsa = "Not Seasonally Adjusted"
 #   source : https://fred.stlouisfed.org/categories
 fred = FredR(api.key)
 
+
+# Globals DataFrames
+rm(df_series)
 meta_data = data.frame(category_id=integer(),
                        category_name=character(),
                        sub_category_id=integer(),
@@ -73,20 +76,23 @@ for(sub_category_id in config_fetch_data$sub_category_id){
     
     is_okay = isSeriesOKAY(series)
     if(is_okay == "yes"){
+      
       if(exists("df_series")){
         df_series[,series_id]=series$value
       }else{
         df_series = data.frame(date=series$date)
+        df_series[,series_id]=series$value
       }
+      
+      meta = data.frame(category_id=category_id, category_name=category_name,
+                        sub_category_id=sub_category_id, sub_category_name,
+                        series_id=series_id, series_name=series_name)
+      
+      meta_data = rbind(meta_data, meta)
+      
     }else{
       print(paste0(series_id,is_okay))
     }
-    
-    meta = data.frame(category_id=category_id, category_name=category_name,
-                       sub_category_id=sub_category_id, sub_category_name,
-                       series_id=series_id, series_name=series_name)
-    
-    meta_data = rbind(meta_data, meta)
     
   }
   

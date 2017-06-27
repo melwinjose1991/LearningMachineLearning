@@ -12,7 +12,7 @@ config_data = config_data[config_data$explore=="yes",]
 
 
 ## Parameters
-data_folder = "../../Data/"
+data_folder = "../../Data/2401/"
 revenue_file = paste0(data_folder,"2401_Revenue.csv")
 sa_OR_nsa = "Not Seasonally Adjusted"
 
@@ -67,7 +67,7 @@ data.new = data[,c("orders_rcvd","month", "t", uncorrelated_vars)]
 
 ## Parameters
 no_vars = 5 #dim(data.new)[2]/2
-method = "forward" # exhaustive, forward
+method = "exhaustive" # exhaustive, forward
 var_cols = names(data.new)
 
 
