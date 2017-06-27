@@ -214,7 +214,9 @@ doLASSO = function(data, inputs) {
   result[[error_type]] = column(width = 2, text)
   for (var in names(coefs)) {
     fId = paste0(feature_selection_prefix, "fid|", var)
-    text = textInput(fId, label = var, value = coefs[[var]])
+    #text = textInput(fId, label = var, value = coefs[[var]])
+    var_name = meta_data[meta_data$series_id==var,"title"]
+    text = tags$div(title=var_name, textInput(fId, label = var, value = coefs[[var]]))
     result[[var]] = column(width = 2, text)
   }
   

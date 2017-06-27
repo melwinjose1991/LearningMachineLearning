@@ -59,6 +59,8 @@ createForecastVariableTable = function(variables, input, output, session){
     is_var_numerical = ifelse(grepl("month", var), FALSE, TRUE)
     
     var_id = paste0(forecast_prefix, "varId|", var)
+    var_name = meta_data[meta_data$series_id==var,"title"]
+    output_var_name = tags$div(title=var_name, tags$h5(var))
     
     if(is_var_numerical){
       
@@ -111,7 +113,7 @@ createForecastVariableTable = function(variables, input, output, session){
       
       # Rows
       fluidRow(
-        column(width=column_width_var_name, tags$h5(var)),
+        column(width=column_width_var_name, output_var_name),
         column(width=column_width_graph, output_var_graph),
         column(width=column_width_var_value, input_text_var_value),
         column(width=column_width_method, input_select_method),
@@ -127,7 +129,7 @@ createForecastVariableTable = function(variables, input, output, session){
       input_select_var_value = checkboxInput(var_value_id, label=NULL)
       
       fluidRow(
-        column(width=column_width_var_name, tags$h5(var)),
+        column(width=column_width_var_name, output_var_name),
         column(width=column_width_graph),
         column(width=column_width_var_value, input_select_var_value)
       )
