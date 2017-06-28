@@ -9,7 +9,18 @@ getForecastUI = function(){
   # row 1 - variables
   text_variables = tags$h4("Variables")
   input_vars = uiOutput(paste0(forecast_prefix, "forecastVariables"))
-  row_1 = fluidRow(text_variables, input_vars)
+  column_var_name = column(width=7, text_variables, input_vars)
+
+  text_var_name = uiOutput(paste0(forecast_prefix,"varName"))
+  output_var_info_graph = plotOutput(paste0(forecast_prefix, "varInfoGraph"))
+  output_var_info_summary = textOutput(paste0(forecast_prefix, "varInfoSummary"))
+  rows_var_info= fluidRow(text_var_name, tags$hr(), 
+                          output_var_info_graph, output_var_info_summary)
+  column_var_info = column(width=5, rows_var_info)
+  
+  row_1 = fluidRow(column_var_name,
+                   column_var_info
+                   )
   
   # row 2 - Buttons
   button_forecast_id = paste0(forecast_prefix, "buttonForecast")
@@ -26,7 +37,7 @@ getForecastUI = function(){
   row_4 = fluidRow()
   
   # 
-  tabPanel(title = "Forecast", row_1, row_2, row_3, row_4)
+  tabPanel(title = "Forecast", row_1, tags$hr(), row_2, row_3, row_4)
   
 }
 
@@ -37,11 +48,11 @@ createForecastVariableTable = function(variables, input, output, session){
   
   print(paste0("forecast :: createForecastVariableTable :: START"))
   
-  column_width_var_name = 3
+  column_width_var_name = 4
   column_width_graph = 6
   column_width_var_value = 2
-  column_width_method = 2
-  column_width_params = 1
+  column_width_method = 3
+  column_width_params = 2
     
   vars_titles = list(
     fluidRow(
@@ -73,7 +84,22 @@ createForecastVariableTable = function(variables, input, output, session){
       input_button_var_info = actionButton(input_button_var_info_id, label="",
                                            icon("area-chart",lib="font-awesome"))
       observeEvent(input[[input_button_var_info_id]],{
-        print("Clicked")
+        
+        var_name_id = paste0(forecast_prefix,"varName")
+        output[[var_name_id]] = renderUI({ list(tags$h5(var)) })
+        
+        series = getSeries(var)
+        
+        graph_id = paste0(forecast_prefix, "varInfoGraph") 
+        output[[graph_id]] = renderPlot(
+          plot(series, xlab="", ylab="")
+        )
+        
+        summary_id = paste0(forecast_prefix, "varInfoSummary") 
+        output[[summary_id]] = renderText(
+          summary(series)
+        )
+        
       })
       
       div_var_name_info = tags$div(output_var_name, input_button_var_info)
