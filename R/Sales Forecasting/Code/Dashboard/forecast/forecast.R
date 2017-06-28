@@ -37,7 +37,7 @@ createForecastVariableTable = function(variables, input, output, session){
   
   print(paste0("forecast :: createForecastVariableTable :: START"))
   
-  column_width_var_name = 1
+  column_width_var_name = 3
   column_width_graph = 6
   column_width_var_value = 2
   column_width_method = 2
@@ -46,7 +46,7 @@ createForecastVariableTable = function(variables, input, output, session){
   vars_titles = list(
     fluidRow(
       column(width=column_width_var_name, tags$h5("Variable")),
-      column(width=column_width_graph, tags$h5("Graph")),
+      #column(width=column_width_graph, tags$h5("Graph")),
       column(width=column_width_var_value, tags$h5("Value")),
       column(width=column_width_method, tags$h5("Method")),
       column(width=column_width_params, tags$h5("Params"))
@@ -60,7 +60,7 @@ createForecastVariableTable = function(variables, input, output, session){
     
     var_id = paste0(forecast_prefix, "varId|", var)
     var_name = meta_data[meta_data$series_id==var,"title"]
-    output_var_name = tags$div(title=var_name, tags$h5(var))
+    output_var_name = tags$div(title=var_name, tags$h5(var),style="float:left;")
     
     if(is_var_numerical){
       
@@ -68,14 +68,16 @@ createForecastVariableTable = function(variables, input, output, session){
       var_value_id = paste0(var_id, "|value")
       input_text_var_value = textInput(var_value_id, label=NULL, placeholder="Enter or Select")
       
-      # Graph
-      output_var_graph_id = paste0(var_id, "|graph")
-      output_var_graph = plotOutput(output_var_graph_id)
-      output[[output_var_graph_id]] = renderPlot({
-        #print(getSeries(var))
-        plot(getSeries(var), ylab=var)
+      # Info Button
+      input_button_var_info_id = paste0(var_id, "|infoButton")
+      input_button_var_info = actionButton(input_button_var_info_id, label="",
+                                           icon("area-chart",lib="font-awesome"))
+      observeEvent(input[[input_button_var_info_id]],{
+        print("Clicked")
       })
-        
+      
+      div_var_name_info = tags$div(output_var_name, input_button_var_info)
+      
       # Method
       var_method_id = paste0(var_id, "|method")
       input_select_method = selectInput(var_method_id, label=NULL, 
@@ -113,8 +115,8 @@ createForecastVariableTable = function(variables, input, output, session){
       
       # Rows
       fluidRow(
-        column(width=column_width_var_name, output_var_name),
-        column(width=column_width_graph, output_var_graph),
+        column(width=column_width_var_name, div_var_name_info),
+        #column(width=column_width_graph, output_var_info_icon),
         column(width=column_width_var_value, input_text_var_value),
         column(width=column_width_method, input_select_method),
         column(width=column_width_params, input_method_params)
@@ -130,7 +132,7 @@ createForecastVariableTable = function(variables, input, output, session){
       
       fluidRow(
         column(width=column_width_var_name, output_var_name),
-        column(width=column_width_graph),
+        #column(width=column_width_graph),
         column(width=column_width_var_value, input_select_var_value)
       )
       
