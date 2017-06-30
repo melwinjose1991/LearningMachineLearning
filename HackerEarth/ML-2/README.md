@@ -10,5 +10,5 @@ Techniques :
 	- month/year/day of the timestamp features  
 	- converted goal to USD and used the log form of it  
 2> Classifier : hyper-parameter tuned xgboost
-(Tried KNN and LASSO regression, didn't a promissing results)  
+(Tried KNN and LASSO regression, didn't give a promissing results)  
 3> Majority Voting from 3 xboosts  
