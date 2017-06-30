@@ -13,6 +13,9 @@ sa_OR_nsa = "Not Seasonally Adjusted"
 
 ## UI Elements
 initFeatureSelectionUI = function() {
+  
+  print("Feature Selection :: Feature Selection :: initFeatureSelectionUI() :: INIT")
+  
   # row 1
   text_advanced_text = tags$h4("Advanced Options")
   
@@ -74,7 +77,7 @@ initFeatureSelectionUI = function() {
   row_3 = fluidRow(output_graph)
   
   # row 4
-  output_coefs = uiOutput(paste0(feature_selection_prefix, "outputLASSOCoefs"))
+  output_coefs = uiOutput(paste0(feature_selection_prefix, "outputLASSOSummary"))
   row_4 = fluidRow(output_coefs)
   
   # row 5
@@ -94,14 +97,15 @@ initFeatureSelectionUI = function() {
 
 
 
-## Helper Functions
-readData = function(inputs) {
+## Server Functions
+readData = function(input, output) {
   print("Feature Selection :: Feature Selection :: readData() :: INIT")
   
+  input_value = reactiveValuesToList(input)
   selected_vars = vector('character')
-  for (key in names(inputs)) {
+  for (key in names(input_value)) {
     print(key)
-    if (grepl("_fId",key) & inputs[[key]] == TRUE) {
+    if (grepl("_fId",key) & input_value[[key]] == TRUE) {
       selected_vars = c(selected_vars, unlist(strsplit(key, "\\|"))[3])
     }
   }
@@ -123,11 +127,7 @@ readData = function(inputs) {
     
     
     file = paste0(
-      data_folder,
-      product,
-      "/",
-      as.character(category_name),
-      "/",
+      data_folder,product,"/",as.character(category_name),"/",
       as.character(sub_category_name)
     )
     
@@ -139,7 +139,6 @@ readData = function(inputs) {
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
     
-    #data_series = data_series[, !names(data_series) %in% c("date")]
     series_vars = intersect(names(data_series), selected_vars)
     
     data = cbind(data, data_series[, series_vars])
@@ -147,13 +146,13 @@ readData = function(inputs) {
   }
   
   print("Feature Selection :: Feature Selection :: readData() :: EXIT")
-  filterFeatures(data, inputs)
+  filterFeatures(data, input, output)
   
 }
 
 
 
-filterFeatures = function(data, inputs) {
+filterFeatures = function(data, input, output) {
   print("Feature Selection :: Feature Selection :: filterFeatures() :: INIT")
   
   # Removing columns whose values don't change
@@ -173,18 +172,20 @@ filterFeatures = function(data, inputs) {
   
   print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
   print(names(data.new))
-  doLASSO(data.new, inputs)
+  doLASSO(data.new, input, output)
+  
 }
 
 
 
-doLASSO = function(data, inputs) {
+doLASSO = function(data, input, output) {
+  
   print("Feature Selection :: Feature Selection :: doLASSO() :: INIT")
   
-  lambda_start = as.numeric(inputs[paste0(feature_selection_prefix, "lambda_start")])
-  lambda_end = as.numeric(inputs[paste0(feature_selection_prefix, "lambda_end")])
-  lambda_length = as.integer(inputs[paste0(feature_selection_prefix, "lambda_length")])
-  error_type = as.character(inputs[paste0(feature_selection_prefix, "selectErrorType")])
+  lambda_start = as.numeric(input[[paste0(feature_selection_prefix, "lambda_start")]])
+  lambda_end = as.numeric(input[[paste0(feature_selection_prefix, "lambda_end")]])
+  lambda_length = as.integer(input[[paste0(feature_selection_prefix, "lambda_length")]])
+  error_type = as.character(input[[paste0(feature_selection_prefix, "selectErrorType")]])
   
   grid = 2.71828 ^ seq(lambda_start, lambda_end, length = lambda_length)
   
@@ -208,18 +209,106 @@ doLASSO = function(data, inputs) {
   coefs = coef(l2.fit)[, 1]
   coefs = coefs[coefs != 0]
   
-  result = list()
-  id = paste0(feature_selection_prefix, "error")
-  text = textInput(id, label = error_type, value = best_error)
-  result[[error_type]] = column(width = 2, text)
-  for (var in names(coefs)) {
-    fId = paste0(feature_selection_prefix, "fid|", var)
-    #text = textInput(fId, label = var, value = coefs[[var]])
-    var_name = meta_data[meta_data$series_id==var,"title"]
-    text = tags$div(title=var_name, textInput(fId, label = var, value = coefs[[var]]))
-    result[[var]] = column(width = 2, text)
-  }
   
-  list(fit = cv.l2.fit, coefs_ui = result, coefs_names=names(coefs))
+  error_id = paste0(feature_selection_prefix, "LASSOSummaryError")
+  text_error = textInput(error_id, label = error_type, value = best_error)
+  div_error = tags$div(text_error, style="float:left;")
+  lambda_id = paste0(feature_selection_prefix, "LASSOSummarylambda")
+  text_lambda = textInput(lambda_id, label = "Best log(Lambda)", value = log(best_lambda))
+  div_lambda =   tags$div(text_lambda, style="float:left;")
+  row_summary = fluidRow(div_error, div_lambda)
+  
+  corr_id = paste0(feature_selection_prefix, "LASSOSummaryVarCorr")
+  output_var_corr = textOutput(corr_id)
+  plot_id = paste0(feature_selection_prefix, "LASSOSummaryVarPlot")
+  output_var_plot = plotOutput(plot_id)
+  var_summary = fluidRow(output_var_plot, output_var_corr)
+  
+  selected_vars = lapply(names(coefs), function(var){ 
+    
+    fId = paste0(feature_selection_prefix, "fid|", var)
+    var_name = meta_data[meta_data$series_id==var,"title"]
+    
+    if(grepl("Intercept",var) | grepl("month",var)){
+      text_var = tags$div(title=var_name, 
+                          textInput(fId, label=var, value=coefs[[var]]))
+    }else{
+      button_id = paste0(fId, "|infoButton")
+      input_button_var_info = actionButton(button_id, label="",
+                                           icon("area-chart",lib="font-awesome"))
+      
+      observeEvent(input[[button_id]],{
+        series = getSeries(var)
+        output[[plot_id]] = renderPlot({
+          plot(y,series)
+        })
+        output[[corr_id]] = renderText({
+          print(paste0("Correlation with output var : ", cor(series, y)))
+        })
+      })
+      
+      text_var_value = textInput(fId, label=var, value=coefs[[var]])
+      text_var = tags$div(title=var_name, 
+                          tags$div(text_var_value, style="float:left;"), 
+                          tags$div(input_button_var_info))
+    }
+    
+    row_var = fluidRow(text_var)
+    row_var
+    
+  })   
+  
+  row_selected_vars = fluidRow(column(width=6, selected_vars),
+                               column(width=6, var_summary))
+  
+  LASSO_summary = fluidRow(row_summary, tags$hr(), row_selected_vars)
+  
+  list(fit = cv.l2.fit, coefs_ui = LASSO_summary, coefs_names=names(coefs))
+  
+}
+
+
+
+attachObservers = function(input, output, session, reactive_vars){
+  
+  print("Feature Selection :: Feature Selection :: attachObservers() :: INIT")
+  
+  # Perform LASSO Regression
+  featureSelection_LASSO = paste0(feature_selection_prefix, "buttonLASSO")
+  observeEvent(input[[featureSelection_LASSO]], {
+    
+    # Function Flow : readData > filterFeatures > doLASSO
+    fit_and_coefs = readData(input, output)
+    
+    output_LASSOgraph = paste0(feature_selection_prefix, "outputLASSOGraph")
+    output[[output_LASSOgraph]] = renderPlot({
+      plot(fit_and_coefs[["fit"]])
+    })
+    
+    output_LASSOcoefs = paste0(feature_selection_prefix, "outputLASSOSummary")
+    output[[output_LASSOcoefs]] = renderUI({
+      fit_and_coefs["coefs_ui"]
+    })
+    
+    reactive_vars[['selected_vars']] = fit_and_coefs[['coefs_names']]
+    
+  })
+  
+  
+  # Select short-listed features for Model and Forecast Tab
+  button_select_them = paste0(feature_selection_prefix, "buttonSelectThem")
+  observeEvent(input[[button_select_them]], {
+    
+    table_regression_varaibles = paste0(regression_prefix, "selectedVariables")
+    output[[table_regression_varaibles]] = renderUI({
+      createVariableTable(reactive_vars[['selected_vars']])
+    })
+    
+    table_forecast_varaibles = paste0(forecast_prefix, "forecastVariables")
+    output[[table_forecast_varaibles]] = renderUI({
+      createForecastVariableTable(reactive_vars[['selected_vars']], input, output, session)
+    })
+    
+  })
   
 }

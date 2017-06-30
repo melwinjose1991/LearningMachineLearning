@@ -12,7 +12,7 @@ source("server.R")
 
 
 
-tab_extract_data = tabPanel(title = "Extract >", "Not Implemented")
+tab_extract_data = tabPanel(title = "Extract >", tags$hr(), "Not Implemented")
 
 tab_feature_selection = tabPanel(title = "Feature Selection >", tags$hr(), feature_selection_navbar)
 

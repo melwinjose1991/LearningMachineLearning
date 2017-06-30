@@ -6,8 +6,9 @@ source("feature selection/feature_selection.R")
 
 
 ## UI Elements
-featureSelection_tabFeatureSelection = initFeatureSelectionUI()
+featureSelection_tabAllFeatures = initAllFeaturesUI()
 featureSelection_tabFilterFeatures = tabPanel(title = "Filter Feature", "...")
+featureSelection_tabFeatureSelection = initFeatureSelectionUI()
 featureSelection_tabFinalFeatures = tabPanel(title = "Final Features", "...")
 
 feature_selection_navbar = navlistPanel(
