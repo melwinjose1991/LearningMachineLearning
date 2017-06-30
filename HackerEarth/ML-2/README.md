@@ -1,7 +1,8 @@
-Competition Link : https://www.hackerearth.com/challenge/competitive/machine-learning-challenge-2/
+Competition Link : https://www.hackerearth.com/challenge/competitive/machine-learning-challenge-2/  
+
 Final Leaderboard Standing #6 : https://www.hackerearth.com/challenge/competitive/machine-learning-challenge-2/leaderboard/
 
-Techniques :
+Techniques :  
 1> word2vec : n=500  
 2> Engineered features  
 	- One hot encoding of top words in 'desc' of train and test - stopwords removed  
