@@ -3,7 +3,7 @@ train = read.csv("data/train.csv", header=TRUE, sep=",")
 test = read.csv("data/test.csv", header=TRUE, sep=",")
 
 names(train)
-
+version = "1"
 
 
 ## name : string
@@ -85,3 +85,7 @@ summary(train$backers_count)
 sum(train$backers_count==0) # 12832 zeros : outliers / missing ?
 
 summary(test)
+
+
+write.csv(train, paste0("data/train_",version,".csv"), row.names = FALSE)
+write.csv(test, paste0("data/test_",version,".csv"), row.names = FALSE)
