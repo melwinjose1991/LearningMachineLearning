@@ -9,6 +9,6 @@ Techniques :
 	- difference between timestamp features in seconds  
 	- month/year/day of the timestamp features  
 	- converted goal to USD and used the log form of it  
-2> Classifier : xgboost  
+2> Classifier : hyper-parameter tuned xgboost
 (Tried KNN and LASSO regression, didn't a promissing results)  
 3> Majority Voting from 3 xboosts  
