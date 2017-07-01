@@ -146,7 +146,7 @@ server = function(input, output, session) {
     
     
     ## Plotting graphs
-    output_graph_forecast = paste0(forecast_prefix, "graphForeCast")
+    output_graph_forecast = paste0(forecast_prefix, "forecastPlot")
     output[[output_graph_forecast]] = renderPlot({
       
       plot(results[["t"]])
@@ -174,6 +174,15 @@ server = function(input, output, session) {
       
       legend("topleft", lwd=2, lty=2, col=colors, legend=models)
       
+    })
+    
+    ## Forecast values
+    output_value_forecast = paste0(forecast_prefix, "forecastValue")
+    output[[output_value_forecast]] = renderText({
+      res = paste0("Forecast : ", results[['line_modelX']][2])
+      res = paste0(res, " \nLower : ", results[['line_modelX_lwr']][1])
+      res = paste0(res, " \nUpper : ", results[['line_modelX_upr']][1])
+      res
     })
     
   })

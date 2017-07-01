@@ -29,9 +29,11 @@ getForecastUI = function(){
   row_2 = fluidRow(button_forecast)
   
   # row 3 - plots
-  id = paste0(forecast_prefix, "graphForeCast")
-  output_graph_forecast = plotOutput(id)
-  row_3 = fluidRow(output_graph_forecast)
+  id = paste0(forecast_prefix, "forecastPlot")
+  column_graph_forecast = column(width=8,plotOutput(id))
+  id = paste0(forecast_prefix, "forecastValue")
+  column_value_forecast = column(width=4, textOutput(id))
+  row_3 = fluidRow(column_graph_forecast, column_value_forecast)
   
   # row 4 - ???
   row_4 = fluidRow()
