@@ -157,12 +157,17 @@ server = function(input, output, session) {
       for(result in names(results)){
         
         if(grepl("line_", result)){
-          lines(results[[result]], col=colors[index], lwd=2, lty=2)
-          
-          model = unlist(strsplit(result,"_"))[2]
-          models = c(models, model)
-          
-          index = index + 1
+          if( grepl("upr",result) | grepl("lwr",result) ){
+            lines(results[[result]], col="blue", lty=2)
+          }else{
+            
+            lines(results[[result]], col=colors[index], lwd=2, lty=2)
+            
+            model = unlist(strsplit(result,"_"))[2]
+            models = c(models, model)
+            
+            index = index + 1
+          }
         }
         
       }

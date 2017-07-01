@@ -254,14 +254,25 @@ getForecastResults=function(y_name="orders_rcvd", forecast_model, input_variable
   }
   
   # Predictions by your model
-  predictions = predict(forecast_model, newdata=input_variables)
-  predictions = c(tail(y,n=1), predictions)
-  print(predictions)
+  pred = predict(forecast_model, newdata=input_variables, interval="predict")
+  
+  predictions = c(tail(y,n=1), pred[,1])
   predictions = ts(predictions, frequency = 12, start=5-0.0833)
   lines(predictions, col=6, lwd=2, lty=2)
+  print(predictions)
+  
+  predictions_lwr = ts(c(pred[,2],pred[,2]), frequency=12, start=5)
+  lines(predictions_lwr, col=6, lwd=2, lty=2)
+  print(predictions_lwr)
+  
+  predictions_upr = ts(c(pred[,3],pred[,3]), frequency=12, start=5)
+  lines(predictions_upr, col=6, lwd=2, lty=2)
+  print(predictions_upr)
+  
   
   results[['line_modelX']] = predictions
-  
+  results[['line_modelX_upr']] = predictions_upr
+  results[['line_modelX_lwr']] = predictions_lwr
   
   legend("topleft", lwd=2, lty=2, col=c(2,3,4,5,9),
          legend=c("Mean","Naive","Seasonal Naive","Drift","ModelX"))
