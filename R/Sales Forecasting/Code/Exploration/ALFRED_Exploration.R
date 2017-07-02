@@ -56,8 +56,13 @@ data = data[sapply(data, function(x) length(unique(x))>1)]
 data_num_var = data[,!names(data) %in% c("month","orders_rcvd","t")]
 tmp = cor(data_num_var)
 tmp[!lower.tri(tmp)] = 0
-uncorrelated_vars = names(data_num_var[,!apply(tmp,2,function(x) any(x > 0.98))])
+
+correlated_vars = names(data_num_var[,apply(tmp,2,function(x) any(x > 0.99))])
+correlated_vars
+
+uncorrelated_vars = names(data_num_var[,!apply(tmp,2,function(x) any(x > 0.99))])
 uncorrelated_vars
+
 #corrplot.mixed(cor(data[,uncorrelated_vars]), upper="circle", lower="number")
 
 data.new = data[,c("orders_rcvd","month", "t", uncorrelated_vars)]
@@ -72,7 +77,7 @@ var_cols = names(data.new)
 
 
 
-## Cross-Validated Model Selection
+##### Cross-Validated Model Selection #####
 source("../Common/Utils.R")
 
 mean_errors = cvSubsetSelection(data.new, no_vars=no_vars, method=method)
@@ -93,7 +98,7 @@ coef(leaps,id=best_model)
 
 
 
-## Leaps' Model Selection
+##### Leaps' Model Selection #####
 leaps = regsubsets(orders_rcvd~., data=data[,var_cols], nvmax=no_vars, method=method, really.big=TRUE)
 plot(leaps)
 
@@ -111,8 +116,8 @@ coef(leaps,id=best_model)
 
 
 
-## LASSO Regression
-grid = 2.71828^seq(0.001, 10, length=1000)
+##### LASSO Regression #####
+grid = 2.71828^seq(0.001, 9, length=1000)
 
 x = model.matrix(orders_rcvd~., data.new)[,-1]
 y = data$orders_rcvd
@@ -173,3 +178,29 @@ lm_pred
 
 getBenchmarkResults(y, lm_pred, h=h)
 getBenchmarkResults(y, lm_pred, naive_model = FALSE, snaive_model = FALSE, drift_model = FALSE, h=h)
+
+
+
+##### FCBF #####
+library(Biocomb)
+
+names(data)
+data_reordered = as.matrix(data[ , c(4:ncol(data),1) ])
+colnames(data_reordered)
+
+for(threshold in seq(0,1, length=10)){
+  fcbf_select = select.fast.filter(data_reordered, 
+                                   disc.method="equal interval width", threshold=threshold, 
+                                   attrs.nominal=numeric())
+  
+  removed_var = setdiff(colnames(data_reordered), fcbf_select$Biomarker)
+  removed_var = removed_var[!grepl("orders_rcvd", removed_var)]  
+  print(removed_var)
+  print(paste0("#Vars Removed : ", length(removed_var)))
+
+  unremoved_var = c(as.character(fcbf_select$Biomarker), "orders_rcvd")
+  print(unremoved_var)
+  print(paste0("#Vars UnRemoved : ", length(unremoved_var)))
+}
+
+data.new = data[,c("month", "t", unremoved_var)]
