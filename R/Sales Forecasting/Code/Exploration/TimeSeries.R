@@ -80,22 +80,36 @@ configs[which.min(maes)]
 # Simple Exponential Smoothing
 h=3
 alphas = seq(0.1, 0.9, length=10)
-maes = vector('numeric')
+valid_maes = vector('numeric')
+train_maes = vector('numeric')
 for(alpha in alphas){
   
   window_ts = window(data_ts, end=4+((12-(h+1))/12))  
   fit = ses(window_ts, alpha=alpha, initial="simple", h=h)
   #plot(fit)
 
-  mae = mean(abs(tail(data,n=h)-fit$mean))
-  print(mae)
-  maes = c(maes, mae)
+  train_mae = mean(abs(fit$residuals))
+  valid_mae = mean(abs(tail(data,n=h)-fit$mean))
+  print(paste0("train-",train_mae," valid-",valid_mae))
+  valid_maes = c(valid_maes, valid_mae)
+  train_maes = c(train_maes, train_mae)
+  
 }
-plot(alphas, maes)
-lines(alphas, maes)
-alphas[which.min(maes)]
-maes[which.min(maes)]
+which.min(train_maes)
+configs[which.min(train_maes)]
+train_maes[which.min(train_maes)]
+# 3660 
+
+which.min(valid_maes)
+configs[which.min(valid_maes)]
+valid_maes[which.min(valid_maes)]
 # 4462
+
+fit = ses(window_ts, initial="simple", h=h)
+train_mae = mean(abs(fit$residuals))
+valid_mae = mean(abs(tail(data,n=h)-fit$mean))
+print(paste0("train-",train_mae," valid-",valid_mae))
+# 3678, 4897
 
 
 
@@ -105,7 +119,8 @@ alphas = seq(0.1, 0.9, length=10)
 betas = seq(0.1, 0.9, length=10)
 t_multiplicative = FALSE
 configs = vector('character')
-maes = vector('numeric')
+valid_maes = vector('numeric')
+train_maes = vector('numeric')
 for(beta in betas){
   for(alpha in alphas){
     
@@ -114,32 +129,60 @@ for(beta in betas){
                h=h, exponential=t_multiplicative)
     # plot(fit)
     
-    mae = mean(abs(tail(data,n=h)-fit$mean))
-    print(mae)
-    maes = c(maes, mae)
+    train_mae = mean(abs(fit$residuals))
+    valid_mae = mean(abs(tail(data,n=h)-fit$mean))
+    print(paste0("train-",train_mae," valid-",valid_mae))
+    valid_maes = c(valid_maes, valid_mae)
+    train_maes = c(train_maes, train_mae)
     
     configs = c(configs, paste0("alpha:",alpha," beta:",beta))
+    
   }
 }
-configs[which.min(maes)]
-maes[which.min(maes)]
-# Additive : 2290
-# Multiplicative : 2457
+which.min(train_maes)
+configs[which.min(train_maes)]
+train_maes[which.min(train_maes)]
+# 4603
+
+which.min(valid_maes)
+configs[which.min(valid_maes)]
+valid_maes[which.min(valid_maes)]
+# 2290
+
+fit = holt(window_ts, initial="simple", h=h, exponential=t_multiplicative)
+plot(data_ts)
+lines(fit$fitted, col="red", lwd=2, lty=2)
+lines(fit$mean, col="green", lwd=2, lty=2)
+train_mae = mean(abs(fit$residuals))
+valid_mae = mean(abs(tail(data,n=h)-fit$mean))
+print(paste0("train-",train_mae," valid-",valid_mae))
+# 4735, 7594
 
 
 
 # Damped : Additive and Multiplicative
 h=3
-t_multiplicative = FALSE
 window_ts = window(data_ts, end=4+((12-(h+1))/12))  
 
-fit_tuned = holt(window_ts, alpha=0.1, beta=0.1, phi=0.98, damped=TRUE, h=h, exponential=t_multiplicative)
-mae = mean(abs(tail(data,n=h)-fit_tuned$mean))
-print(mae) #3745
+t_multiplicative = FALSE
+fit_add = holt(window_ts, damped=TRUE, h=h, exponential=t_multiplicative)
+plot(data_ts, lwd=2)
+lines(fit_add$fitted, col="red", lwd=2, lty=2)
+lines(fit_add$mean, col="green", lwd=2, lty=2)
+train_mae = mean(abs(fit_add$residuals))
+valid_mae = mean(abs(tail(data,n=h)-fit_add$mean))
+print(paste0("train-",train_mae," valid-",valid_mae))
+# 3575, 4238
 
-fit_auto = holt(window_ts, damped=TRUE, h=h, exponential=t_multiplicative)
-mae = mean(abs(tail(data,n=h)-fit_auto$mean))
-print(mae) #4238
+t_multiplicative = TRUE
+fit_multi = holt(window_ts, damped=TRUE, h=h, exponential=t_multiplicative)
+plot(data_ts, lwd=2)
+lines(fit_multi$fitted, col="red", lwd=2, lty=2)
+lines(fit_multi$mean, col="green", lwd=2, lty=2)
+train_mae = mean(abs(fit_multi$residuals))
+valid_mae = mean(abs(tail(data,n=h)-fit_multi$mean))
+print(paste0("train-",train_mae," valid-",valid_mae))
+# 0.106, 4726
 
 
 
@@ -149,30 +192,46 @@ t_multiplicative = FALSE
 window_ts = window(data_ts, end=4+((12-(h+1))/12))  
 
 fit_add = hw(window_ts, seasonal="additive", h=h)
-plot(fit_add)
-mae = mean(abs(tail(data,n=h)-fit_add$mean))
-print(mae) #4341
+plot(data_ts, lwd=2)
+lines(fit_add$fitted, col="red", lwd=2, lty=2)
+lines(fit_add$mean, col="green", lwd=2, lty=2)
+train_mae = mean(abs(fit_add$residuals))
+valid_mae = mean(abs(tail(data,n=h)-fit_add$mean))
+print(paste0("train-",train_mae," valid-",valid_mae))
+# 3203, 4341
 
 fit_multi = hw(window_ts, seasonal="multiplicative", h=h)
-plot(fit_multi)
-mae = mean(abs(tail(data,n=h)-fit_multi$mean))
-print(mae) #4304
+plot(data_ts, lwd=2)
+lines(fit_multi$fitted, col="red", lwd=2, lty=2)
+lines(fit_multi$mean, col="green", lwd=2, lty=2)
+train_mae = mean(abs(fit_multi$residuals))
+valid_mae = mean(abs(tail(data,n=h)-fit_multi$mean))
+print(paste0("train-",train_mae," valid-",valid_mae))
+# 0.085, 4304
 
 fit_add_damped = hw(window_ts, seasonal="additive", h=h, damped=TRUE)
-plot(fit_add_damped)
-mae = mean(abs(tail(data,n=h)-fit_add_damped$mean))
-print(mae) #4380
+plot(data_ts, lwd=2)
+lines(fit_add_damped$fitted, col="red", lwd=2, lty=2)
+lines(fit_add_damped$mean, col="green", lwd=2, lty=2)
+train_mae = mean(abs(fit_add_damped$residuals))
+valid_mae = mean(abs(tail(data,n=h)-fit_add_damped$mean))
+print(paste0("train-",train_mae," valid-",valid_mae))
+# 3177, 4380
 
 fit_multi_damped = hw(window_ts, seasonal="multiplicative", h=h, damped=TRUE)
-plot(fit_multi_damped)
-mae = mean(abs(tail(data,n=h)-fit_multi_damped$mean))
-print(mae) #4047
-
+plot(data_ts, lwd=2)
+lines(fit_multi_damped$fitted, col="red", lwd=2, lty=2)
+lines(fit_multi_damped$mean, col="green", lwd=2, lty=2)
+train_mae = mean(abs(fit_multi_damped$residuals))
+valid_mae = mean(abs(tail(data,n=h)-fit_multi_damped$mean))
+print(paste0("train-",train_mae," valid-",valid_mae))
+# 0.084, 4047
 
 
 # ETS
 best_fit = ets(window_ts, opt.crit="mae", allow.multiplicative.trend=TRUE)
-best_fit
+plot(best_fit)
 f = forecast(best_fit, h=3)$mean
 mae = mean(abs(tail(data,n=h)-f))
 print(mae) #4467
+
