@@ -4,7 +4,7 @@ print("Feature Selection :: All Features :: Init")
 ## Globals
 all_features_prefix = paste0(features_prefix, "features_")
 
-file = paste0("../../Data/", product, "/meta_data.csv")
+file = paste0("../../Data/External Data/meta_data.csv")
 meta_data = read.csv(file, header = TRUE, sep = ",")
 
 

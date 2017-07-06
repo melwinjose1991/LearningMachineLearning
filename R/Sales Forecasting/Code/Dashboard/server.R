@@ -6,6 +6,9 @@ server = function(input, output, session) {
   
   reactive_vars = reactiveValues()
   
+  ### Products
+  attachProductsObservers(input, output, session, reactive_vars)
+  
   ### Feature Selection > Features
   populateFeatures(input, output, session)
 

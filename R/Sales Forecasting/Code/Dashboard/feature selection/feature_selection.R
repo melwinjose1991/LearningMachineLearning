@@ -5,8 +5,6 @@ library(glmnet)
 ## Globals
 feature_selection_prefix = paste0(features_prefix, "featureSelection_")
 
-data_folder = "../../Data/"
-revenue_file = paste0(data_folder, product, "/", product, "_Revenue.csv")
 sa_OR_nsa = "Not Seasonally Adjusted"
 
 
@@ -104,7 +102,7 @@ readData = function(input, output) {
   input_value = reactiveValuesToList(input)
   selected_vars = vector('character')
   for (key in names(input_value)) {
-    print(key)
+    #print(key)
     if (grepl("_fId",key) & input_value[[key]] == TRUE) {
       selected_vars = c(selected_vars, unlist(strsplit(key, "\\|"))[3])
     }
@@ -115,8 +113,9 @@ readData = function(input, output) {
   config_data = meta_data[meta_data$series_id %in% selected_vars, ]
   
   # Y
+  revenue_file = paste0(data_folder, "/", product_line, "/Revenue.csv")
   data_revenue = read.csv(revenue_file, header = TRUE, sep = ",")
-  data = data_revenue[, c("orders_rcvd", "month", "t")]
+  data = data_revenue[, c(product_data_column, "month", "t")]
   data$month = as.factor(data$month)
   
   # X
@@ -127,7 +126,7 @@ readData = function(input, output) {
     
     
     file = paste0(
-      data_folder,product,"/",as.character(category_name),"/",
+      data_folder, "/External Data/", as.character(category_name), "/",
       as.character(sub_category_name)
     )
     
@@ -160,18 +159,18 @@ filterFeatures = function(data, input, output) {
     length(unique(x)) > 1)]
   
   # Removing highly correlated variables
-  data_num_var = data[, !names(data) %in% c("month", "orders_rcvd", "t")]
+  data_num_var = data[, !names(data) %in% c("month", product_data_column, "t")]
   tmp = cor(data_num_var)
   tmp[!lower.tri(tmp)] = 0
   uncorrelated_vars = names(data_num_var[, !apply(tmp, 2, function(x)
     any(x > 0.99))])
-  print("UnCorrelated Vars")
-  print(uncorrelated_vars)
+  #print("UnCorrelated Vars")
+  #print(uncorrelated_vars)
   
-  data.new = data[, c("orders_rcvd", "month", "t", uncorrelated_vars)]
+  data.new = data[, c(product_data_column, "month", "t", uncorrelated_vars)]
   
-  print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
-  print(names(data.new))
+  #print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
+  #print(names(data.new))
   doLASSO(data.new, input, output)
   
 }
@@ -181,6 +180,7 @@ filterFeatures = function(data, input, output) {
 doLASSO = function(data, input, output) {
   
   print("Feature Selection :: Feature Selection :: doLASSO() :: INIT")
+  print(paste0("Product_Line=", product_line, ", Product_Column=", product_data_column))
   
   lambda_start = as.numeric(input[[paste0(feature_selection_prefix, "lambda_start")]])
   lambda_end = as.numeric(input[[paste0(feature_selection_prefix, "lambda_end")]])
@@ -189,8 +189,9 @@ doLASSO = function(data, input, output) {
   
   grid = 2.71828 ^ seq(lambda_start, lambda_end, length = lambda_length)
   
-  x = model.matrix(orders_rcvd ~ ., data)[, -1]
-  y = data$orders_rcvd
+  form = as.formula(paste0(product_data_column," ~ ."))
+  x = model.matrix(form, data)[, -1]
+  y = data[,product_data_column]
   
   cv.l2.fit = cv.glmnet(x,
                         y,
@@ -229,7 +230,8 @@ doLASSO = function(data, input, output) {
     fId = paste0(feature_selection_prefix, "fid|", var)
     var_name = meta_data[meta_data$series_id==var,"title"]
     
-    if(grepl("Intercept",var) | grepl("month",var)){
+    print(var)
+    if(grepl("Intercept",var) | grepl("month",var) | var=="t"){
       text_var = tags$div(title=var_name, 
                           textInput(fId, label=var, value=coefs[[var]]))
     }else{

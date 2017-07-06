@@ -193,8 +193,8 @@ getSeries = function(var_id){
     sub_category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "sub_category_name"])
     
     file = paste0(
-      data_folder,product,"/",as.character(category_name),
-      "/",as.character(sub_category_name)
+      data_folder, "/External Data/", as.character(category_name), "/",
+      as.character(sub_category_name)
     )
     
     if (sa_OR_nsa == "Not Seasonally Adjusted") {

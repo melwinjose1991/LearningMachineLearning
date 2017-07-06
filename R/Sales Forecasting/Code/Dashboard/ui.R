@@ -3,14 +3,16 @@ library(shinyjs)
 
 if(TRUE){
 
-product = "2401"
+#product = "2401"
 
+source("products/main.R")
 source("feature selection/main.R")
 source("models/main.R")
 source("forecast/main.R")
 source("server.R")
 
-
+  
+tab_products = tabPanel(title = "Products >", tags$hr(), products_navbar)
 
 tab_extract_data = tabPanel(title = "Extract >", tags$hr(), "Not Implemented")
 
@@ -24,6 +26,7 @@ tab_forecast = tabPanel(title = "Forecast", tags$hr(), forecast_navbar)
 ui = fluidPage(
   useShinyjs(),
   tabsetPanel(
+    tab_products,
     tab_extract_data,
     tab_feature_selection,
     tab_models,
