@@ -73,7 +73,10 @@ createForecastVariableTable = function(variables, input, output, session){
     
     var_id = paste0(forecast_prefix, "varId|", var)
     var_name = meta_data[meta_data$series_id==var,"title"]
-    output_var_name = tags$div(title=var_name, tags$h5(var),style="float:left;")
+    if(length(var_name)==0){
+      var_name = var
+    }
+    output_var_name = tags$div(title=var, tags$h5(var_name),style="float:left;")
     
     if(is_var_numerical){
       

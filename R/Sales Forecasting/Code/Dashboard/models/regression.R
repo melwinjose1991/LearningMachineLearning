@@ -144,8 +144,11 @@ createVariableTable = function(variables){
     
     var_id = paste0(regression_prefix,"varId|",var)
     var_name = meta_data[meta_data$series_id==var,"title"]
+    if(length(var_name)==0){
+      var_name = var
+    }
     fluidRow(
-      column(width=2, tags$div(title=var_name, tags$h5(var))),
+      column(width=2, tags$div(title=var, tags$h5(var_name))),
       column(width=2, textInput(paste0(var_id, "|Est"), label="")),
       column(width=2, textInput(paste0(var_id, "|StdErr"), label="")),
       column(width=2, textInput(paste0(var_id, "|t"), label="")),

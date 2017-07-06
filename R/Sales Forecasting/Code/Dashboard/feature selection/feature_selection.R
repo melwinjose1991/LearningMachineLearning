@@ -247,8 +247,8 @@ doLASSO = function(data, input, output) {
         })
       })
       
-      text_var_value = textInput(fId, label=var, value=coefs[[var]])
-      text_var = tags$div(title=var_name, 
+      text_var_value = textInput(fId, label=var_name, value=coefs[[var]])
+      text_var = tags$div(title=var, 
                           tags$div(text_var_value, style="float:left;"), 
                           tags$div(input_button_var_info))
     }
