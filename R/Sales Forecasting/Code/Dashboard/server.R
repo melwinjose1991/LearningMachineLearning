@@ -182,11 +182,13 @@ server = function(input, output, session) {
     
     ## Forecast values
     output_value_forecast = paste0(forecast_prefix, "forecastValue")
-    output[[output_value_forecast]] = renderText({
-      res = paste0("Forecast : ", results[['line_modelX']][2])
-      res = paste0(res, " \nLower : ", results[['line_modelX_lwr']][1])
-      res = paste0(res, " \nUpper : ", results[['line_modelX_upr']][1])
-      res
+    output[[output_value_forecast]] = renderUI({
+      res_forecast = paste0("Forecast : ", results[['line_modelX']][2])
+      res_lower    = paste0("Lower : ", results[['line_modelX_lwr']][1])
+      res_upper    = paste0("Upper : ", results[['line_modelX_upr']][1])
+      res_interval = paste0("Interval : ",
+                            (results[['line_modelX_upr']][1] - results[['line_modelX_lwr']][1]))
+      HTML(paste(res_forecast, res_upper, res_lower, res_interval, sep="<br/>"))
     })
     
   })

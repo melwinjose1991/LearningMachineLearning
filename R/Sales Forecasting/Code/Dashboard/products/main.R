@@ -6,6 +6,7 @@ data_folders_to_skip = c("External Data")
 
 products = vector('character')
 product_line = "2401" # default
+product_start_date = vector('integer')
 product_data = vector('numeric')
 product_data_column = "orders_rcvd"
 columns_to_skip = c("period_id", "month", "year", "month_str", "t")
@@ -111,14 +112,16 @@ attachProductsObservers = function(input, output, session, reactive_vars){
   
   lapply(products, FUN=function(product){
     
+    start_year = getProductData(product, "year")[1]  
+    start_month = getProductData(product, "month")[1] 
+    
     button_id = paste0(products_prefix, "pId|",product,"|Columns")
     observeEvent(input[[button_id]],{
       plot_id = paste0(products_prefix, product, "|plot")
       column_name =  input[[button_id]]
       output[[plot_id]] = renderPlot({
         y = getProductData(product, column_name)
-        start_year = min(getProductData(product, "year"))
-        time_series = ts(y, frequency=12, start=c(start_year, 1))
+        time_series = ts(y, frequency=12, start=c(start_year, start_month))
         plot(time_series, xlab="Time", ylab=column_name)
       })
     })
@@ -129,6 +132,7 @@ attachProductsObservers = function(input, output, session, reactive_vars){
       column_name =  input[[button_id]]
       
       product_line <<- product
+      product_start_date <<- c(start_year, start_month)
       product_data <<- getProductData(product, column_name)
       product_data_column <<- column_name
       

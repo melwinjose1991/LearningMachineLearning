@@ -96,7 +96,7 @@ initFeatureSelectionUI = function() {
 
 
 ## Server Functions
-readData = function(input, output) {
+readData = function(input, output, session) {
   print("Feature Selection :: Feature Selection :: readData() :: INIT")
   
   input_value = reactiveValuesToList(input)
@@ -145,13 +145,13 @@ readData = function(input, output) {
   }
   
   print("Feature Selection :: Feature Selection :: readData() :: EXIT")
-  filterFeatures(data, input, output)
+  filterFeatures(data, input, output, session)
   
 }
 
 
 
-filterFeatures = function(data, input, output) {
+filterFeatures = function(data, input, output, session) {
   print("Feature Selection :: Feature Selection :: filterFeatures() :: INIT")
   
   # Removing columns whose values don't change
@@ -171,13 +171,13 @@ filterFeatures = function(data, input, output) {
   
   #print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
   #print(names(data.new))
-  doLASSO(data.new, input, output)
+  doLASSO(data.new, input, output, session)
   
 }
 
 
 
-doLASSO = function(data, input, output) {
+doLASSO = function(data, input, output, session) {
   
   print("Feature Selection :: Feature Selection :: doLASSO() :: INIT")
   print(paste0("Product_Line=", product_line, ", Product_Column=", product_data_column))
@@ -250,9 +250,23 @@ doLASSO = function(data, input, output) {
       })
       
       text_var_value = textInput(fId, label=var_name, value=coefs[[var]])
+      
+      select_var_id = paste0(fId,"|select")
+      input_select_var = checkboxInput(select_var_id, label="", value=TRUE)
+      observeEvent(input[[select_var_id]],{
+        group = meta_data[meta_data$series_id==var, "sub_category_name"]
+        id = paste0(all_features_prefix, "fId|", group, "|", var)
+        if(input[[select_var_id]]){
+          updateTextInput(session, id, value=TRUE)
+        }else{
+          updateTextInput(session, id, value=FALSE)
+        }
+      })
+            
       text_var = tags$div(title=var, 
                           tags$div(text_var_value, style="float:left;"), 
-                          tags$div(input_button_var_info))
+                          tags$div(input_button_var_info),
+                          tags$div(input_select_var))
     }
     
     row_var = fluidRow(text_var)
@@ -280,7 +294,7 @@ attachObservers = function(input, output, session, reactive_vars){
   observeEvent(input[[featureSelection_LASSO]], {
     
     # Function Flow : readData > filterFeatures > doLASSO
-    fit_and_coefs = readData(input, output)
+    fit_and_coefs = readData(input, output, session)
     
     output_LASSOgraph = paste0(feature_selection_prefix, "outputLASSOGraph")
     output[[output_LASSOgraph]] = renderPlot({

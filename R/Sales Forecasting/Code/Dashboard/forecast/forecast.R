@@ -32,7 +32,7 @@ getForecastUI = function(){
   id = paste0(forecast_prefix, "forecastPlot")
   column_graph_forecast = column(width=8,plotOutput(id))
   id = paste0(forecast_prefix, "forecastValue")
-  column_value_forecast = column(width=4, textOutput(id))
+  column_value_forecast = column(width=4, htmlOutput(id))
   row_3 = fluidRow(column_graph_forecast, column_value_forecast)
   
   # row 4 - ???
@@ -97,12 +97,14 @@ createForecastVariableTable = function(variables, input, output, session){
         
         graph_id = paste0(forecast_prefix, "varInfoGraph") 
         output[[graph_id]] = renderPlot(
-          plot(series, xlab="", ylab="")
+          plot(ts(series, frequency=12, start=product_start_date), xlab="", ylab="")
         )
         
         summary_id = paste0(forecast_prefix, "varInfoSummary") 
+        summ = summary(series)
+        summ_cols = names(summ)
         output[[summary_id]] = renderText(
-          summary(series)
+          paste0(summ_cols,"=",summ," | ")
         )
         
       })
