@@ -18,7 +18,7 @@ server = function(input, output, session) {
   ### Models > Regression
   regression_build_regression = paste0(regression_prefix, "buttonBuildRegression")
   observeEvent(input[[regression_build_regression]], {
-    fit = doRegression(reactive_vars[['selected_vars']])
+    fit = doRegression(reactive_vars[['selected_vars']], product_data_column)
     reactive_vars[['forecast_model']] = fit[['regression']]
     
     output_regression_graph_1 = paste0(regression_prefix, "graphResidualVsFitted")
@@ -58,7 +58,8 @@ server = function(input, output, session) {
     drift_model = input[[paste0(benchmark_prefix,"methodId|drift")]]
     error_type = input[[paste0(benchmark_prefix,"selectErrorType")]]
     
-    fit_forecast = doRegression(reactive_vars[['selected_vars']], h=h)
+    fit_forecast = doRegression(reactive_vars[['selected_vars']], 
+                                product_data_column, h=h)
   
     
     results = getBenchmarkResults(model_predictions=fit_forecast[['forecast']], h = h,

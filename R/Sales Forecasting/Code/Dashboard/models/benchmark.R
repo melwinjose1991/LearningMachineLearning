@@ -69,6 +69,7 @@ getBenchmarkResults=function(y_name="orders_rcvd", model_predictions, h=6,
                              mean_model=TRUE, naive_model=TRUE, snaive_model=TRUE,
                              drift_model=TRUE, error_type="mae"){
   
+  revenue_file = paste0(data_folder, "/", product_line, "/Revenue.csv")
   data = read.csv(revenue_file, header = TRUE, sep = ",")
   y = data[,y_name]
   

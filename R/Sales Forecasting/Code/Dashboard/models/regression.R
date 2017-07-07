@@ -53,6 +53,7 @@ getData = function(vars_id, y_name){
   config_data = meta_data[meta_data$series_id %in% vars_id, ]
   
   # Y
+  revenue_file = paste0(data_folder, "/", product_line, "/Revenue.csv")
   data = read.csv(revenue_file, header = TRUE, sep = ",")
   data$month = as.factor(data$month)
   data = data[,!names(data) %in% c("month_str")]
@@ -64,8 +65,8 @@ getData = function(vars_id, y_name){
     sub_category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "sub_category_name"])
     
     file = paste0(
-      data_folder,product,"/",as.character(category_name),
-      "/",as.character(sub_category_name)
+      data_folder, "/External Data/", as.character(category_name), "/",
+      as.character(sub_category_name)
     )
     
     if (sa_OR_nsa == "Not Seasonally Adjusted") {
@@ -96,7 +97,7 @@ getData = function(vars_id, y_name){
 
 
 
-doRegression = function(selected_vars, y_name="orders_rcvd", h=0) {
+doRegression = function(selected_vars, y_name, h=0) {
   
   print(selected_vars)
   variables = vector('character')

@@ -230,7 +230,7 @@ doLASSO = function(data, input, output) {
     fId = paste0(feature_selection_prefix, "fid|", var)
     var_name = meta_data[meta_data$series_id==var,"title"]
     
-    print(var)
+    #print(var)
     if(grepl("Intercept",var) | grepl("month",var) | var=="t"){
       text_var = tags$div(title=var_name, 
                           textInput(fId, label=var, value=coefs[[var]]))
