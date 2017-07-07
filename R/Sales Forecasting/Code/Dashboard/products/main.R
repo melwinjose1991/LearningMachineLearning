@@ -116,11 +116,10 @@ attachProductsObservers = function(input, output, session, reactive_vars){
       plot_id = paste0(products_prefix, product, "|plot")
       column_name =  input[[button_id]]
       output[[plot_id]] = renderPlot({
-        x = getProductData(product, "t")
         y = getProductData(product, column_name)
-        plot(x, y, xlab="Time", ylab=column_name)
-        lines(x, y)
-        
+        start_year = min(getProductData(product, "year"))
+        time_series = ts(y, frequency=12, start=c(start_year, 1))
+        plot(time_series, xlab="Time", ylab=column_name)
       })
     })
     
