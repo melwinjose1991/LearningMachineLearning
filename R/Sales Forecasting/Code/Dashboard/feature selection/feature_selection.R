@@ -220,7 +220,7 @@ doLASSO = function(data, input, output, session) {
   row_summary = fluidRow(div_error, div_lambda)
   
   corr_id = paste0(feature_selection_prefix, "LASSOSummaryVarCorr")
-  output_var_corr = textOutput(corr_id)
+  output_var_corr = htmlOutput(corr_id)
   plot_id = paste0(feature_selection_prefix, "LASSOSummaryVarPlot")
   output_var_plot = plotOutput(plot_id)
   var_summary = fluidRow(output_var_plot, output_var_corr)
@@ -241,11 +241,19 @@ doLASSO = function(data, input, output, session) {
       
       observeEvent(input[[button_id]],{
         series = getSeries(var)
+        my_df = data.frame(xx=series,yy=y)
+        fit = lm(yy~xx, data=my_df)
+        
         output[[plot_id]] = renderPlot({
-          plot(y,series)
+          plot(series, y, ylab=paste0(product_line, " - ", product_data_column), 
+               xlab=var_name)
+          abline(fit)
         })
-        output[[corr_id]] = renderText({
-          print(paste0("Correlation with output var : ", cor(series, y)))
+        
+        output[[corr_id]] = renderUI({
+          res_corr = paste0("Correlation : ", cor(series, y))
+          res_slope = paste0("Slope : ", fit$coefficients[2])
+          HTML(paste(res_corr, res_slope, sep="<br/>"))
         })
       })
       
