@@ -21,13 +21,13 @@ initAllFeaturesUI = function(){
 
 
 ## Server Function
-getCheckBoxInput = function(i, group) {
+getCheckBoxInput = function(i, group_id) {
   series_id = meta_data[i,]$series_id
   category_name = meta_data[i,]$category_name
   sub_category_name = meta_data[i,]$sub_category_name
   var_name = meta_data[i,]$title
   
-  id = paste0(all_features_prefix, "fId|", group, "|", series_id)
+  id = paste0(all_features_prefix, "fId|", group_id, "|", series_id)
   
   checkboxInput(inputId = id,
                 label = var_name,
@@ -39,24 +39,25 @@ getCheckBoxInput = function(i, group) {
 
 getGroupCheckBoxInput = function(group) {
   print("Feature Selection :: All Features :: getGroupCheckBoxInput()")
-  
+
+  group_id = unique(meta_data[meta_data$sub_category_name==group, "sub_category_id"])
   type_rows = which(meta_data$sub_category_name == group)
   
-  select_all_id = paste0(all_features_prefix, "selectAllId|", group)
+  select_all_id = paste0(all_features_prefix, "selectAllId|", group_id)
   select_all = checkboxInput(inputId = select_all_id,
                              label = "Select All",
                              value = TRUE)
   
-  show_button_id = paste0(all_features_prefix, "showButtonId|", group)
+  show_button_id = paste0(all_features_prefix, "showButtonId|", group_id)
   show_button = actionButton(show_button_id, label="Hide")
   
   vars_columns = lapply(
     type_rows,
     FUN = function(row_index)
-      column(width = 2, getCheckBoxInput(row_index, group))
+      column(width = 2, getCheckBoxInput(row_index, group_id))
   )
   
-  group_div_id = paste0(all_features_prefix, "divId_", group)
+  group_div_id = paste0(all_features_prefix, "divId_", group_id)
   list(title = tags$h4(group),
        select_all,
        show_button,
@@ -86,13 +87,15 @@ populateFeatures = function(input, output, session){
   ## Attaching listeners to each features
   groups = unique(meta_data$sub_category_name)
   lapply(groups, function(group) {
-    select_all_id = paste0(all_features_prefix, "selectAllId|", group)
-    show_button_id = paste0(all_features_prefix, "showButtonId|", group)
+    
+    group_id = unique(meta_data[meta_data$sub_category_name==group, "sub_category_id"])
+    select_all_id = paste0(all_features_prefix, "selectAllId|", group_id)
+    show_button_id = paste0(all_features_prefix, "showButtonId|", group_id)
     
     observeEvent(input[[select_all_id]], {
       all_features = vector('character')
       for (key in names(input)) {
-        if (grepl(paste0("_fid|", group), key)) {
+        if (grepl(paste0("_fId\\|", group_id,"\\|"), key)) {
           all_features = c(all_features, key)
         }
       }
@@ -111,10 +114,10 @@ populateFeatures = function(input, output, session){
     
     observeEvent(input[[show_button_id]], {
       if (input[[show_button_id]] %% 2 == 0) {
-        showElement(paste0(all_features_prefix, "divId_", group))
+        showElement(paste0(all_features_prefix, "divId_", group_id))
         updateActionButton(session, show_button_id, label = "Hide")
       } else{
-        hideElement(paste0(all_features_prefix, "divId_", group))
+        hideElement(paste0(all_features_prefix, "divId_", group_id))
         updateActionButton(session, show_button_id, label = "Show")
       }
     })
