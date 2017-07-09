@@ -19,27 +19,21 @@ initFeatureSelectionUI = function() {
   
   row_1_col_width = 3
   row_1_textInput_width = '40%'
-  text_lambda = column(row_1_col_width, tags$h5("lambda"))
-  text_lambda_start = column(
+  
+  text_lambda = column(
     row_1_col_width,
     textInput(
       paste0(feature_selection_prefix, "lambda_start"),
       "lambda start",
       value = "0.001",
       width = row_1_textInput_width
-    )
-  )
-  text_lambda_end = column(
-    row_1_col_width,
+    ),
     textInput(
       paste0(feature_selection_prefix, "lambda_end"),
-      "lambda end value",
+      "lambda end",
       value = "10",
       width = row_1_textInput_width
-    )
-  )
-  text_lambda_lengths = column(
-    row_1_col_width,
+    ),
     textInput(
       paste0(feature_selection_prefix, "lambda_length"),
       "lengths",
@@ -47,21 +41,42 @@ initFeatureSelectionUI = function() {
       width = row_1_textInput_width
     )
   )
+  
+  text_kfolds = column(
+    row_1_col_width,
+    textInput(
+      paste0(feature_selection_prefix, "kFolds"),
+      "k-folds",
+      value = "48",
+      width = row_1_textInput_width
+    )
+  )
+  
+  text_alpha = column(
+    row_1_col_width,
+    textInput(
+      paste0(feature_selection_prefix, "alpha"),
+      "alpha",
+      value = "1",
+      width = row_1_textInput_width
+    )
+  )
+  
   select_error_type =  column(row_1_col_width, selectInput(
     paste0(feature_selection_prefix, "selectErrorType"),
     "Error Type:",
     c(
       "Mean Square Error" = "mse",
       "Mean Absolute Error" = "mae"
-    )
+    ),
+    selected="mae"
   ))
   
   row_1 = fluidRow(
     text_advanced_text,
-    #text_lambda,
-    text_lambda_start,
-    text_lambda_end,
-    text_lambda_lengths,
+    text_lambda,
+    text_kfolds,
+    text_alpha,
     select_error_type
   )
   
@@ -184,6 +199,8 @@ doLASSO = function(data, input, output, session) {
   lambda_end = as.numeric(input[[paste0(feature_selection_prefix, "lambda_end")]])
   lambda_length = as.integer(input[[paste0(feature_selection_prefix, "lambda_length")]])
   error_type = as.character(input[[paste0(feature_selection_prefix, "selectErrorType")]])
+  nfolds = as.numeric(input[[paste0(feature_selection_prefix, "kFolds")]])
+  alpha = as.numeric(input[[paste0(feature_selection_prefix, "alpha")]])
   
   grid = 2.71828 ^ seq(lambda_start, lambda_end, length = lambda_length)
   
@@ -191,10 +208,8 @@ doLASSO = function(data, input, output, session) {
   x = model.matrix(form, data)[, -1]
   y = data[,product_data_column]
   
-  cv.l2.fit = cv.glmnet(x,
-                        y,
-                        alpha = 1,
-                        type.measure = error_type,
+  cv.l2.fit = cv.glmnet(x, y, type.measure = error_type,
+                        alpha = alpha, nfolds=nfolds,
                         lambda = grid)
   
   best_lambda = cv.l2.fit$lambda.min

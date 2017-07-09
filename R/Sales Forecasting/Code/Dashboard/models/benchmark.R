@@ -35,7 +35,7 @@ getBenchmarkUI = function(){
   select_error_type = selectInput(id, "Error Type:", 
                                   c("Mean Square Error" = "mse",
                                     "Mean Absolute Error" = "mae"
-                                  )
+                                  ), selected="mae"
   )
   
   row_1 = fluidRow(column(2, input_numeric_h), 
