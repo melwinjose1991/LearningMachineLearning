@@ -64,10 +64,8 @@ getData = function(vars_id, y_name){
     category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "category_name"])
     sub_category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "sub_category_name"])
     
-    file = paste0(
-      data_folder, "/External Data/", as.character(category_name), "/",
-      as.character(sub_category_name)
-    )
+    file = paste0(FRED_folder, "/", as.character(category_name), 
+                  "/", as.character(sub_category_name) )
     
     if (sa_OR_nsa == "Not Seasonally Adjusted") {
       file = paste0(file, "_nsa.csv")

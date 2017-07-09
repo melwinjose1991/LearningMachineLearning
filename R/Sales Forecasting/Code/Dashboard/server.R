@@ -9,6 +9,9 @@ server = function(input, output, session) {
   ### Products
   attachProductsObservers(input, output, session, reactive_vars)
   
+  ### FRED
+  attachFREDObservers(input)
+  
   ### Feature Selection > Features
   populateFeatures(input, output, session)
 

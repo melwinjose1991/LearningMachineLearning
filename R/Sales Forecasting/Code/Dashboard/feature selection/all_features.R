@@ -4,8 +4,8 @@ print("Feature Selection :: All Features :: Init")
 ## Globals
 all_features_prefix = paste0(features_prefix, "features_")
 
-file = paste0("../../Data/External Data/meta_data.csv")
-meta_data = read.csv(file, header = TRUE, sep = ",")
+#file = paste0("../../Data/External Data/FRED/meta_data.csv")
+#meta_data = read.csv(file, header = TRUE, sep = ",")
 
 
 
@@ -67,6 +67,10 @@ getGroupCheckBoxInput = function(group) {
 
 
 populateFeatures = function(input, output, session){
+  
+  if(nrow(meta_data)==0){
+    meta_data <<- read.csv(paste0(FRED_folder, "/meta_data_old.csv" ))
+  }
   
   ## Populate the features in the "Feature_Selection > Features"
   all_features_id = paste0(all_features_prefix,"all_features_box")
