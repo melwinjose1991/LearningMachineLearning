@@ -222,7 +222,7 @@ doLASSO = function(data, input, output, session) {
   l2.fit = glmnet(x, y, alpha = 1, lambda = best_lambda)
   coefs = coef(l2.fit)[, 1]
   coefs = coefs[coefs != 0]
-  
+  print(coefs)
   
   error_id = paste0(feature_selection_prefix, "LASSOSummaryError")
   text_error = textInput(error_id, label = error_type, value = best_error)
@@ -275,8 +275,9 @@ doLASSO = function(data, input, output, session) {
       select_var_id = paste0(fId,"|select")
       input_select_var = checkboxInput(select_var_id, label="", value=TRUE)
       observeEvent(input[[select_var_id]],{
-        group = meta_data[meta_data$series_id==var, "sub_category_name"]
-        id = paste0(all_features_prefix, "fId|", group, "|", var)
+        group_id = meta_data[meta_data$series_id==var, "sub_category_id"]
+        #id = paste0(all_features_prefix, "fId|", group, "|", var)
+         id = paste0(all_features_prefix, "fId|", group_id, "|", var)
         if(input[[select_var_id]]){
           updateTextInput(session, id, value=TRUE)
         }else{

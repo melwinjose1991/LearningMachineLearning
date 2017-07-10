@@ -24,6 +24,10 @@ server = function(input, output, session) {
     fit = doRegression(reactive_vars[['selected_vars']], product_data_column)
     reactive_vars[['forecast_model']] = fit[['regression']]
     
+    text_tests_id = paste0(regression_prefix, "testResults")
+    failed_tests = sum(lengths(fit[['failed_tests']]))
+    updateTextInput(session, text_tests_id, label="#failed test", value=failed_tests)
+    
     output_regression_graph_1 = paste0(regression_prefix, "graphResidualVsFitted")
     output[[output_regression_graph_1]] = renderPlot({
       plot(fit[["regression"]], which=1)
