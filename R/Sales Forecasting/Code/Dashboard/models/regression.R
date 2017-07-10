@@ -5,6 +5,7 @@ library(lmtest)
 
 ## Globals
 regression_prefix = paste0(models_prefix, "regression_")
+test_color_code = c("#6ACA52", "#C5F274", "#FFF81E", "#F4D214", "#F48414", "#FF5733", "#C70039")
 
 
 
@@ -21,7 +22,7 @@ getRegressionUI = function() {
                                          label = "Build Regression")
   
   text_tests_id = paste0(regression_prefix, "testResults")
-  text_tests = textInput(inputId=text_tests_id, label="", value="")
+  text_tests = htmlOutput(text_tests_id)
   
   row_2 = fluidRow(button_build_regression, text_tests)
   

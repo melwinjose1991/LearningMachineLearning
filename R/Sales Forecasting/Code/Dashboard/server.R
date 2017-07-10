@@ -26,7 +26,10 @@ server = function(input, output, session) {
     
     text_tests_id = paste0(regression_prefix, "testResults")
     failed_tests = sum(lengths(fit[['failed_tests']]))
-    updateTextInput(session, text_tests_id, label="#failed test", value=failed_tests)
+    output[[text_tests_id]] = renderUI({
+      tags$h4(paste0("#Test Failed : ", failed_tests), 
+              style=paste0("color:", test_color_code[failed_tests+1],"; font-weight: bold;") )
+    })
     
     output_regression_graph_1 = paste0(regression_prefix, "graphResidualVsFitted")
     output[[output_regression_graph_1]] = renderPlot({
