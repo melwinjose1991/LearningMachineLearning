@@ -55,7 +55,8 @@ server = function(input, output, session) {
     
   })
   
-  
+  ### Models > TimeSeries
+  attachTimeSeriesObservers(input, output)
   
   ### Models > Benchmark
   benchmark_perform_benchmark = paste0(benchmark_prefix, "buttonPerformBenchmark")

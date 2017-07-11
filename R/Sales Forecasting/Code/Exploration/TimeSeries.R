@@ -4,12 +4,9 @@ library(forecast)
 
 ## Parameters
 data_folder = "../../Data/2401/"
-revenue_file = paste0(data_folder,"2401_Revenue.csv")
+revenue_file = paste0(data_folder,"Revenue.csv")
 
-
-
-# Loading Data
-data_revenue = read.csv(revenue_file, header=TRUE, sep=",")
+data_revenue = read.csv(revenue_file)
 data = data_revenue[,c("orders_rcvd")]
 data_ts = ts(data, frequency=12)
 plot(data_ts)
@@ -17,7 +14,7 @@ plot(data_ts)
 
 
 # Forecast using decomposition : Just using naive
-h=3
+h=6
 t.windows = 1:15
 s.windows = c(7,9,11,13)
 maes = vector('numeric')
@@ -26,6 +23,7 @@ for(s.window in s.windows){
   for(t.window in t.windows){
     
     window_ts = window(data_ts, end=4+((12-(h+1))/12))  
+    # plot(window_ts)
     fit <- stl(window_ts, t.window=t.window, s.window=s.window, robust=TRUE)
     sa_adj <- seasadj(fit)
     
@@ -44,7 +42,8 @@ for(s.window in s.windows){
 maes[which.min(maes)]
 configs[which.min(maes)]
 # 3636
-
+t.window=1
+s.window=7
 
 
 # Forecast using decomposition : Using snaive
@@ -74,7 +73,8 @@ for(s.window in s.windows){
 maes[which.min(maes)]
 configs[which.min(maes)]
 # 4053
-
+t.window=4
+s.window=11
 
 
 # Simple Exponential Smoothing
@@ -109,6 +109,7 @@ fit = ses(window_ts, initial="simple", h=h)
 train_mae = mean(abs(fit$residuals))
 valid_mae = mean(abs(tail(data,n=h)-fit$mean))
 print(paste0("train-",train_mae," valid-",valid_mae))
+plot(fit)
 # 3678, 4897
 
 
