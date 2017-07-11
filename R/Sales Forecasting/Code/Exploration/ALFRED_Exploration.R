@@ -5,31 +5,30 @@ library(glmnet)
 source("../Common/Utils.R")
 
 
-## Config file
-config_data = read.csv("../../Config/2401/external_data_config.csv", header=TRUE, sep=",")
-config_data = config_data[config_data$explore=="yes",]
-
-
 
 ## Parameters
-data_folder = "../../Data/2401/"
-revenue_file = paste0(data_folder,"2401_Revenue.csv")
+data_folder = "../../Data/"
 sa_OR_nsa = "Not Seasonally Adjusted"
 
-
-
 # Loading Data
-data_revenue = read.csv(revenue_file, header=TRUE, sep=",")
+revenue_file = paste0(data_folder,"2401/Revenue.csv")
+data_revenue = read.csv(revenue_file)
 data = data_revenue[,c("orders_rcvd","month","t")]
 data$month = as.factor(data$month)
 
-for(sub_category_id in config_data$sub_category_id){
+## FRED
+FRED_folder = paste0(data_folder, "External Data/FRED/")
+meta_data_file = paste0(FRED_folder, "meta_data.csv")
+config_data = read.csv(meta_data_file)
+
+
+for(sub_category_id in unique(config_data$sub_category_id)){
   
-  category_name = config_data[config_data$sub_category_id==sub_category_id,"category_name"]
-  sub_category_name = config_data[config_data$sub_category_id==sub_category_id,"sub_category_name"]
+  category_name = unique(config_data[config_data$sub_category_id==sub_category_id,"category_name"])
+  sub_category_name = unique(config_data[config_data$sub_category_id==sub_category_id,"sub_category_name"])
   
   
-  file = paste0(data_folder ,as.character(category_name), "/", as.character(sub_category_name))
+  file = paste0(FRED_folder ,as.character(category_name), "/", as.character(sub_category_name))
   if(sa_OR_nsa=="Not Seasonally Adjusted"){
     file = paste0(file, "_nsa.csv")
   }else{
@@ -45,22 +44,25 @@ for(sub_category_id in config_data$sub_category_id){
 
 
 
-## Correlation
-#corrplot.mixed(cor(data[,!names(data) %in% c("month")]), upper="circle", lower="number")
-# Highest Correlation : 0.410 : PBPWRCON : Total Public Construction Spending: Power
+### Filtering Techinques
 
 # Removing columns whose values don't change
 data = data[sapply(data, function(x) length(unique(x))>1)]
 
+## 1 : Correlation
+# corrplot.mixed(cor(data[,!names(data) %in% c("month")]), upper="circle", lower="number")
+# Highest Correlation : 0.410 : PBPWRCON : Total Public Construction Spending: Power
+
 # Removing highly correlated variables
 data_num_var = data[,!names(data) %in% c("month","orders_rcvd","t")]
-tmp = cor(data_num_var)
-tmp[!lower.tri(tmp)] = 0
+corr_df = cor(data_num_var)
+corr_df[!lower.tri(corr_df)] = 0
 
-correlated_vars = names(data_num_var[,apply(tmp,2,function(x) any(x > 0.99))])
-correlated_vars
+simple_filter_correlated_vars = names(data_num_var[,apply(corr_df,2,function(x) any(x > 0.99))])
+simple_filter_correlated_vars
+length(simple_filter_correlated_vars)
 
-uncorrelated_vars = names(data_num_var[,!apply(tmp,2,function(x) any(x > 0.99))])
+uncorrelated_vars = names(data_num_var[,!apply(corr_df,2,function(x) any(x > 0.99))])
 uncorrelated_vars
 
 #corrplot.mixed(cor(data[,uncorrelated_vars]), upper="circle", lower="number")
@@ -69,10 +71,50 @@ data.new = data[,c("orders_rcvd","month", "t", uncorrelated_vars)]
 #corrplot.mixed(cor(data.new[,!names(data.new) %in% c("month")]), upper="circle", lower="number")
 
 
+## 2 : FCBF
+library(Biocomb)
+
+names(data)
+data_reordered = as.matrix(data[ , c(4:ncol(data),1) ])
+colnames(data_reordered)
+
+for(threshold in seq(0,1, length=10)){
+  fcbf_select = select.fast.filter(data_reordered, 
+                                   disc.method="equal interval width", threshold=threshold, 
+                                   attrs.nominal=numeric())
+  
+  removed_var = setdiff(colnames(data_reordered), fcbf_select$Biomarker)
+  removed_var = removed_var[!grepl("orders_rcvd", removed_var)]  
+  print(removed_var)
+  print(paste0("#Vars Removed : ", length(removed_var)))
+  
+  unremoved_var = c(as.character(fcbf_select$Biomarker), "orders_rcvd")
+  print(unremoved_var)
+  print(paste0("#Vars UnRemoved : ", length(unremoved_var)))
+}
+
+data.new = data[,c("month", "t", unremoved_var)]
+
+
+## 3 : findCorrelation
+library(caret)
+
+corr_df = cor(data_num_var)
+high_corr_cols = findCorrelation(corr_df, cutoff=0.99)
+findcor_correlated_cols = names(data_num_var)[high_corr_cols]
+length(findcor_correlated_cols)
+
+
+findcor_uncorrelated_cols = names(data_num_var)[-high_corr_cols]
+length(findcor_uncorrelated_cols)
+
+data.new = data[,c("orders_rcvd","month", "t", findcor_uncorrelated_cols)]
+
+
 
 ## Parameters
 no_vars = 5 #dim(data.new)[2]/2
-method = "exhaustive" # exhaustive, forward
+method = "forward" # exhaustive, forward
 var_cols = names(data.new)
 
 
@@ -181,26 +223,4 @@ getBenchmarkResults(y, lm_pred, naive_model = FALSE, snaive_model = FALSE, drift
 
 
 
-##### FCBF #####
-library(Biocomb)
 
-names(data)
-data_reordered = as.matrix(data[ , c(4:ncol(data),1) ])
-colnames(data_reordered)
-
-for(threshold in seq(0,1, length=10)){
-  fcbf_select = select.fast.filter(data_reordered, 
-                                   disc.method="equal interval width", threshold=threshold, 
-                                   attrs.nominal=numeric())
-  
-  removed_var = setdiff(colnames(data_reordered), fcbf_select$Biomarker)
-  removed_var = removed_var[!grepl("orders_rcvd", removed_var)]  
-  print(removed_var)
-  print(paste0("#Vars Removed : ", length(removed_var)))
-
-  unremoved_var = c(as.character(fcbf_select$Biomarker), "orders_rcvd")
-  print(unremoved_var)
-  print(paste0("#Vars UnRemoved : ", length(unremoved_var)))
-}
-
-data.new = data[,c("month", "t", unremoved_var)]
