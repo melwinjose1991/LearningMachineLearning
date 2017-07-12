@@ -14,7 +14,8 @@ getBenchmarkUI = function(){
   
   # row_1 - options
   id = paste0(benchmark_prefix, "h")
-  input_numeric_h = numericInput(id, "Forecast Period", value=2, min = 2, max = 6, step = 1, width = "50%")
+  input_numeric_h = numericInput(id, "Forecast Period", value=12, min=2, max=12, 
+                                 step=1, width="50%")
   
   id = paste0(benchmark_prefix, "methodId|mean")
   input_mean_check = checkboxInput(inputId = id, label = "Mean", value = TRUE)
@@ -76,7 +77,7 @@ getBenchmarkResults=function(y_name="orders_rcvd", model_predictions, h=6,
   t = ts(y, frequency=12)
   plot(t)
   results = list(t=t)
-  t_window = window(t, end=4+((12-(h+1))/12))
+  t_window = window(t, end=product_last_year_index+((12-(h+1))/12))
   
   train_indices = 1:(length(y)-h)
   y_actual = y[-train_indices]
@@ -130,7 +131,8 @@ getBenchmarkResults=function(y_name="orders_rcvd", model_predictions, h=6,
   }
   
   # Predictions by your model
-  predictions = ts(model_predictions, frequency = 12, start=4+((12-h)/12))
+  predictions = ts(model_predictions, frequency=12, 
+                   start=product_last_year_index+((12-h)/12))
   lines(predictions, col=6, lwd=2, lty=2)
   error = ifelse(error_type=="mae", 
                  mean(abs(predictions-y_actual)), mean((predictions-y_actual)^2))

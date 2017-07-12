@@ -105,3 +105,39 @@ getBenchmarkResults=function(y, model_predictions, h=6,
   legend("topleft", lwd=2, lty=2, col=c(2,3,4,5,9),
          legend=c("Mean","Naive","Seasonal Naive","Drift","ModelX"))
 }
+
+
+convertSeries = function(data_folder, product, file_to_convert, start_year, start_month
+                         , frequency=12, write_to){
+  
+  product = "2401"
+  file_to_convert = "temp.csv"
+  data_folder = paste0("../../Data/", product, "/")
+  start_year = 2004
+  start_month = 1
+  frequency = 12
+  write_to = "Revenue.csv"
+  
+  
+  file_to_convert = paste0(data_folder, file_to_convert)
+  old_df = read.csv(file_to_convert)
+  
+  index = 1
+  month_i = start_month
+  year_i = start_year
+  
+  new_df = old_df
+  new_df[,"t"] = 1:nrow(new_df)
+  new_df[,"month"] = sapply(new_df$t, function(x){
+    ifelse(x%%frequency!=0, x%%frequency, frequency)
+  })
+  new_df[,"year"] = sapply(new_df$t, function(x){
+    start_year + as.integer((x-1)/12)
+  })
+  new_df[,"period_id"] = paste0(new_df$month,"/",new_df$year)
+  
+  write.csv(new_df, paste0(data_folder, "/", write_to), quote=FALSE, row.names=FALSE)
+  
+}
+
+

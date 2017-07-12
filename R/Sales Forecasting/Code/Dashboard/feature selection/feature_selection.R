@@ -47,7 +47,7 @@ initFeatureSelectionUI = function() {
     textInput(
       paste0(feature_selection_prefix, "kFolds"),
       "k-folds",
-      value = "48",
+      value = "24",
       width = row_1_textInput_width
     )
   )

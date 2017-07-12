@@ -10,9 +10,6 @@ meta_file = paste0(FRED_folder, "/meta_data.csv" )
 meta_data = data.frame()
 
 api.key = "b96673bc1d92a335c6306c864e046827"
-date_start = "2013-01-01"
-date_end = "2016-12-31"
-no_of_data_obs = 48
 
 sa_OR_nsa = "Not Seasonally Adjusted" 
 #sa_OR_nsa = "Seasonally Adjusted Annual Rate"
@@ -84,8 +81,9 @@ getFREDUI = function(){
 ## Server Functions
 isSeriesOKAY=function(series){
   
-  if(dim(series)[1]!=no_of_data_obs){
-    return(paste0(" has ",dim(series)[1]," observations, required ",no_of_data_obs))
+  if(dim(series)[1]!=product_data_obeservations){
+    return(paste0(" has ",dim(series)[1],
+                  " observations, required ",product_data_obeservations))
   }
   
   if(sum(series$value==".")>0){
@@ -123,6 +121,18 @@ fetchData = function(sub_categories_id){
   
   config_fetch_data = read.csv(sub_categories_file)
   
+  # TOD: no of days in a month 29,30,31
+  # Format : yyyy-mm-dd
+  start_month = ifelse(product_start_date[2]<10, 
+                       paste0("0",product_start_date[2]), 
+                       product_start_date[2])
+  end_month = ifelse(product_end_date[2]<10, 
+                       paste0("0",product_end_date[2]), 
+                       product_end_date[2])
+  
+  date_start = paste0(product_start_date[1], "-", start_month, "-01")
+  date_end = paste0(product_end_date[1], "-", end_month, "-31")
+  
   meta_data = data.frame(category_id=integer(),
                          category_name=character(),
                          sub_category_id=integer(),
@@ -158,7 +168,6 @@ fetchData = function(sub_categories_id){
       series = fred$series.observations(series_id=series_id, 
                                         observation_start = date_start,
                                         observation_end = date_end)
-      
       is_okay = isSeriesOKAY(series)
       if(is_okay == "yes"){
         

@@ -7,8 +7,11 @@ data_folders_to_skip = c("External Data")
 products = vector('character')
 product_line = "2401" # default
 product_start_date = vector('integer')
+product_end_date = vector('integer')
+product_last_year_index = 0
 product_data = vector('numeric')
 product_data_column = "orders_rcvd"
+product_data_obeservations = 48
 columns_to_skip = c("period_id", "month", "year", "month_str", "t")
 
 
@@ -115,6 +118,9 @@ attachProductsObservers = function(input, output, session, reactive_vars){
     start_year = getProductData(product, "year")[1]  
     start_month = getProductData(product, "month")[1] 
     
+    end_year = tail(getProductData(product, "year"), n=1)
+    end_month = tail(getProductData(product, "month"), n=1)
+    
     button_id = paste0(products_prefix, "pId|",product,"|Columns")
     observeEvent(input[[button_id]],{
       plot_id = paste0(products_prefix, product, "|plot")
@@ -130,12 +136,15 @@ attachProductsObservers = function(input, output, session, reactive_vars){
                                       product, "|Select")
     observeEvent(input[[button_select_product_id]],{
       column_name =  input[[button_id]]
+      tmp = getProductData(product, column_name)
       
       product_line <<- product
       product_start_date <<- c(start_year, start_month)
-      product_data <<- getProductData(product, column_name)
+      product_end_date <<- c(end_year, end_month)
+      product_last_year_index <<- product_end_date[1] - product_start_date[1] + 1
+      product_data <<- tmp
       product_data_column <<- column_name
-      
+      product_data_obeservations <<- length(tmp)
     })
     
   })

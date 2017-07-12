@@ -73,7 +73,8 @@ buildSTLModel = function(h=6, forecast_method="naive"){
   configs_t = vector('numeric')
   configs_s = vector('numeric')
   data_ts = ts(product_data, frequency=12)
-  window_ts = window(data_ts, end=4+((12-(h+1))/12))  
+  
+  window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))  
   
   for(s.window in s.windows){
     for(t.window in t.windows){
@@ -119,28 +120,28 @@ buildSTLModel = function(h=6, forecast_method="naive"){
 
 doSES = function(h=6){
   data_ts = ts(product_data, frequency=12)
-  window_ts = window(data_ts, end=4+((12-(h+1))/12))  
+  window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))  
   fit = ses(window_ts, initial="simple", h=h)
-  mae = mean(abs(tail(data,n=h)-fit$mean))
+  mae = mean(abs(tail(data_ts,n=h)-fit$mean))
   list(forecast_fit=fit, error=mae)
 }
 
 doHolts = function(h=6, damped=FALSE, t_multiplicative=FALSE){
   data_ts = ts(product_data, frequency=12)
-  window_ts = window(data_ts, end=4+((12-(h+1))/12))
+  window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
   fit = holt(window_ts, h=h, damped=damped, 
              exponential=t_multiplicative)
   #plot(data_ts)
   #lines(fit$fitted, col="red", lwd=2, lty=2)
   #lines(fit$mean, col="green", lwd=2, lty=2)
-  mae = mean(abs(tail(data,n=h)-fit$mean))
+  mae = mean(abs(tail(data_ts,n=h)-fit$mean))
 
   list(forecast_fit=fit, error=mae)
 }
 
 doHW = function(h=6, seasonal="additive", damped=FALSE, t_multiplicative=FALSE){
   data_ts = ts(product_data, frequency=12)
-  window_ts = window(data_ts, end=4+((12-(h+1))/12))
+  window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
   fit = hw(window_ts, h=h, seasonal=seasonal,
                         damped=damped, 
                         exponential=t_multiplicative)
@@ -148,7 +149,7 @@ doHW = function(h=6, seasonal="additive", damped=FALSE, t_multiplicative=FALSE){
   #lines(fit_multi_damped$fitted, col="red", lwd=2, lty=2)
   #lines(fit_multi_damped$mean, col="green", lwd=2, lty=2)
   #train_mae = mean(abs(fit_multi_damped$residuals))
-  mae = mean(abs(tail(data,n=h)-fit$mean))
+  mae = mean(abs(tail(data_ts,n=h)-fit$mean))
   
   list(forecast_fit=fit, error=mae)
 }
