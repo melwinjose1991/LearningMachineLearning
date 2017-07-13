@@ -46,12 +46,17 @@ getProductTabPanel = function(product){
   output_plot = plotOutput(plot_id)
   row_2 = fluidRow(output_plot)
   
+  # Obersvations to avoid
+  id = paste0(products_prefix, product, "|avoid")
+  text_avoid_obs = textInput(id, label="Exclude Observations#:")
+  row_3 = fluidRow(text_avoid_obs)
+  
   # To Select product line
   button_select_product_id = paste0(products_prefix, "pId|", product, "|Select")
   button_select_product = actionButton(button_select_product_id, "Select")
-  row_3 = fluidRow(button_select_product)
+  row_4 = fluidRow(button_select_product)
   
-  tabPanel(title=product, row_1, row_2, row_3)
+  tabPanel(title=product, row_1, row_2, row_3, row_4)
   
 }
 

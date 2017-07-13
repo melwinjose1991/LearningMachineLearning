@@ -211,10 +211,69 @@ names(coefs[coefs!=0])
 
 
 
-## Evaluation against benchmark model
-h = 3
-train_till = dim(data.new)[1] - h
-lm_fit = lm(orders_rcvd~PBPWRCON, data=data.new[1:train_till,])
+## Regression Analysis
+y_name = "orders_rcvd"
+x = names(coefs[coefs!=0])[-1]
+
+df = data.frame(model.matrix(~., data.new))
+regression_formula = as.formula(paste0(y_name,"~",paste(x, collapse="+")))
+
+
+outliers = c(37)
+use_rows = setdiff(1:nrow(df), outliers)
+lm_fit = lm(regression_formula, data=df, subset=use_rows)
+
+summary(lm_fit)
+
+# detecting leverage points - based on H
+H = hatvalues(lm_fit)
+
+H_threshold_upper = (3*(length(x)+1))/dim(df)[1]
+sum(H>H_threshold_upper)
+which(H>H_threshold_upper)
+
+H_threshold_lower = (2*(length(x)+1))/dim(df)[1]
+sum(H>H_threshold_lower)
+which(H>H_threshold_lower)
+# First is the row number
+
+# Detecting outliers
+std.res = abs(rstandard(lm_fit))
+sum(std.res>=3)
+which(std.res>=3)
+
+sum(std.res>=2)
+which(std.res>=2)
+
+stu.res = abs(rstudent(lm_fit))
+sum(stu.res>=3)
+which(stu.res>=3)
+
+sum(stu.res>=2)
+which(stu.res>=2)
+
+
+# Influential Points
+cooks = cooks.distance(lm_fit)
+sum(cooks>0.5)
+which(cooks>0.5)
+
+sum(cooks>1)
+which(cooks>1)
+
+
+# observed v fitted
+plot(df$orders_rcvd[use_rows], lm_fit$fitted.values)
+lines(df$orders_rcvd[use_rows], df$orders_rcvd[use_rows], col="red")
+
+plot(lm_fit)
+
+plot(ts(df$orders_rcvd, frequency=12))
+points((outliers/12)+1, df$orders_rcvd[outliers], col="red", lwd=2)
+
+
+
+## Bechnmarking
 lm_pred = predict(lm_fit, newdata=data.new[(train_till+1):dim(data.new)[1],] )
 lm_pred
 

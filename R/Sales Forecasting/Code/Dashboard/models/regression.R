@@ -209,7 +209,7 @@ getData = function(vars_id, y_name){
 
 
 
-doRegression = function(selected_vars, y_name, h=0) {
+doRegression = function(input, selected_vars, y_name, h=0) {
   
   print(selected_vars)
   variables = vector('character')
@@ -228,10 +228,14 @@ doRegression = function(selected_vars, y_name, h=0) {
 
   if(h==0){
     
-    fit = lm(form, data=as.data.frame(data))
+    obs_to_exclude = input[[paste0(products_prefix, product, "|avoid")]]
+    obs_to_exclude = as.numeric(unlist(strsplit(obs_to_exclude,",")))
+    use_rows = setdiff(1:nrow(data), obs_to_exclude)
+    
+    fit = lm(form, data=as.data.frame(data), subset=use_rows)
     
     df_vars = as.data.frame(data)
-    df_vars = df_vars[, !names(df_vars) %in% y_name]
+    df_vars = df_vars[use_rows, !names(df_vars) %in% y_name]
     test_results = verifyRegressionModel(fit, df_vars)
     print(paste0("#Tests failed : ", sum(lengths(test_results))))  
     

@@ -21,7 +21,7 @@ server = function(input, output, session) {
   ### Models > Regression
   regression_build_regression = paste0(regression_prefix, "buttonBuildRegression")
   observeEvent(input[[regression_build_regression]], {
-    fit = doRegression(reactive_vars[['selected_vars']], product_data_column)
+    fit = doRegression(input, reactive_vars[['selected_vars']], product_data_column)
     reactive_vars[['forecast_model']] = fit[['regression']]
     
     text_tests_id = paste0(regression_prefix, "testResults")
@@ -69,7 +69,7 @@ server = function(input, output, session) {
     drift_model = input[[paste0(benchmark_prefix,"methodId|drift")]]
     error_type = input[[paste0(benchmark_prefix,"selectErrorType")]]
     
-    fit_forecast = doRegression(reactive_vars[['selected_vars']], 
+    fit_forecast = doRegression(input, reactive_vars[['selected_vars']], 
                                 product_data_column, h=h)
   
     

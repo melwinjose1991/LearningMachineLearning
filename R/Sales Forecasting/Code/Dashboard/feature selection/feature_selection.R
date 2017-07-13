@@ -151,9 +151,16 @@ readData = function(input, output, session) {
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
     
+    #series_vars = intersect(names(data_series), selected_vars)
+    #data = cbind(data, data_series[, series_vars])
+
     series_vars = intersect(names(data_series), selected_vars)
-    
-    data = cbind(data, data_series[, series_vars])
+    if(is.null(dim(data_series[, series_vars]))){
+      ## there is just one column from the series
+      data[,series_vars] = data_series[, series_vars]
+    }else{
+      data = cbind(data, data_series[, series_vars])  
+    }
     
   }
   
@@ -195,23 +202,34 @@ doLASSO = function(data, input, output, session) {
   print("Feature Selection :: Feature Selection :: doLASSO() :: INIT")
   print(paste0("Product_Line=", product_line, ", Product_Column=", product_data_column))
   
+  
+  # parameters for LASSO
   lambda_start = as.numeric(input[[paste0(feature_selection_prefix, "lambda_start")]])
   lambda_end = as.numeric(input[[paste0(feature_selection_prefix, "lambda_end")]])
   lambda_length = as.integer(input[[paste0(feature_selection_prefix, "lambda_length")]])
   error_type = as.character(input[[paste0(feature_selection_prefix, "selectErrorType")]])
   nfolds = as.numeric(input[[paste0(feature_selection_prefix, "kFolds")]])
   alpha = as.numeric(input[[paste0(feature_selection_prefix, "alpha")]])
-  
   grid = 2.71828 ^ seq(lambda_start, lambda_end, length = lambda_length)
   
+  obs_to_exclude = input[[paste0(products_prefix, product, "|avoid")]]
+  obs_to_exclude = as.numeric(unlist(strsplit(obs_to_exclude,",")))
+  weights = rep(1, nrow(data))
+  weights[obs_to_exclude] = 0
+  
+  # Varaibles and Predictors
   form = as.formula(paste0(product_data_column," ~ ."))
   x = model.matrix(form, data)[, -1]
   y = data[,product_data_column]
   
+  
+  # LASSO
   cv.l2.fit = cv.glmnet(x, y, type.measure = error_type,
                         alpha = alpha, nfolds=nfolds,
-                        lambda = grid)
+                        lambda = grid, weights=weights)
   
+  
+  # Best Model
   best_lambda = cv.l2.fit$lambda.min
   #best_lambda
   best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
@@ -224,6 +242,8 @@ doLASSO = function(data, input, output, session) {
   coefs = coefs[coefs != 0]
   print(coefs)
   
+  
+  # Populating the results
   error_id = paste0(feature_selection_prefix, "LASSOSummaryError")
   text_error = textInput(error_id, label = error_type, value = best_error)
   div_error = tags$div(text_error, style="float:left;")
