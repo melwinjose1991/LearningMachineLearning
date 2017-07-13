@@ -113,7 +113,7 @@ data.new = data[,c("orders_rcvd","month", "t", findcor_uncorrelated_cols)]
 
 
 ## Parameters
-no_vars = 5 #dim(data.new)[2]/2
+no_vars = dim(data.new)[2]/10
 method = "forward" # exhaustive, forward
 var_cols = names(data.new)
 
@@ -167,6 +167,7 @@ y = data$orders_rcvd
 cv.l2.fit = cv.glmnet(x, y, alpha=1, type.measure="mae", lambda=grid)
 plot(cv.l2.fit)
 
+## best model
 best_lambda = cv.l2.fit$lambda.min
 best_lambda
 best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
@@ -179,35 +180,18 @@ coefs = coef(l2.fit)[,1]
 coefs[coefs!=0]
 names(coefs[coefs!=0])
 
-# Just Construction
-# run#   MAE       month8 + month10 + month11 + PBPWRCON
-#    1   3557         *                  *         *
-#    2   3568         *                  *         *
-#    3   3505         *                  *         *
-#    4   3554                                      *
+## simpler model with 1SE
+simple_lambda = cv.l2.fit$lambda.1se
+simple_lambda
+simple_lambda_index = match(simple_lambda, cv.l2.fit$lambda)
+simple_lambda_index
 
-# Just Manufacturing
-# AWCDNA156MNFRBPHI : Current Workhours; Percent Reporting Decreases for FRB - Philadelphia District
-# MNFCTRSMNSA : Manufacturers Sales
-# PPFDNA156MNFRBPHI : Future Prices Paid; Percent Reporting Decreases for FRB - Philadelphia District
-# UOFDINA066MNFRBNY : Future Unfilled Orders; Diffusion Index for New York
-# UOFINA156MNFRBNY : Future Unfilled Orders; Percent Expecting Increases for New York
-# CV MAE : 3400
+cv.l2.fit$cvm[simple_lambda_index]
 
-# Just Ind Production and Capacity Utilization
-# IPB53130N : Industrial Production: Other durable materials
-# IPB53242N : Industrial Production: Miscellaneous nondurable materials
-# IPB562A3CN : Industrial Production: Primary and semifinished processing
-# IPG316N : Industrial Production: Nondurable Goods: Leather and allied product
-# IPG332991N : Industrial Production: Durable Goods: Ball and roller bearing
-# CV MAE : 3469
-
-# Just Prices:Commodities
-# PPORKUSDM : Global Price of Swine ???!!!
-# Shrimp ? Sugar ?
-
-# Just Prices:Housing Prices Indexes
-# Home Price Sales Pair Counts : Atlanta, Chicago, Dallas, Detriot,NY, San Diego, 
+l2.fit = glmnet(x, y, alpha=1, lambda=simple_lambda)
+coefs = coef(l2.fit)[,1]
+coefs[coefs!=0]
+names(coefs[coefs!=0])
 
 
 
