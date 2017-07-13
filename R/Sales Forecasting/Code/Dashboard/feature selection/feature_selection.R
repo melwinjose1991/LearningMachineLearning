@@ -413,7 +413,7 @@ attachSelectButtonObservers = function(model_name, input, output, session, react
     
     table_regression_varaibles = paste0(regression_prefix, "selectedVariables")
     output[[table_regression_varaibles]] = renderUI({
-      createVariableTable(reactive_vars[[selected_vars_id]])
+      createVariableTable(reactive_vars[[selected_vars_id]], input, session)
     })
     
     table_forecast_varaibles = paste0(forecast_prefix, "forecastVariables")

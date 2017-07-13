@@ -251,7 +251,7 @@ doRegression = function(input, selected_vars, y_name, h=0) {
   }
 }
 
-createVariableTable = function(variables){
+createVariableTable = function(variables, input, session){
   
   vars_titles = list(
     fluidRow(
@@ -259,7 +259,8 @@ createVariableTable = function(variables){
       column(width=2, tags$h5("Estimate")),
       column(width=2, tags$h5("Std. Error")),
       column(width=2, tags$h5("t value")),
-      column(width=2, tags$h5("Pr(>|t|)"))
+      column(width=2, tags$h5("Pr(>|t|)")),
+      column(width=2, tags$h5("Keep?"))
     )
   )
   
@@ -270,12 +271,26 @@ createVariableTable = function(variables){
     if(length(var_name)==0){
       var_name = var
     }
+    
+    select_var_id = paste0(regression_prefix,"varId|", var, "|select")
+    input_select_var = checkboxInput(select_var_id, label="", value=TRUE)
+    observeEvent(input[[select_var_id]],{
+      group_id = meta_data[meta_data$series_id==var, "sub_category_id"]
+      id = paste0(all_features_prefix, "fId|", group_id, "|", var)
+      if(input[[select_var_id]]){
+        updateTextInput(session, id, value=TRUE)
+      }else{
+        updateTextInput(session, id, value=FALSE)
+      }
+    })
+    
     fluidRow(
       column(width=2, tags$div(title=var, tags$h5(var_name))),
       column(width=2, textInput(paste0(var_id, "|Est"), label="")),
       column(width=2, textInput(paste0(var_id, "|StdErr"), label="")),
       column(width=2, textInput(paste0(var_id, "|t"), label="")),
-      column(width=2, textInput(paste0(var_id, "|p"), label=""))
+      column(width=2, textInput(paste0(var_id, "|p"), label="")),
+      column(width=2, input_select_var)
     )
     
   })
