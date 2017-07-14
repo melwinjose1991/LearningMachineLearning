@@ -25,10 +25,24 @@ server = function(input, output, session) {
     reactive_vars[['forecast_model']] = fit[['regression']]
     
     text_tests_id = paste0(regression_prefix, "testResults")
-    failed_tests = sum(lengths(fit[['failed_tests']]))
     output[[text_tests_id]] = renderUI({
-      tags$h4(paste0("#Test Failed : ", failed_tests), 
-              style=paste0("color:", test_color_code[failed_tests+1],"; font-weight: bold;") )
+      list_failed_tests = fit[['failed_tests']]
+      no_of_failed_tests = sum(lengths(list_failed_tests))
+      text_failed_tests_count = tags$h4(paste0("#Test Failed : ", no_of_failed_tests), 
+                                  style=paste0("color:", test_color_code[no_of_failed_tests+1],"; font-weight: bold;") )
+      
+      text_failed_tests = vector('character')
+      for(index in names(list_failed_tests)){
+        text_failed_test = list_failed_tests[[index]]
+        text_failed_tests = c(text_failed_tests, text_failed_test)
+      }
+      text_failed_tests = paste0(text_failed_tests, collapse="<br/>")
+      
+      text_reg_summary_F = paste0("<br/><br/>F-statistic : ", summary(fit[['regression']])$fstatistic[1], "<br/>")
+      text_reg_summary_R = paste0("R2 : ", summary(fit[['regression']])$r.squared, "<br/>")
+      text_reg_summary = paste0(text_reg_summary_F, text_reg_summary_R)
+      
+      HTML(paste0(text_failed_tests_count, text_failed_tests, text_reg_summary))
     })
     
     output_regression_graph_1 = paste0(regression_prefix, "graphResidualVsFitted")

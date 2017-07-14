@@ -68,7 +68,7 @@ verifyRegressionModel=function(fit, df_vars){
   sum_res = sum(fit$residuals)
   if(sum_res>0.0001){
     print(paste0("   FAIL : sum(errors)=",sum_res))
-    failed_tests[2] = "sum of residuals not zero"
+    failed_tests["2"] = "Sum of residuals not zero"
   }else{
     print(paste0("   PASS : sum(errors)=",sum_res))
   }
@@ -79,7 +79,7 @@ verifyRegressionModel=function(fit, df_vars){
   print("   Null Hypothesis : residuals have constant variance")
   if(ncvTest(fit)$p<0.05){
     print("   FAIL : Rejected null hypothesis")
-    failed_tests[3] = "non-constant variance of residuals"
+    failed_tests["3"] = "Non-constant variance of residuals"
   }else{
     print("   OK : Failed to reject null hypothesis")
   }
@@ -90,7 +90,7 @@ verifyRegressionModel=function(fit, df_vars){
   print("   Null Hypothesis : errors are serially uncorrelated")
   if(dwtest(fit)$p.value<0.05){
     print("   FAIL : Rejected null hypothesis")
-    failed_tests[4] = "correlation amongst residuals"
+    failed_tests["4"] = "Correlation amongst residuals"
   }else{
     print("   OK : Failed to reject null hypothesis")
   }
@@ -103,7 +103,7 @@ verifyRegressionModel=function(fit, df_vars){
     #print(paste0("   Checking:",vars_name))
     if(cor.test(df_vars[,vars_name], fit$residuals)$p.value<0.05){
       print("      FAIL : Rejected null hypothesis")
-      failed_tests[5] = "correlation b/w variables"
+      failed_tests["5"] = "Correlation b/w variables and residuals"
     }else{
       print("      OK : Failed to reject null hypothesis")
     }
@@ -120,7 +120,7 @@ verifyRegressionModel=function(fit, df_vars){
     variability = var(df_vars[,vars_name])
     if(variability<=0){
       print("      FAIL : Variability = 0")
-      failed_tests[7] = "no variablity in one/more variables"
+      failed_tests["7"] = "No variablity in one/more variables"
     }else{
       print("      PASS : Variability > 0 ")
     }
@@ -137,7 +137,7 @@ verifyRegressionModel=function(fit, df_vars){
     vifs = vif(fit)
     if(sum(vifs>vif_threshold)>1){
       print(paste0("   FAIL for vars : ",unlist(names(df_vars)[vifs>vif_threshold])))
-      failed_tests[9] = "collinearity b/w one/more variables"
+      failed_tests["9"] = "Collinearity b/w one/more variables"
     }else{
       print("   PASS : No Collinearity")
     }
@@ -151,7 +151,7 @@ verifyRegressionModel=function(fit, df_vars){
   print("   Null Hypothesis : errors are normally distributed")
   if(shapiro.test(fit$residuals)$p.value<0.05){
     print("   FAIL : Rejected null hypothesis")
-    failed_tests[10] = "residuals not normally distributed"
+    failed_tests["10"] = "Residuals not normally distributed"
   }else{
     print("   OK : Failed to reject null hypothesis")
   }
