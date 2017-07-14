@@ -1,6 +1,7 @@
 features_prefix = "featureSelection_"
 
 source("feature selection/all_features.R")
+source("feature selection/filter_features.R")
 source("feature selection/feature_selection.R")
 
 

@@ -42,18 +42,14 @@ initFeatureSelectionUI = function() {
     )
   )
   
-  text_kfolds = column(
+  text_kfolds_alpha = column(
     row_1_col_width,
     textInput(
       paste0(feature_selection_prefix, "kFolds"),
       "k-folds",
       value = "24",
       width = row_1_textInput_width
-    )
-  )
-  
-  text_alpha = column(
-    row_1_col_width,
+    ),
     textInput(
       paste0(feature_selection_prefix, "alpha"),
       "alpha",
@@ -62,7 +58,7 @@ initFeatureSelectionUI = function() {
     )
   )
   
-  select_error_type =  column(row_1_col_width, selectInput(
+  column_select_error = selectInput(
     paste0(feature_selection_prefix, "selectErrorType"),
     "Error Type:",
     c(
@@ -70,14 +66,26 @@ initFeatureSelectionUI = function() {
       "Mean Absolute Error" = "mae"
     ),
     selected="mae"
-  ))
+  )
+  
+  column_select_filter = selectInput(
+    paste0(feature_selection_prefix, "selectFilter"),
+    "Filter:",
+    c(
+      "Direct:Correlation" = "direct_corr_filter",
+      "CARET:Correlation" = "caret_corr_filter"
+    ),
+    selected="direct_corr"
+  )
+  
+  column_selects =  column(row_1_col_width, column_select_error, 
+                           column_select_filter)
   
   row_1 = fluidRow(
     text_advanced_text,
     text_lambda,
-    text_kfolds,
-    text_alpha,
-    select_error_type
+    text_kfolds_alpha,
+    column_selects
   )
   
   # row 2
@@ -174,19 +182,13 @@ filterFeatures = function(data, input, output, session) {
   print("Feature Selection :: Feature Selection :: filterFeatures() :: INIT")
   
   # Removing columns whose values don't change
-  data = data[sapply(data, function(x)
-    length(unique(x)) > 1)]
+  data.new = removeUnchangingVariables(data)
   
-  # Removing highly correlated variables
-  data_num_var = data[, !names(data) %in% c("month", product_data_column, "t")]
-  tmp = cor(data_num_var)
-  tmp[!lower.tri(tmp)] = 0
-  uncorrelated_vars = names(data_num_var[, !apply(tmp, 2, function(x)
-    any(x > 0.99))])
-  #print("UnCorrelated Vars")
-  #print(uncorrelated_vars)
-  
-  data.new = data[, c(product_data_column, "month", "t", uncorrelated_vars)]
+  # Filter
+  data.new = switch(input[[paste0(feature_selection_prefix, "selectFilter")]],
+                    direct_corr_filter = removeCorrelatedVariables(data.new),
+                    caret_corr_filter =  removeCorrelatedVariablesCARET(data.new)
+  )
   
   #print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
   #print(names(data.new))
@@ -269,9 +271,9 @@ getLASSOModels = function(data, input, output, session, cv.l2.fit){
 
 getModelSummary = function(data, input, output, session, model_name, coefs, error, lambda){
   
-  error_type = as.character(input[[paste0(feature_selection_prefix, "selectErrorType")]])
-  
+  y = data[,product_data_column]
   model_id = paste0(feature_selection_prefix, model_name)
+  error_type = as.character(input[[paste0(feature_selection_prefix, "selectErrorType")]])  
   
   # Error and Lambda
   error_id = paste0(model_id, "LASSOSummaryError")
