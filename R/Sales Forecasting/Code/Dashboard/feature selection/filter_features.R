@@ -49,7 +49,7 @@ removeCorrelatedVariablesCARET = function(data, corr_threshold=0.99){
   # print(uncorrelated_vars)
   
   print("Fiter Features :: removeCorrelatedVariablesCARET() :: END")
-  data[,c("orders_rcvd","month", "t", uncorrelated_cols)]
+  data[,c(product_data_column, "month", "t", uncorrelated_cols)]
 
 }
 
@@ -69,7 +69,7 @@ getImportantVarCIForest = function(data){
   #length(significant_vars)
   
   print("Fiter Features :: getImportantVarCIForest() :: END")
-  data[,c("orders_rcvd","month", "t", significant_vars)]
+  data[,c(product_data_column, "month", "t", significant_vars)]
   
 }
 
@@ -79,7 +79,7 @@ getImportantVarBoruta = function(data){
   data_num_vars = data[,!names(data) %in% c("month", "t")]
   
   form = as.formula(paste0(product_data_column,"~."))
-  output = Boruta(orders_rcvd~., data=data_num_vars)
+  output = Boruta(form, data=data_num_vars)
 
   unsignificant_vars = names(output$finalDecision[output$finalDecision %in% c("Rejected")])
   print(paste0("Non-Significant Variables : ",length(unsignificant_vars)))
@@ -88,6 +88,6 @@ getImportantVarBoruta = function(data){
   #length(significant_vars)
   
   print("Fiter Features :: getImportantVarBoruta() :: END")
-  data[,c("orders_rcvd","month", "t", significant_vars)]
+  data[,c(product_data_column,"month", "t", significant_vars)]
   
 }

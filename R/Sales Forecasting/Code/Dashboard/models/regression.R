@@ -27,6 +27,9 @@ getRegressionUI = function() {
   row_2 = fluidRow(button_build_regression, text_tests)
   
   # row 3 - plots
+  id = paste0(regression_prefix, "graphObservedVsFitted")
+  output_graph_obs.vs.fitted = plotOutput(id)
+  
   id = paste0(regression_prefix, "graphResidualVsFitted")
   output_graph_res.vs.fitted = plotOutput(id)
   
@@ -40,6 +43,7 @@ getRegressionUI = function() {
   output_graph_stdres.vs.leverage = plotOutput(id)
   
   row_3 = fluidRow(
+    column(width = 6, output_graph_obs.vs.fitted),
     column(width = 6, output_graph_res.vs.fitted),
     column(width = 6, output_graph_qq),
     column(width = 6, output_graph_stdres.vs.fitted),
