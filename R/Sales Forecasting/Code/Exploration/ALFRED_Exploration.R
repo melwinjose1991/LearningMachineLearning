@@ -112,6 +112,33 @@ data.new = data[,c("orders_rcvd","month", "t", findcor_uncorrelated_cols)]
 
 
 
+## CForest :: party
+library(party)
+
+data_num_vars = data[,!names(data) %in% c("month", "t")]
+cf1 = cforest(orders_rcvd~., data=data_num_vars, controls=cforest_unbiased(mtry=2, ntree=50))
+vi = varimp(cf1, conditional=TRUE)
+
+unsignificant_vars = names(vi)[vi<=0]
+length(unsignificant_vars)
+significant_vars = names(vi)[vi>0]
+length(significant_vars)
+
+data.new = data[,c("orders_rcvd","month", "t", significant_vars)]
+
+
+
+## Boruta
+library(Boruta)
+
+data_num_vars = data[,!names(data) %in% c("month", "t")]
+output = Boruta(orders_rcvd~., data=data_num_vars)
+significant_vars = names(output$finalDecision[output$finalDecision %in% c("Confirmed", "Tentative")])
+length(significant_vars)
+data.new = data[,c("orders_rcvd","month", "t", significant_vars)]
+
+
+
 ## Parameters
 no_vars = dim(data.new)[2]/10
 method = "forward" # exhaustive, forward
@@ -164,7 +191,7 @@ grid = 2.71828^seq(0.001, 9, length=1000)
 x = model.matrix(orders_rcvd~., data.new)[,-1]
 y = data$orders_rcvd
 
-cv.l2.fit = cv.glmnet(x, y, alpha=1, type.measure="mae", lambda=grid)
+cv.l2.fit = cv.glmnet(x, y, alpha=1, type.measure="mae", lambda=grid, nfolds=12)
 plot(cv.l2.fit)
 
 ## best model

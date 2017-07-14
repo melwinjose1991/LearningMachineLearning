@@ -73,7 +73,9 @@ initFeatureSelectionUI = function() {
     "Filter:",
     c(
       "Direct:Correlation" = "direct_corr_filter",
-      "CARET:Correlation" = "caret_corr_filter"
+      "CARET:Correlation" = "caret_corr_filter",
+      "Party:Var-Imp" = "party_var_imp_filter",
+      "Boruta:Var-Imp" = "boruta_var_imp_filter"
     ),
     selected="direct_corr"
   )
@@ -187,7 +189,9 @@ filterFeatures = function(data, input, output, session) {
   # Filter
   data.new = switch(input[[paste0(feature_selection_prefix, "selectFilter")]],
                     direct_corr_filter = removeCorrelatedVariables(data.new),
-                    caret_corr_filter =  removeCorrelatedVariablesCARET(data.new)
+                    caret_corr_filter =  removeCorrelatedVariablesCARET(data.new),
+                    party_var_imp_filter = getImportantVarCIForest(data.new),
+                    boruta_var_imp_filter = getImportantVarBoruta(data.new)
   )
   
   #print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")
