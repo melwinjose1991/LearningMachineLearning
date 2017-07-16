@@ -151,12 +151,13 @@ attachProductsObservers = function(input, output, session, reactive_vars){
         ticks_at = (0:(max(years)-min(years)+1))*12
         ticks_label = ticks_at
         ticks_label[1] = 1
-        #time_series = ts(y, frequency=12, start=c(start_year, start_month))
-        #plot(time_series, xlab="Time", ylab=column_name)
+        # time_series = ts(y, frequency=12, start=c(start_year, start_month))
+        # plot(time_series, xlab="Time", ylab=column_name)
         
-        ggplot(mapping=aes(x, y)) + geom_line()  + 
+        ggplot(mapping=aes(x, y)) + geom_line() +
           scale_x_continuous(breaks = ticks_at, labels=period_id[ticks_label]) +
-          labs(x="Time",y=column_name)
+          labs(x="Time",y=column_name) + geom_point()
+          
       })
     })
     
