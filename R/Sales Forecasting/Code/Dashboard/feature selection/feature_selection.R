@@ -127,7 +127,8 @@ readData = function(input, output, session) {
   selected_vars = vector('character')
   for (key in names(input_value)) {
     #print(key)
-    if (grepl("_fId",key) & input_value[[key]] == TRUE) {
+    if (grepl(paste0(all_features_prefix, "fId"),key) && 
+        is.logical(input_value[[key]]) && input_value[[key]] == TRUE) {
       selected_vars = c(selected_vars, unlist(strsplit(key, "\\|"))[3])
     }
   }

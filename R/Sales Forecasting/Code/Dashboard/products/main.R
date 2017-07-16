@@ -38,12 +38,14 @@ getProductTabPanel = function(product){
   # To display revenue columns
   button_id = paste0(products_prefix, "pId|",product,"|Columns")
   radio_buttons = radioButtons(button_id, label="Series within the Product", inline=TRUE,
-                              choiceNames=revenue_cols, choiceValues=revenue_cols)
+                              choiceNames=revenue_cols, choiceValues=revenue_cols, 
+                              selected=revenue_cols[1])
   row_1 = fluidRow(radio_buttons)
   
   # To display plots
   plot_id = paste0(products_prefix, product, "|plot")
-  output_plot = plotOutput(plot_id)
+  plot_click_id = paste0(products_prefix, product, "|plot_click")
+  output_plot = plotOutput(plot_id, click=plot_click_id)
   row_2 = fluidRow(output_plot)
   
   # Obersvations to avoid
@@ -120,23 +122,76 @@ attachProductsObservers = function(input, output, session, reactive_vars){
   
   lapply(products, FUN=function(product){
     
-    start_year = getProductData(product, "year")[1]  
-    start_month = getProductData(product, "month")[1] 
+    product_folder = paste0(data_folder,"/",product)
+    revenue_file = list.files(product_folder, full.names=TRUE)
+    product_df = read.csv(revenue_file)
     
-    end_year = tail(getProductData(product, "year"), n=1)
-    end_month = tail(getProductData(product, "month"), n=1)
+    y_df = product_df[,!names(product_df) %in% columns_to_skip]
+    revenue_cols = names(y_df)
     
+    start_year = product_df[, "year"][1]  
+    start_month = product_df[, "month"][1] 
+    
+    end_year = tail(product_df[, "year"], n=1)
+    end_month = tail(product_df[, "month"], n=1)
+    
+    x = product_df$t
+    y = y_df[,revenue_cols[1]]
+    
+    # selecting columns within product
     button_id = paste0(products_prefix, "pId|",product,"|Columns")
     observeEvent(input[[button_id]],{
       plot_id = paste0(products_prefix, product, "|plot")
       column_name =  input[[button_id]]
+      y = y_df[,column_name]
       output[[plot_id]] = renderPlot({
-        y = getProductData(product, column_name)
-        time_series = ts(y, frequency=12, start=c(start_year, start_month))
-        plot(time_series, xlab="Time", ylab=column_name)
+        years = product_df[,"year"]
+        period_id = product_df[,"period_id"]
+        
+        ticks_at = (0:(max(years)-min(years)+1))*12
+        ticks_label = ticks_at
+        ticks_label[1] = 1
+        #time_series = ts(y, frequency=12, start=c(start_year, start_month))
+        #plot(time_series, xlab="Time", ylab=column_name)
+        
+        ggplot(mapping=aes(x, y)) + geom_line()  + 
+          scale_x_continuous(breaks = ticks_at, labels=period_id[ticks_label]) +
+          labs(x="Time",y=column_name)
       })
     })
     
+    # clicks on plots
+    plot_click_id = paste0(products_prefix, product, "|plot_click")
+    observeEvent(input[[plot_click_id]],{
+      column_name =  input[[button_id]]
+      row = nearPoints(df=product_df, input[[plot_click_id]], 
+                       xvar="t", yvar=column_name, threshold=10, maxpoints=1)
+      print(row)
+      
+      if(nrow(row)>0){
+        id = paste0(products_prefix, product, "|avoid")
+        current_obs_str = input[[id]]
+        
+        #current_obs_str = "2,3"
+        current_obs = as.numeric(unlist(strsplit(current_obs_str,",")))
+        new_obs = as.numeric(row["t"])  
+        #new_obs = 1
+        if(length(current_obs)>0){
+          if(new_obs %in% current_obs){
+            current_obs = current_obs[current_obs!=new_obs]
+            new_obs = paste0(current_obs, collapse=",")
+          }else{
+            new_obs = paste0(current_obs_str, ",", new_obs)
+          }
+        }
+        #new_obs
+        
+        updateTextInput(session, id, value=new_obs)
+      }
+      
+    })
+    
+    # select a product
     button_select_product_id = paste0(products_prefix, "pId|", 
                                       product, "|Select")
     observeEvent(input[[button_select_product_id]],{
