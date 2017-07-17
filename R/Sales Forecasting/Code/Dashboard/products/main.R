@@ -43,15 +43,20 @@ getProductTabPanel = function(product){
   row_1 = fluidRow(radio_buttons)
   
   # To display plots
-  plot_id = paste0(products_prefix, product, "|plot")
+  plot_id = paste0(products_prefix, product, "@plot")
   plot_click_id = paste0(products_prefix, product, "|plot_click")
-  output_plot = plotOutput(plot_id, click=plot_click_id)
+  plot_hover_id = paste0(products_prefix, product, "|plot_hover")
+  output_plot = plotOutput(plot_id, click=plot_click_id, 
+                           hover=hoverOpts(plot_hover_id,delay=250 ))
   row_2 = fluidRow(output_plot)
   
-  # Obersvations to avoid
+  # Obersvations to avoid & Hovered-Over observation
   id = paste0(products_prefix, product, "|avoid")
   text_avoid_obs = textInput(id, label="Exclude Observations#:")
-  row_3 = fluidRow(text_avoid_obs)
+  id = paste0(products_prefix, product, "|hovered")
+  text_current_obs = uiOutput(id)
+  row_3 = fluidRow(column(6, text_avoid_obs),
+                   column(6, text_current_obs))
   
   # To Select product line
   button_select_product_id = paste0(products_prefix, "pId|", product, "|Select")
@@ -138,10 +143,11 @@ attachProductsObservers = function(input, output, session, reactive_vars){
     x = product_df$t
     y = y_df[,revenue_cols[1]]
     
+    
     # selecting columns within product
     button_id = paste0(products_prefix, "pId|",product,"|Columns")
     observeEvent(input[[button_id]],{
-      plot_id = paste0(products_prefix, product, "|plot")
+      plot_id = paste0(products_prefix, product, "@plot")
       column_name =  input[[button_id]]
       y = y_df[,column_name]
       output[[plot_id]] = renderPlot({
@@ -161,13 +167,14 @@ attachProductsObservers = function(input, output, session, reactive_vars){
       })
     })
     
+    
     # clicks on plots
     plot_click_id = paste0(products_prefix, product, "|plot_click")
     observeEvent(input[[plot_click_id]],{
       column_name =  input[[button_id]]
       row = nearPoints(df=product_df, input[[plot_click_id]], 
                        xvar="t", yvar=column_name, threshold=10, maxpoints=1)
-      print(row)
+      #print(row)
       
       if(nrow(row)>0){
         id = paste0(products_prefix, product, "|avoid")
@@ -191,6 +198,29 @@ attachProductsObservers = function(input, output, session, reactive_vars){
       }
       
     })
+    
+    
+    # Hover on plots
+    plot_hover_id = paste0(products_prefix, product, "|plot_hover")
+    observeEvent(input[[plot_hover_id]],{
+      column_name =  input[[button_id]]
+      row = nearPoints(df=product_df, input[[plot_hover_id]], 
+                       xvar="t", yvar=column_name, threshold=10, maxpoints=1)
+      #print(row)
+      
+      id = paste0(products_prefix, product, "|hovered")
+      if(nrow(row)>0){
+        result = paste0("observation# : ", row$t, "<br/>")
+        result = paste0(result, column_name," : ",row[,column_name],"<br/>")
+        result = paste0(result, "period:", row$period_id)
+      }else{
+        result = ""
+      }
+      output[[id]] = renderUI({
+        HTML(result)
+      })
+    })
+    
     
     # select a product
     button_select_product_id = paste0(products_prefix, "pId|", 
