@@ -249,7 +249,8 @@ doRegression = function(input, selected_vars, y_name, h=0) {
     
     train_till = dim(data)[1] - h
     fit = lm(form, data=as.data.frame(data[1:train_till,]))
-    pred = predict(fit, newdata=as.data.frame(data[(train_till+1):dim(data)[1],]) )
+    pred = predict(fit, newdata=as.data.frame(data[(train_till+1):dim(data)[1],]), 
+                   interval="predict" )
     list(regression=fit, forecast=pred)
     
   }

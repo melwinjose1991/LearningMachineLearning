@@ -85,74 +85,7 @@ server = function(input, output, session) {
   attachTimeSeriesObservers(input, output)
   
   ### Models > Benchmark
-  benchmark_perform_benchmark = paste0(benchmark_prefix, "buttonPerformBenchmark")
-  observeEvent(input[[benchmark_perform_benchmark]], {
-    
-    h = input[[paste0(benchmark_prefix, "h")]]
-    mean_model = input[[paste0(benchmark_prefix,"methodId|mean")]]
-    naive_model = input[[paste0(benchmark_prefix,"methodId|naive")]]
-    snaive_model = input[[paste0(benchmark_prefix,"methodId|snaive")]]
-    drift_model = input[[paste0(benchmark_prefix,"methodId|drift")]]
-    error_type = input[[paste0(benchmark_prefix,"selectErrorType")]]
-    
-    fit_forecast = doRegression(input, reactive_vars[['selected_vars']], 
-                                product_data_column, h=h)
-  
-    
-    results = getBenchmarkResults(model_predictions=fit_forecast[['forecast']], h = h,
-                                  mean_model=mean_model, naive_model=naive_model,
-                                  snaive_model=snaive_model, drift_model=drift_model,
-                                  error_type=error_type)
-    
-    
-    ## Plotting graphs
-    output_graph_benchmark = paste0(benchmark_prefix, "graphBenchmark")
-    output[[output_graph_benchmark]] = renderPlot({
-      
-      plot(results[["t"]])
-      
-      models = vector('character')
-      colors = c(2,3,4,5,9)
-      index = 1
-      for(result in names(results)){
-        
-        if(grepl("line_", result)){
-          lines(results[[result]], col=colors[index], lwd=2, lty=2)
-          
-          model = unlist(strsplit(result,"_"))[2]
-          models = c(models, model)
-          
-          index = index + 1
-        }
-        
-      }
-      
-      legend("topleft", lwd=2, lty=2, col=colors, legend=models)
-      
-    })
-    
-    ## Reporting summary
-    output_summary_benchmark = paste0(benchmark_prefix, "summaryBenchmark")
-    output[[output_summary_benchmark]] = renderUI({
-      
-      summary_text = list()
-      for(result in names(results)){
-        
-        if(grepl("error_", result)){
-          
-          model = unlist(strsplit(result,"_"))[2]
-          
-          model_summary = paste0(error_type, " for ", model, " = ", results[[result]])
-          html_element = tags$p(model_summary)
-          summary_text = list(summary_text, list(html_element))
-        }
-        
-      }
-      summary_text
-      
-    })
-    
-  })
+  attachBenchmarkObservers(input, output, reactive_vars)
   
   
   

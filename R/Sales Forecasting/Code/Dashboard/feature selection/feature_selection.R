@@ -75,13 +75,21 @@ initFeatureSelectionUI = function() {
       "Direct:Correlation" = "direct_corr_filter",
       "CARET:Correlation" = "caret_corr_filter",
       "Party:Var-Imp" = "party_var_imp_filter",
-      "Boruta:Var-Imp" = "boruta_var_imp_filter"
+      "Boruta:Var-Imp" = "boruta_var_imp_filter",
+      "LASSO+VIF" = "lasso_vif_filter"
     ),
     selected="direct_corr"
   )
   
+  column_threshold = textInput(
+    paste0(feature_selection_prefix, "filterThreshold"),
+    "threshold",
+    value = "0.99",
+    width = row_1_textInput_width
+  )
+  
   column_selects =  column(row_1_col_width, column_select_error, 
-                           column_select_filter)
+                           column_select_filter, column_threshold)
   
   row_1 = fluidRow(
     text_advanced_text,
@@ -187,12 +195,22 @@ filterFeatures = function(data, input, output, session) {
   # Removing columns whose values don't change
   data.new = removeUnchangingVariables(data)
   
+  threshold = as.numeric(input[[paste0(feature_selection_prefix, "filterThreshold")]])
+  
   # Filter
   data.new = switch(input[[paste0(feature_selection_prefix, "selectFilter")]],
-                    direct_corr_filter = removeCorrelatedVariables(data.new),
-                    caret_corr_filter =  removeCorrelatedVariablesCARET(data.new),
+                    direct_corr_filter = removeCorrelatedVariables(data.new, 
+                                                                   corr_threshold = threshold),
+                    
+                    caret_corr_filter =  removeCorrelatedVariablesCARET(data.new, 
+                                                                        corr_threshold = threshold),
+                    
                     party_var_imp_filter = getImportantVarCIForest(data.new),
-                    boruta_var_imp_filter = getImportantVarBoruta(data.new)
+                    
+                    boruta_var_imp_filter = getImportantVarBoruta(data.new),
+                    
+                    lasso_vif_filter = doLassoPlusVif(data.new, 
+                                                      vif_threshold = threshold)
   )
   
   #print("Feature Selection :: Feature Selection :: filterFeatures() :: EXIT")

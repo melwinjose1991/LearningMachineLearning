@@ -5,12 +5,12 @@ library(forecast)
 
 
 ## Globals
-benchmark_prefix = paste0(models_prefix, "benchmark_")
+benchmark_prefix = paste0(models_prefix, "regressionBenchmark_")
 
 
 
 ## UI Elements
-getBenchmarkUI = function(){
+getRegressionBenchmarkUI = function(){
   
   # row_1 - options
   id = paste0(benchmark_prefix, "h")
@@ -59,7 +59,7 @@ getBenchmarkUI = function(){
   output_summary_benchmark = uiOutput(id)
   row_3 = fluidRow(output_summary_benchmark)
   
-  tabPanel(title = "Benchmark", row_1, row_2, row_3)
+  tabPanel(title = "Regression Benchmark", row_1, row_2, row_3)
   
 }
 
@@ -147,4 +147,100 @@ getBenchmarkResults=function(y_name="orders_rcvd", model_predictions, h=6,
   
   results
   
+}
+
+
+attachBenchmarkObservers = function(input, output, reactive_vars){
+  
+  benchmark_perform_benchmark = paste0(benchmark_prefix, "buttonPerformBenchmark")
+  observeEvent(input[[benchmark_perform_benchmark]], {
+    
+    h = input[[paste0(benchmark_prefix, "h")]]
+    mean_model = input[[paste0(benchmark_prefix,"methodId|mean")]]
+    naive_model = input[[paste0(benchmark_prefix,"methodId|naive")]]
+    snaive_model = input[[paste0(benchmark_prefix,"methodId|snaive")]]
+    drift_model = input[[paste0(benchmark_prefix,"methodId|drift")]]
+    error_type = input[[paste0(benchmark_prefix,"selectErrorType")]]
+    
+    fit_forecast = doRegression(input, reactive_vars[['selected_vars']], 
+                                product_data_column, h=h)
+    
+    results = getBenchmarkResults(model_predictions=fit_forecast[['forecast']][,'fit'], 
+                                  h=h, mean_model=mean_model, naive_model=naive_model,
+                                  snaive_model=snaive_model, drift_model=drift_model,
+                                  error_type=error_type)
+    
+    
+    ## Plotting graphs
+    output_graph_benchmark = paste0(benchmark_prefix, "graphBenchmark")
+    output[[output_graph_benchmark]] = renderPlot({
+      
+      plot(results[["t"]])
+      
+      models = vector('character')
+      colors = c(2,3,4,5,9)
+      index = 1
+      for(result in names(results)){
+        
+        if(grepl("line_", result)){
+          lines(results[[result]], col=colors[index], lwd=2, lty=2)
+          
+          model = unlist(strsplit(result,"_"))[2]
+          models = c(models, model)
+          
+          index = index + 1
+        }
+        
+      }
+      lwr = ts(fit_forecast[['forecast']][,'lwr'], frequency=12, 
+         start=product_last_year_index+((12-h)/12))
+      lines(lwr, lwd=1, lty=3, col=45)
+      
+      upr = ts(fit_forecast[['forecast']][,'upr'], frequency=12, 
+               start=product_last_year_index+((12-h)/12))
+      lines(upr, lwd=1, lty=3, col=45)
+      
+      legend("topleft", lwd=2, lty=2, col=colors, legend=models)
+      
+    })
+    
+    ## Reporting summary
+    output_summary_benchmark = paste0(benchmark_prefix, "summaryBenchmark")
+    output[[output_summary_benchmark]] = renderUI({
+      
+      # Benchmark Models
+      text_errors = vector('character')
+      for(result in names(results)){
+        
+        if(grepl("error_", result)){
+          
+          model = unlist(strsplit(result,"_"))[2]
+          model_summary = paste0(error_type, " for ", 
+                                 model, " = ", results[[result]], "<br/>")
+          text_errors = c(text_errors, model_summary)
+        }
+        
+      }
+      text_errors = paste0(text_errors, collapse="")
+      
+      # Prediction Interval
+      df = as.data.frame(fit_forecast[['forecast']])
+      text_interval = apply(df, 1, function(row){
+        lwr = row['lwr']
+        upr = row['upr']
+        interval = abs(upr-lwr)
+        text = paste0("<tr><td>&nbsp;",lwr,"&nbsp;</td><td>&nbsp;",
+                      upr, "&nbsp;</td><td>&nbsp;", interval,"&nbsp;</td>")
+        text
+      })
+      text_interval = paste0(text_interval, collapse="")
+      text_interval = paste0("<table><tr><th>Lower</th><th>Upper</th>",
+                             "<th>Interval</th></tr>",
+                             text_interval,"</table>")
+      
+      text_summary = paste0(text_errors, "<br/>", text_interval)
+      HTML(text_summary)
+    })
+    
+  })
 }
