@@ -1,4 +1,5 @@
 library(forecast)
+library(tseries)
 
 
 
@@ -235,4 +236,60 @@ plot(best_fit)
 f = forecast(best_fit, h=3)$mean
 mae = mean(abs(tail(data,n=h)-f))
 print(mae) #4467
+
+
+
+# auto.ARIMA - non seasonal
+use_box_cox = FALSE
+seasonal = TRUE
+
+if(use_box_cox==TRUE){
+  lambda = BoxCox.lambda(data_ts)
+  data_ts_star = BoxCox(data_ts, lambda)
+  print(lambda)
+}else{
+  data_ts_star = data_ts
+}
+plot(data_ts_star)
+
+h=12
+train_window = window(data_ts_star, end=13+((12-(h+1))/12))  
+arima_model = auto.arima(train_window,seasonal=seasonal, 
+                         stepwise=FALSE, approximation=FALSE)
+arima_model
+pred = forecast(arima_model, h=12)
+plot(pred)
+
+if(use_box_cox==TRUE){
+  train_mae = mean(abs(lambda^arima_model$fitted - data_ts[1:(length(data_ts)-h)]))
+  valid_mae = mean(abs(tail(data_ts,n=h)-lambda^pred$mean))
+}else{
+  train_mae = mean(abs(arima_model$residuals))
+  valid_mae = mean(abs(tail(data_ts,n=h)-pred$mean))
+}
+print(paste0("train-",train_mae," valid-",valid_mae))
+
+plot(arima_model$residuals)
+result = adf.test(arima_model$residuals, alternative = "stationary")
+if(result$p.value<=0.01){
+  # OK
+}else{
+  
+}
+
+result = kpss.test(arima_model$residuals)
+if(result$p.value>0.01){
+  # OK
+}else{
+  
+}
+
+Box.test(arima_model$residuals, lag=24, type="Ljung")
+
+# Non-Seasonal
+#   log     : 5842, 3129 : 1,0,1
+#   non-log : 6242, 4365 : 1,0,2
+# Seasonal
+#   log     : 5388, 3855 : 1,0,1 2,0,0 [12] non-zero mean
+#   non-log : 5445, 4821 : 2,0,1 2,0,0 [12] non-zero mean
 
