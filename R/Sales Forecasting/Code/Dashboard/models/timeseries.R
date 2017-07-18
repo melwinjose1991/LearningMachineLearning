@@ -48,7 +48,7 @@ getTimeSeriesUI = function(){
   id = paste0(timeseries_prefix, "buildModel")
   input_forecast_button = actionButton(id, label="Build Model")
   
-  row_1 = fluidRow(row_1_1, row_1_2, input_forecast_button)
+  row_1 = fluidRow(row_1_1, input_forecast_button)
   
   # Row-2 : Plot
   id = paste0(timeseries_prefix, "forecastPlot")
@@ -119,14 +119,20 @@ buildSTLModel = function(h=6, forecast_method="naive"){
 }
 
 doSES = function(h=6){
+  print(paste0("Models :: Time-Series :: doSES() :: START"))
+  
   data_ts = ts(product_data, frequency=12)
   window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))  
   fit = ses(window_ts, initial="simple", h=h)
   mae = mean(abs(tail(data_ts,n=h)-fit$mean))
+  
+  print(paste0("Models :: Time-Series :: doSES() :: DONE"))
   list(forecast_fit=fit, error=mae)
 }
 
 doHolts = function(h=6, damped=FALSE, t_multiplicative=FALSE){
+  print(paste0("Models :: Time-Series :: doHolts() :: START"))
+  
   data_ts = ts(product_data, frequency=12)
   window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
   fit = holt(window_ts, h=h, damped=damped, 
@@ -136,10 +142,13 @@ doHolts = function(h=6, damped=FALSE, t_multiplicative=FALSE){
   #lines(fit$mean, col="green", lwd=2, lty=2)
   mae = mean(abs(tail(data_ts,n=h)-fit$mean))
 
+  print(paste0("Models :: Time-Series :: doHolts() :: DONE"))
   list(forecast_fit=fit, error=mae)
 }
 
 doHW = function(h=6, seasonal="additive", damped=FALSE, t_multiplicative=FALSE){
+  print(paste0("Models :: Time-Series :: doHW() :: START"))
+  
   data_ts = ts(product_data, frequency=12)
   window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
   fit = hw(window_ts, h=h, seasonal=seasonal,
@@ -151,10 +160,13 @@ doHW = function(h=6, seasonal="additive", damped=FALSE, t_multiplicative=FALSE){
   #train_mae = mean(abs(fit_multi_damped$residuals))
   mae = mean(abs(tail(data_ts,n=h)-fit$mean))
   
+  print(paste0("Models :: Time-Series :: doHW() :: DONE"))
   list(forecast_fit=fit, error=mae)
 }
 
 getBestNonArimaModelError = function(h=6){
+  print(paste0("Models :: Time-Series :: getBestNonArimaModelError() :: START"))
+  
   best_error = vector('numeric')
   
   result_ses = doSES(h)
@@ -196,6 +208,7 @@ getBestNonArimaModelError = function(h=6){
   result_hw_xdm = doHW(h, seasonal="multiplicative", damped=TRUE, t_multiplicative=TRUE)
   best_error = c(best_error, result_hw_xdm[['error']])
 
+  print(paste0("Models :: Time-Series :: getBestNonArimaModelError() :: END"))
   switch( which.min(best_error),
          "1" = result_ses,
          
@@ -214,6 +227,58 @@ getBestNonArimaModelError = function(h=6){
   
 }
 
+doAutoARIMA = function(h=12, use_box_cox=FALSE, seasonal=TRUE){
+  print(paste0("Models :: Time-Series :: doAutoARIMA :: START"))
+  #use_box_cox = FALSE
+  #seasonal = TRUE
+  
+  if(use_box_cox==TRUE){
+    lambda = BoxCox.lambda(data_ts)
+    data_ts_star = BoxCox(data_ts, lambda)
+    print(lambda)
+  }else{
+    data_ts_star = data_ts
+  }
+  #plot(data_ts_star)
+  
+  train_window = window(data_ts_star, end=13+((12-(h+1))/12))  
+  arima_model = auto.arima(train_window,seasonal=seasonal, 
+                           stepwise=FALSE, approximation=FALSE)
+  arima_model
+  pred = forecast(arima_model, h=h)
+  #plot(pred)
+  
+  if(use_box_cox==TRUE){
+    train_mae = mean(abs(lambda^arima_model$fitted - data_ts[1:(length(data_ts)-h)]))
+    valid_mae = mean(abs(tail(data_ts,n=h)-lambda^pred$mean))
+  }else{
+    train_mae = mean(abs(arima_model$residuals))
+    valid_mae = mean(abs(tail(data_ts,n=h)-pred$mean))
+  }
+  print(paste0("train-mae:",train_mae," | valid-mae:",valid_mae))
+  
+  plot(arima_model$residuals)
+  adf_test = adf.test(arima_model$residuals, alternative = "stationary")
+  if(adf_test$p.value<=0.01){
+    result_adf = "OK"
+  }else{
+    result_adf = "FAILED"
+  }
+  
+  kpss_test = kpss.test(arima_model$residuals)
+  if(kpss_test$p.value>0.01){
+    result_kpss = "OK"
+  }else{
+    result_kpss = "FAILED"
+  }
+
+  print(paste0("Models :: Time-Series :: doAutoARIMA :: DONE"))  
+  list(forecast_fit=pred, error = valid_mae,
+       error_stationarity=c(result_adf, result_kpss))
+}
+
+
+
 attachTimeSeriesObservers = function(input, output){
   
   id = paste0(timeseries_prefix, "buildModel")
@@ -231,7 +296,7 @@ attachTimeSeriesObservers = function(input, output){
       result = getBestNonArimaModelError(h=h)
       
     }else if(input[[id]]=="arima"){
-      
+      result = doAutoARIMA(h)
     }
     
     id = paste0(timeseries_prefix, "forecastPlot")
