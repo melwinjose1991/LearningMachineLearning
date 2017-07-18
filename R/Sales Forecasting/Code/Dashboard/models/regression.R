@@ -262,8 +262,9 @@ createVariableTable = function(variables, input, session){
       column(width=2, tags$h5("Variable")),
       column(width=2, tags$h5("Estimate")),
       column(width=2, tags$h5("Std. Error")),
-      column(width=2, tags$h5("t value")),
-      column(width=2, tags$h5("Pr(>|t|)")),
+      column(width=1, tags$h5("t value")),
+      column(width=1, tags$h5("Pr(>|t|)")),
+      column(width=2, tags$h5("VIF")),
       column(width=2, tags$h5("Keep?"))
     )
   )
@@ -292,8 +293,9 @@ createVariableTable = function(variables, input, session){
       column(width=2, tags$div(title=var, tags$h5(var_name))),
       column(width=2, textInput(paste0(var_id, "|Est"), label="")),
       column(width=2, textInput(paste0(var_id, "|StdErr"), label="")),
-      column(width=2, textInput(paste0(var_id, "|t"), label="")),
-      column(width=2, textInput(paste0(var_id, "|p"), label="")),
+      column(width=1, textInput(paste0(var_id, "|t"), label="")),
+      column(width=1, textInput(paste0(var_id, "|p"), label="")),
+      column(width=2, textInput(paste0(var_id, "|VIF"), label="")),
       column(width=2, input_select_var)
     )
     
@@ -309,6 +311,7 @@ fillVariableTable = function(session, fit){
   
   s = summary(fit)
   coefs = as.data.frame(s$coefficients)
+  vifs = vif(fit)
   
   for(var in row.names(coefs)){
     var_id = paste0(regression_prefix,"varId|",var)
@@ -316,6 +319,9 @@ fillVariableTable = function(session, fit){
     updateTextInput(session, paste0(var_id, "|StdErr"), value=coefs[var, "Std. Error"])
     updateTextInput(session, paste0(var_id, "|t"), value=coefs[var, "t value"])
     updateTextInput(session, paste0(var_id, "|p"), value=coefs[var, "Pr(>|t|)"])
+    if(var!="(Intercept)"){
+      updateTextInput(session, paste0(var_id, "|VIF"), value=vifs[[var]])
+    }
   }
   
 }

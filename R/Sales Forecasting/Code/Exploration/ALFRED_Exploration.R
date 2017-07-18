@@ -139,6 +139,59 @@ data.new = data[,c("orders_rcvd","month", "t", significant_vars)]
 
 
 
+# LASSO + VIF - recursive elimination
+y_name = "orders_rcvd"
+vif_threshold = 4
+grid = 2.71828^seq(0.001, 9, length=1000)
+tmp_data = data.new
+
+i=1
+while(1){
+  
+  form = as.formula(paste0(y_name,"~."))
+  print(paste0("Total Vars : ", (dim(tmp_data)[2]-1)))
+  x = model.matrix(form, tmp_data)
+  y = tmp_data[,y_name]
+  
+  cv.l2.fit = cv.glmnet(x, y, alpha=1, type.measure="mae", lambda=grid, nfolds=24)
+  # plot(cv.l2.fit)
+  
+  ## best model
+  best_lambda = cv.l2.fit$lambda.min
+  #best_lambda
+  best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
+  #best_lambda_index
+  
+  cv.l2.fit$cvm[best_lambda_index]
+  
+  l2.fit = glmnet(x, y, alpha=1, lambda=best_lambda)
+  coefs = coef(l2.fit)[,1]
+  #coefs[coefs!=0]
+  lasso_x = names(coefs[coefs!=0])[-1]
+
+  df = as.data.frame(x[,lasso_x])
+  df[, y_name] = y
+    
+  form = as.formula(paste0(y_name,"~."))
+  fit = lm(form, df)
+  vifs = vif(fit)
+  
+  remove_index = which.max(vifs)
+  if(vifs[[remove_index]]>vif_threshold){
+    remove_var = names(vifs[remove_index])
+    print(paste0("Removed : ",remove_var))
+    tmp_data = tmp_data[,!names(tmp_data) %in% remove_var]
+    i = i+1
+    if(i>20){
+      break;
+    }
+  }else{
+    break;
+  }
+  
+}
+
+
 ## Parameters
 no_vars = dim(data.new)[2]/10
 method = "forward" # exhaustive, forward
@@ -188,8 +241,11 @@ coef(leaps,id=best_model)
 ##### LASSO Regression #####
 grid = 2.71828^seq(0.001, 9, length=1000)
 
-x = model.matrix(orders_rcvd~., data.new)[,-1]
-y = data$orders_rcvd
+y_name = "orders_rcvd"
+form = as.formula(paste0(y_name,"~."))
+x = model.matrix(form, data.new)
+colnames(x)
+y = data.new[,y_name]
 
 cv.l2.fit = cv.glmnet(x, y, alpha=1, type.measure="mae", lambda=grid, nfolds=12)
 plot(cv.l2.fit)
@@ -223,15 +279,22 @@ names(coefs[coefs!=0])
 
 
 ## Regression Analysis
+#y_t_name = "orders_rcvd_t"
 y_name = "orders_rcvd"
 x = names(coefs[coefs!=0])[-1]
 
-df = data.frame(model.matrix(~., data.new))
-regression_formula = as.formula(paste0(y_name,"~",paste(x, collapse="+")))
+form = as.formula(paste0(y_name,"~."))
+df = data.frame(model.matrix(form, data.new))[,-1]
+df = df[,lasso_x]
+df[,y_name] = data.new[,y_name]
+#df[,y_t_name] = transformed
+names(df)
 
-
-outliers = c(37)
+which(abs(stdres(lm_fit))>3)
+outliers = c(36,37,48,57,156)
 use_rows = setdiff(1:nrow(df), outliers)
+
+regression_formula = as.formula(paste0(y_name,"~",paste(x, collapse="+")))
 lm_fit = lm(regression_formula, data=df, subset=use_rows)
 
 summary(lm_fit)
@@ -274,15 +337,16 @@ which(cooks>1)
 
 
 # observed v fitted
-plot(df$orders_rcvd[use_rows], lm_fit$fitted.values)
-lines(df$orders_rcvd[use_rows], df$orders_rcvd[use_rows], col="red")
+plot(df[use_rows, y_name], lm_fit$fitted.values)
+lines(df[use_rows, y_name], df[use_rows, y_name], col="red")
 
 plot(lm_fit)
 
 plot(ts(df$orders_rcvd, frequency=12))
 points((outliers/12)+1, df$orders_rcvd[outliers], col="red", lwd=2)
 
-
+failed_tests = verifyRegressionModel(lm_fit, df[use_rows,x])
+failed_tests
 
 ## Bechnmarking
 lm_pred = predict(lm_fit, newdata=data.new[(train_till+1):dim(data.new)[1],] )
