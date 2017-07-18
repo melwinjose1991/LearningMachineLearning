@@ -14,7 +14,7 @@ getTimeSeriesUI = function(){
   # Row - 1 : Parameters
   id = paste0(timeseries_prefix, "h")
   input_numeric_h = numericInput(id, "In-Sample Forecast Period", 
-                                           value=3, min=2, max=12, step=1, width="60%")
+                                           value=12, min=2, max=12, step=1, width="60%")
   
   id = paste0(timeseries_prefix, "method")
   input_method = radioButtons(id, label="Method", selected="decompose-snaive", inline=TRUE, 
@@ -232,6 +232,8 @@ doAutoARIMA = function(h=12, use_box_cox=FALSE, seasonal=TRUE){
   #use_box_cox = FALSE
   #seasonal = TRUE
   
+  data_ts = ts(product_data, frequency=12)
+  
   if(use_box_cox==TRUE){
     lambda = BoxCox.lambda(data_ts)
     data_ts_star = BoxCox(data_ts, lambda)
@@ -306,10 +308,36 @@ attachTimeSeriesObservers = function(input, output){
     
     id = paste0(timeseries_prefix, "forecastSummary")
     output[[id]] = renderUI({
-      res_mae = paste0("MAE : ", result[['error']])
-      res_forecast = paste0(result[["forecast_fit"]]$mean, collapse="</br>")
-      res_forecast = paste0("Forecasts:</br>", res_forecast)
-      HTML(paste0(res_mae, "</br>", res_forecast))
+      
+      text_error = paste0("MAE : ", result[['error']])
+      
+      df = data.frame(fit=result[["forecast_fit"]]$mean,
+                      lwr=result[["forecast_fit"]]$lower[,2],
+                      upr=result[["forecast_fit"]]$upper[,2])
+      
+      text_forecast = sapply(1:nrow(df), function(i){
+        row = df[i,]
+        fit = round(row[['fit']], 2)
+        lwr = round(row[['lwr']], 2)
+        upr = round(row[['upr']], 2)
+        interval = abs(upr-lwr)
+        text = paste0("<tr><td>&nbsp;", i ,"&nbsp</td>",
+                      "<td>&nbsp;", fit ,"&nbsp</td>",
+                      "<td>&nbsp;",lwr,"&nbsp;</td>",
+                      "<td>&nbsp;",upr, "&nbsp;</td>",
+                      "<td>&nbsp;", interval,"&nbsp;</td></tr>")
+        text
+      })
+      
+      text_forecast = paste0(text_forecast, collapse="")
+      text_forecast = paste0("<table><tr><th>#</th>",
+                             "<th>Forecast</th>",
+                             "<th>Lower</th><th>Upper</th>",
+                             "<th>Interval</th></tr>",
+                             text_forecast,"</table>")
+      
+      text_summary = paste0(text_error, "<br/>", text_forecast)
+      HTML(text_summary)
     })
     
   })

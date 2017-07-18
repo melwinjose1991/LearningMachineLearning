@@ -110,8 +110,8 @@ getBenchmarkResults=function(y, model_predictions, h=6,
 convertSeries = function(data_folder, product, file_to_convert, start_year, start_month
                          , frequency=12, write_to){
   
-  product = "2401"
-  file_to_convert = "temp.csv"
+  product = "2404"
+  file_to_convert = "tmp.csv"
   data_folder = paste0("../../Data/", product, "/")
   start_year = 2004
   start_month = 1

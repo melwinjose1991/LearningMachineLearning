@@ -281,7 +281,7 @@ names(coefs[coefs!=0])
 ## Regression Analysis
 #y_t_name = "orders_rcvd_t"
 y_name = "orders_rcvd"
-x = names(coefs[coefs!=0])[-1]
+#x = names(coefs[coefs!=0])[-1]
 
 form = as.formula(paste0(y_name,"~."))
 df = data.frame(model.matrix(form, data.new))[,-1]
@@ -291,10 +291,10 @@ df[,y_name] = data.new[,y_name]
 names(df)
 
 which(abs(stdres(lm_fit))>3)
-outliers = c(36,37,48,57,156)
+outliers = c(36,37,48,84,57,156,27,96,140)
 use_rows = setdiff(1:nrow(df), outliers)
 
-regression_formula = as.formula(paste0(y_name,"~",paste(x, collapse="+")))
+regression_formula = as.formula(paste0(y_name,"~",paste(lasso_x, collapse="+")))
 lm_fit = lm(regression_formula, data=df, subset=use_rows)
 
 summary(lm_fit)
@@ -345,7 +345,7 @@ plot(lm_fit)
 plot(ts(df$orders_rcvd, frequency=12))
 points((outliers/12)+1, df$orders_rcvd[outliers], col="red", lwd=2)
 
-failed_tests = verifyRegressionModel(lm_fit, df[use_rows,x])
+failed_tests = verifyRegressionModel(lm_fit, df[use_rows,lasso_x])
 failed_tests
 
 ## Bechnmarking
