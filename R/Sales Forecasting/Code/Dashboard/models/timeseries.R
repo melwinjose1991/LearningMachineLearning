@@ -313,16 +313,20 @@ attachTimeSeriesObservers = function(input, output){
       
       df = data.frame(fit=result[["forecast_fit"]]$mean,
                       lwr=result[["forecast_fit"]]$lower[,2],
-                      upr=result[["forecast_fit"]]$upper[,2])
+                      upr=result[["forecast_fit"]]$upper[,2],
+                      actual = tail(product_data, n=h))
       
       text_forecast = sapply(1:nrow(df), function(i){
         row = df[i,]
         fit = round(row[['fit']], 2)
+        actual = round(row[['actual']], 2)
+        error = round(abs(fit-actual), 2)
         lwr = round(row[['lwr']], 2)
         upr = round(row[['upr']], 2)
         interval = abs(upr-lwr)
         text = paste0("<tr><td>&nbsp;", i ,"&nbsp</td>",
                       "<td>&nbsp;", fit ,"&nbsp</td>",
+                      "<td>&nbsp;", error ,"&nbsp</td>",
                       "<td>&nbsp;",lwr,"&nbsp;</td>",
                       "<td>&nbsp;",upr, "&nbsp;</td>",
                       "<td>&nbsp;", interval,"&nbsp;</td></tr>")
@@ -331,7 +335,7 @@ attachTimeSeriesObservers = function(input, output){
       
       text_forecast = paste0(text_forecast, collapse="")
       text_forecast = paste0("<table><tr><th>#</th>",
-                             "<th>Forecast</th>",
+                             "<th>Forecast</th><th>Error</th>",
                              "<th>Lower</th><th>Upper</th>",
                              "<th>Interval</th></tr>",
                              text_forecast,"</table>")
