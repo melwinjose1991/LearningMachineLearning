@@ -74,10 +74,23 @@ getBenchmarkResults=function(y_name="orders_rcvd", model_predictions, h=6,
   data = read.csv(revenue_file, header = TRUE, sep = ",")
   y = data[,y_name]
   
-  t = ts(y, frequency=12)
+  t = ts(y, frequency=12, start=product_start_date, end=product_end_date)
   plot(t)
-  results = list(t=t)
-  t_window = window(t, end=product_last_year_index+((12-(h+1))/12))
+  
+  last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
+  
+  train_end_ym = format(last_ym - (h/12),"%Y-%m")
+  train_end_ym = as.numeric(unlist(strsplit(train_end_ym,"-")))
+  t_window = window(t, end=train_end_ym)
+  
+  valid_start_ym = format(last_ym - (h/12) + (1/12),"%Y-%m")
+  valid_start_ym = as.numeric(unlist(strsplit(valid_start_ym,"-")))
+  
+  preview_start_ym = format(last_ym - ((2*h)/12),"%Y-%m")
+  preview_start_ym = as.numeric(unlist(strsplit(preview_start_ym,"-")))
+  preview_window = window(t, start=preview_start_ym)
+  plot(preview_window)
+  results = list(t=preview_window)
   
   train_indices = 1:(length(y)-h)
   y_actual = y[-train_indices]
@@ -132,7 +145,7 @@ getBenchmarkResults=function(y_name="orders_rcvd", model_predictions, h=6,
   
   # Predictions by your model
   predictions = ts(model_predictions, frequency=12, 
-                   start=product_last_year_index+((12-h)/12))
+                   start=valid_start_ym)
   lines(predictions, col=6, lwd=2, lty=2)
   error = ifelse(error_type=="mae", 
                  mean(abs(predictions-y_actual)), mean((predictions-y_actual)^2))
@@ -140,7 +153,6 @@ getBenchmarkResults=function(y_name="orders_rcvd", model_predictions, h=6,
   
   results[['line_modelX']] = predictions
   results[['error_modelX']] = error
-  
   
   legend("topleft", lwd=2, lty=2, col=c(2,3,4,5,9),
          legend=c("Mean","Naive","Seasonal Naive","Drift","ModelX"))
@@ -192,12 +204,17 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
         }
         
       }
+      
+      last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
+      valid_start_ym = format(last_ym - (h/12) + (1/12),"%Y-%m")
+      valid_start_ym = as.numeric(unlist(strsplit(valid_start_ym,"-")))
+      
       lwr = ts(fit_forecast[['forecast']][,'lwr'], frequency=12, 
-         start=product_last_year_index+((12-h)/12))
+         start=valid_start_ym)
       lines(lwr, lwd=1, lty=3, col=45)
       
       upr = ts(fit_forecast[['forecast']][,'upr'], frequency=12, 
-               start=product_last_year_index+((12-h)/12))
+               start=valid_start_ym)
       lines(upr, lwd=1, lty=3, col=45)
       
       legend("topleft", lwd=2, lty=2, col=colors, legend=models)

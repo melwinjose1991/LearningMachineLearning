@@ -5,16 +5,15 @@ data_folder = paste0("../../Data")
 data_folders_to_skip = c("External Data")
 
 products = vector('character')
-product_line = "2401" # default
+product_line = "1234"
 product_start_date = vector('integer')
 product_end_date = vector('integer')
 product_last_year_index = 0
 product_data = vector('numeric')
-product_data_column = "orders_rcvd"
+product_data_column = "1234"
 product_data_obeservations = 48
 columns_to_skip = c("period_id", "month", "year", "month_str", "t")
-
-
+product_code_mapping = list("2401"="2401 - DTR", "2404"="2404 - SPT")
 
 
 ## UI Elements
@@ -63,7 +62,7 @@ getProductTabPanel = function(product){
   button_select_product = actionButton(button_select_product_id, "Select")
   row_4 = fluidRow(button_select_product)
   
-  tabPanel(title=product, row_1, row_2, row_3, row_4)
+  tabPanel(title=product_code_mapping[[product]], row_1, row_2, row_3, row_4)
   
 }
 
