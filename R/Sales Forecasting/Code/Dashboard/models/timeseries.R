@@ -65,16 +65,14 @@ getTimeSeriesUI = function(){
 
 
 ## Server Function
-buildSTLModel = function(h=6, forecast_method="naive"){
+buildSTLModel = function(train, h=6, forecast_method="naive"){
   
   t.windows = 1:15
   s.windows = c(7,9,11,13)
   maes = vector('numeric')
   configs_t = vector('numeric')
   configs_s = vector('numeric')
-  data_ts = ts(product_data, frequency=12)
-  
-  window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))  
+  window_ts = train
   
   for(s.window in s.windows){
     for(t.window in t.windows){
@@ -92,7 +90,7 @@ buildSTLModel = function(h=6, forecast_method="naive"){
       # plot(forecast)
       # print(forecast$mean)
       
-      mae = mean(abs(tail(data_ts,n=h)-forecast$mean))
+      mae = mean(abs(c(tail(train,n=h))-forecast$mean))
       maes = c(maes, mae)
       
       configs_t = c(configs_t, t.window)
@@ -113,44 +111,47 @@ buildSTLModel = function(h=6, forecast_method="naive"){
     forecast = forecast(fit, method="naive", h=h)
   }
   plot(forecast)
-  mae = mean(abs(tail(data_ts,n=h)-forecast$mean))
+  mae = mean(abs(c(tail(train,n=h))-forecast$mean))
   
   list(forecast_fit=forecast, error=mae)
 }
 
-doSES = function(h=6){
+doSES = function(train, h=6){
   print(paste0("Models :: Time-Series :: doSES() :: START"))
   
-  data_ts = ts(product_data, frequency=12)
-  window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))  
+  # data_ts = ts(product_data, frequency=12)
+  # window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))  
+  window_ts = train
   fit = ses(window_ts, initial="simple", h=h)
-  mae = mean(abs(tail(data_ts,n=h)-fit$mean))
+  mae = mean(abs(c(tail(train,n=h))-c(fit$mean)))
   
   print(paste0("Models :: Time-Series :: doSES() :: DONE"))
   list(forecast_fit=fit, error=mae)
 }
 
-doHolts = function(h=6, damped=FALSE, t_multiplicative=FALSE){
+doHolts = function(train, h=6, damped=FALSE, t_multiplicative=FALSE){
   print(paste0("Models :: Time-Series :: doHolts() :: START"))
   
-  data_ts = ts(product_data, frequency=12)
-  window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
+  # data_ts = ts(product_data, frequency=12)
+  # window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
+  windows_ts = train
   fit = holt(window_ts, h=h, damped=damped, 
              exponential=t_multiplicative)
   #plot(data_ts)
   #lines(fit$fitted, col="red", lwd=2, lty=2)
   #lines(fit$mean, col="green", lwd=2, lty=2)
-  mae = mean(abs(tail(data_ts,n=h)-fit$mean))
+  mae = mean(abs(c(tail(train,n=h))-c(fit$mean)))
 
   print(paste0("Models :: Time-Series :: doHolts() :: DONE"))
   list(forecast_fit=fit, error=mae)
 }
 
-doHW = function(h=6, seasonal="additive", damped=FALSE, t_multiplicative=FALSE){
+doHW = function(train, h=6, seasonal="additive", damped=FALSE, t_multiplicative=FALSE){
   print(paste0("Models :: Time-Series :: doHW() :: START"))
   
-  data_ts = ts(product_data, frequency=12)
-  window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
+  #data_ts = ts(product_data, frequency=12)
+  #window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
+  window_ts = train
   fit = hw(window_ts, h=h, seasonal=seasonal,
                         damped=damped, 
                         exponential=t_multiplicative)
@@ -158,54 +159,54 @@ doHW = function(h=6, seasonal="additive", damped=FALSE, t_multiplicative=FALSE){
   #lines(fit_multi_damped$fitted, col="red", lwd=2, lty=2)
   #lines(fit_multi_damped$mean, col="green", lwd=2, lty=2)
   #train_mae = mean(abs(fit_multi_damped$residuals))
-  mae = mean(abs(tail(data_ts,n=h)-fit$mean))
+  mae = mean(abs(c(tail(train,n=h)-c(fit$mean))))
   
   print(paste0("Models :: Time-Series :: doHW() :: DONE"))
   list(forecast_fit=fit, error=mae)
 }
 
-getBestNonArimaModelError = function(h=6){
+getBestNonArimaModelError = function(train, h=6){
   print(paste0("Models :: Time-Series :: getBestNonArimaModelError() :: START"))
   
   best_error = vector('numeric')
   
-  result_ses = doSES(h)
+  result_ses = doSES(train, h)
   best_error = c(best_error, result_ses[['error']])
   
   ## Holts  
-  result_holts = doHolts(h, damped=FALSE, t_multiplicative=FALSE)
+  result_holts = doHolts(train, h, damped=FALSE, t_multiplicative=FALSE)
   best_error = c(best_error, result_holts[['error']])
   
-  result_holts_m = doHolts(h, damped=FALSE, t_multiplicative=TRUE)
+  result_holts_m = doHolts(train, h, damped=FALSE, t_multiplicative=TRUE)
   best_error = c(best_error, result_holts_m[['error']])
   
-  result_holts_d = doHolts(h, damped=TRUE, t_multiplicative=FALSE)
+  result_holts_d = doHolts(train, h, damped=TRUE, t_multiplicative=FALSE)
   best_error = c(best_error, result_holts_d[['error']])
   
-  result_holts_dm = doHolts(h, damped=TRUE, t_multiplicative=TRUE)
+  result_holts_dm = doHolts(train, h, damped=TRUE, t_multiplicative=TRUE)
   best_error = c(best_error, result_holts_dm[['error']])
   
   ## Holt's Winters
-  result_hw_a = doHW(h, seasonal="additive", damped=FALSE, t_multiplicative=FALSE)
+  result_hw_a = doHW(train, h, seasonal="additive", damped=FALSE, t_multiplicative=FALSE)
   best_error = c(best_error, result_hw_a[['error']])
   
-  #result_hw_am = doHW(h, seasonal="additive", damped=FALSE, t_multiplicative=TRUE)
+  #result_hw_am = doHW(train, h, seasonal="additive", damped=FALSE, t_multiplicative=TRUE)
   
-  result_hw_ad = doHW(h, seasonal="additive", damped=TRUE, t_multiplicative=FALSE)
+  result_hw_ad = doHW(train, h, seasonal="additive", damped=TRUE, t_multiplicative=FALSE)
   best_error = c(best_error, result_hw_ad[['error']])
   
-  #result_hw_adm = doHW(h, seasonal="additive", damped=TRUE, t_multiplicative=TRUE)
+  #result_hw_adm = doHW(train, h, seasonal="additive", damped=TRUE, t_multiplicative=TRUE)
   
-  result_hw_x = doHW(h, seasonal="multiplicative", damped=FALSE, t_multiplicative=FALSE)
+  result_hw_x = doHW(train, h, seasonal="multiplicative", damped=FALSE, t_multiplicative=FALSE)
   best_error = c(best_error, result_hw_x[['error']])
   
-  result_hw_xm = doHW(h, seasonal="multiplicative", damped=FALSE, t_multiplicative=TRUE)
+  result_hw_xm = doHW(train, h, seasonal="multiplicative", damped=FALSE, t_multiplicative=TRUE)
   best_error = c(best_error, result_hw_xm[['error']])
   
-  result_hw_xd = doHW(h, seasonal="multiplicative", damped=TRUE, t_multiplicative=FALSE)
+  result_hw_xd = doHW(train, h, seasonal="multiplicative", damped=TRUE, t_multiplicative=FALSE)
   best_error = c(best_error, result_hw_xd[['error']])
   
-  result_hw_xdm = doHW(h, seasonal="multiplicative", damped=TRUE, t_multiplicative=TRUE)
+  result_hw_xdm = doHW(train, h, seasonal="multiplicative", damped=TRUE, t_multiplicative=TRUE)
   best_error = c(best_error, result_hw_xdm[['error']])
 
   print(paste0("Models :: Time-Series :: getBestNonArimaModelError() :: END"))
@@ -227,12 +228,20 @@ getBestNonArimaModelError = function(h=6){
   
 }
 
-doAutoARIMA = function(h=12, use_box_cox=FALSE, seasonal=TRUE){
+tailForecast = function(pred, n=24){
+  pred$x = tail(pred$x, n)
+  pred$fitted = tail(pred$fitted, n)
+  pred$residuals = tail(pred$residuals, n)
+  pred
+}
+
+doAutoARIMA = function(train, h=12, use_box_cox=FALSE, seasonal=TRUE){
   print(paste0("Models :: Time-Series :: doAutoARIMA :: START"))
   #use_box_cox = FALSE
   #seasonal = TRUE
   
-  data_ts = ts(product_data, frequency=12)
+  data_ts = ts(product_data, frequency=12, 
+               start=product_start_date, end=product_end_date)
   
   if(use_box_cox==TRUE){
     lambda = BoxCox.lambda(data_ts)
@@ -243,12 +252,16 @@ doAutoARIMA = function(h=12, use_box_cox=FALSE, seasonal=TRUE){
   }
   #plot(data_ts_star)
   
-  train_window = window(data_ts_star, end=13+((12-(h+1))/12))  
-  arima_model = auto.arima(train_window,seasonal=seasonal, 
+  last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
+  train_end_ym = format(last_ym - (h/12),"%Y-%m")
+  train_end_ym = as.numeric(unlist(strsplit(train_end_ym,"-")))
+  train_window = window(data_ts_star, end=train_end_ym)  
+  
+  arima_model = auto.arima(train, seasonal=seasonal, 
                            stepwise=FALSE, approximation=FALSE)
   arima_model
   pred = forecast(arima_model, h=h)
-  #plot(pred)
+  # plot(pred)
   
   if(use_box_cox==TRUE){
     train_mae = mean(abs(lambda^arima_model$fitted - data_ts[1:(length(data_ts)-h)]))
@@ -288,22 +301,40 @@ attachTimeSeriesObservers = function(input, output){
     h = input[[paste0(timeseries_prefix, "h")]]
     id = paste0(timeseries_prefix, "method")
     
+    data_ts = ts(product_data, frequency=12, 
+                 start=product_start_date, end=product_end_date)
+    
+    last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
+    train_end_ym = format(last_ym - (h/12),"%Y-%m")
+    train_end_ym = as.numeric(unlist(strsplit(train_end_ym,"-")))
+    train = window(data_ts, end=train_end_ym)  
+    
     if(input[[id]]=="decompose-naive"){
-      result = buildSTLModel(h=h, forecast_method="naive")
+      result = buildSTLModel(train, h=h, forecast_method="naive")
       
     }else if(input[[id]]=="decompose-snaive"){  
-      result = buildSTLModel(h=h, forecast_method="snaive")
+      result = buildSTLModel(train, h=h, forecast_method="snaive")
       
     }else if(input[[id]]=="non-arima"){
-      result = getBestNonArimaModelError(h=h)
+      result = getBestNonArimaModelError(train, h=h)
       
     }else if(input[[id]]=="arima"){
-      result = doAutoARIMA(h)
+      result = doAutoARIMA(train, h)
     }
     
     id = paste0(timeseries_prefix, "forecastPlot")
     output[[id]] = renderPlot({
-      plot(result[['forecast_fit']])
+      last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
+      
+      preview_start_ym = format(last_ym - ((2*h)/12),"%Y-%m")
+      preview_start_ym = as.numeric(unlist(strsplit(preview_start_ym,"-")))
+      preview_window = window(t, start=preview_start_ym)
+      
+      tailed_results = tailForecast(result[['forecast_fit']], h*2)
+      plot(preview_window)
+      lines(tailed_results$mean, col=50, lwd=3, lty=2)
+      lines(tailed_results$lower[,2], col=45, lwd=3, lty=3)
+      lines(tailed_results$upper[,2], col=45, lwd=3, lty=3)
     })
     
     id = paste0(timeseries_prefix, "forecastSummary")
