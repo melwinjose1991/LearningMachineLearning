@@ -1,10 +1,16 @@
 ## Globals
 forecast_prefix = paste0(forecast_tab_prefix, "forecast_")
+no_of_forecast = 3
 
 
 
 ## UI Elements
 getForecastUI = function(){
+  
+  # row 0 - ARIMA options
+  id = paste0(forecast_prefix, "fastARIMA")
+  checkbox_fast_arima = checkboxInput(id, "FAST-ARIMA", TRUE)
+  row_0 = fluidRow(column(6, checkbox_fast_arima))
   
   # row 1 - variables
   text_variables = tags$h4("Variables")
@@ -18,9 +24,7 @@ getForecastUI = function(){
                           output_var_info_graph, output_var_info_summary)
   column_var_info = column(width=5, rows_var_info)
   
-  row_1 = fluidRow(column_var_name,
-                   column_var_info
-                   )
+  row_1 = fluidRow(column_var_name, column_var_info)
   
   # row 2 - Buttons
   button_forecast_id = paste0(forecast_prefix, "buttonForecast")
@@ -38,8 +42,7 @@ getForecastUI = function(){
   # row 4 - ???
   row_4 = fluidRow()
   
-  # 
-  tabPanel(title = "Forecast", row_1, tags$hr(), row_2, row_3, row_4)
+  tabPanel(title = "Forecast", row_0, row_1, tags$hr(), row_2, row_3, row_4)
   
 }
 
@@ -51,18 +54,20 @@ createForecastVariableTable = function(variables, input, output, session){
   print(paste0("forecast :: createForecastVariableTable :: START"))
   
   column_width_var_name = 4
-  column_width_graph = 6
   column_width_var_value = 2
-  column_width_method = 3
+  column_width_method = 2
   column_width_params = 2
     
+  cols_forecast_periods_header = lapply(1:no_of_forecast, function(i){
+    tag_name = paste0("month-",i)
+    
+    column(width=column_width_var_value, tags$h5(tag_name))
+  })
+  
   vars_titles = list(
     fluidRow(
       column(width=column_width_var_name, tags$h5("Variable")),
-      #column(width=column_width_graph, tags$h5("Graph")),
-      column(width=column_width_var_value, tags$h5("Value")),
-      column(width=column_width_method, tags$h5("Method")),
-      column(width=column_width_params, tags$h5("Params"))
+      cols_forecast_periods_header
     )
   )
   
@@ -80,10 +85,6 @@ createForecastVariableTable = function(variables, input, output, session){
     
     if(is_var_numerical){
       
-      # Value to use
-      var_value_id = paste0(var_id, "|value")
-      input_text_var_value = textInput(var_value_id, label=NULL, placeholder="Enter or Select")
-      
       # Info Button
       input_button_var_info_id = paste0(var_id, "|infoButton")
       input_button_var_info = actionButton(input_button_var_info_id, label="",
@@ -94,12 +95,19 @@ createForecastVariableTable = function(variables, input, output, session){
         output[[var_name_id]] = renderUI({ list(tags$h5(var)) })
         
         series = getSeries(var)
+        series_ts = ts(series, frequency=12, 
+                     start=product_start_date, end=product_end_date)
+        fast_arima = input[[paste0(forecast_prefix, "fastARIMA")]]
+        var_forecast = doAutoARIMA(series_ts, no_of_forecast, 
+                                   stepwise=fast_arima, approximation=fast_arima)
         
+        # plotting graph
         graph_id = paste0(forecast_prefix, "varInfoGraph") 
         output[[graph_id]] = renderPlot(
-          plot(ts(series, frequency=12, start=product_start_date), xlab="", ylab="")
+          plot(var_forecast[['forecast_fit']])
         )
         
+        # populating summary
         summary_id = paste0(forecast_prefix, "varInfoSummary") 
         summ = summary(series)
         summ_cols = names(summ)
@@ -107,52 +115,29 @@ createForecastVariableTable = function(variables, input, output, session){
           paste0(summ_cols,"=",summ," | ")
         )
         
+        # populating values
+        lapply(1:no_of_forecast, function(i){
+          var_value_id = paste0(var_id, "|value|",i)
+          value = var_forecast[['forecast_fit']]$mean[i]
+          updateTextInput(session, var_value_id, value=value)
+        })
+        
       })
       
       div_var_name_info = tags$div(output_var_name, input_button_var_info)
       
-      # Method
-      var_method_id = paste0(var_id, "|method")
-      input_select_method = selectInput(var_method_id, label=NULL, 
-                                    c("User Entered" = "user",
-                                      "Use Mean" = "mean",
-                                      "Use Last Value" = "last_value",
-                                      "Time-Series x" = "time_series"
-                                    ))
-  
-      observeEvent(input[[var_method_id]], {
-        variable_id = unlist(strsplit(var_method_id,"\\|"))[2]
-        var_series = getSeries(variable_id)
-        print(paste0("forecast :: createForecastVariableTable :: triggered var ",variable_id))      
+      # Value For Forecast periods
+      cols_forecast_periods_values = lapply(1:no_of_forecast, function(i){
+        var_value_id = paste0(var_id, "|value|",i)
+        input_text_var_value = textInput(var_value_id, label=NULL)
         
-        method = input[[var_method_id]]
-        print(paste0("forecast :: createForecastVariableTable :: method=",method))
-        if(method=="user"){
-          value = input[[var_value_id]]
-        }else if(method=="mean"){
-          value = mean(var_series)
-        }else if(method=="last_value"){
-          value = tail(var_series, n=1)
-        }else{
-          value = 0
-        }
-        print(paste0("forecast :: createForecastVariableTable :: value=",value))
-        
-        var_value_id = paste0(forecast_prefix, "varId|", variable_id, "|value")
-        updateTextInput(session, var_value_id, value=value)
+        column(width=column_width_var_value, input_text_var_value)
       })
-      
-      # Method Params
-      var_method_params_id = paste0(var_id, "|parameters")
-      input_method_params = tags$div(id=var_method_params_id, "params")
       
       # Rows
       fluidRow(
         column(width=column_width_var_name, div_var_name_info),
-        #column(width=column_width_graph, output_var_info_icon),
-        column(width=column_width_var_value, input_text_var_value),
-        column(width=column_width_method, input_select_method),
-        column(width=column_width_params, input_method_params)
+        cols_forecast_periods_values
       )
       
     }else{
@@ -160,13 +145,16 @@ createForecastVariableTable = function(variables, input, output, session){
       # Value to use
       # NOTE : need to generalized to categorical variables with 
       #        more number of values
-      var_value_id = paste0(var_id, "|value")
-      input_select_var_value = checkboxInput(var_value_id, label=NULL)
+      cols_forecast_periods_values = lapply(1:no_of_forecast, function(i){
+        var_value_id = paste0(var_id, "|value|",i)
+        input_select_var_value = checkboxInput(var_value_id, label=NULL)
+        
+        column(width=column_width_var_value, input_select_var_value)
+      })
       
       fluidRow(
         column(width=column_width_var_name, output_var_name),
-        #column(width=column_width_graph),
-        column(width=column_width_var_value, input_select_var_value)
+        cols_forecast_periods_values
       )
       
     }
@@ -221,11 +209,9 @@ getForecastResults=function(y_name="orders_rcvd", forecast_model, input_variable
   data = read.csv(revenue_file, header = TRUE, sep = ",")
   y = data[,y_name]
 
-  t = ts(c(y, rep(NA,h)), frequency=12)
-  plot(t)
-  results = list(t=t)
-  t_window = window(t, end=4.999)
-  t_window
+  t_window = ts(c(y, rep(NA,h)), frequency=12, start=product_start_date)
+  plot(t_window)
+  results = list(t=t_window)
   
   ## Average Method
   if(mean_model){
@@ -260,18 +246,22 @@ getForecastResults=function(y_name="orders_rcvd", forecast_model, input_variable
   }
   
   # Predictions by your model
+  last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
+  forecast_start_ym = format(last_ym + (1/12),"%Y-%m")
+  forecast_start_ym = as.numeric(unlist(strsplit(forecast_start_ym,"-")))
+  
   pred = predict(forecast_model, newdata=input_variables, interval="predict")
   
-  predictions = c(tail(y,n=1), pred[,1])
-  predictions = ts(predictions, frequency = 12, start=5-0.0833)
+  predictions = pred[,1]
+  predictions = ts(predictions, frequency = 12, start=forecast_start_ym)
   lines(predictions, col=6, lwd=2, lty=2)
   print(predictions)
   
-  predictions_lwr = ts(c(pred[,2],pred[,2]), frequency=12, start=5)
+  predictions_lwr = ts(pred[,2], frequency=12, start=forecast_start_ym)
   lines(predictions_lwr, col=6, lwd=2, lty=2)
   print(predictions_lwr)
   
-  predictions_upr = ts(c(pred[,3],pred[,3]), frequency=12, start=5)
+  predictions_upr = ts(pred[,3], frequency=12, start=forecast_start_ym)
   lines(predictions_upr, col=6, lwd=2, lty=2)
   print(predictions_upr)
   

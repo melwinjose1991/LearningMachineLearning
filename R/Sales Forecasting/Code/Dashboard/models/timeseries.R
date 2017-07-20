@@ -5,7 +5,7 @@ library(tseries)
 
 ## Globals
 timeseries_prefix = paste0(models_prefix, "timeseries_")
-
+preview_multiplier = 3
 
 
 ## UI Elements
@@ -134,7 +134,7 @@ doHolts = function(train, h=6, damped=FALSE, t_multiplicative=FALSE){
   
   # data_ts = ts(product_data, frequency=12)
   # window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
-  windows_ts = train
+  window_ts = train
   fit = holt(window_ts, h=h, damped=damped, 
              exponential=t_multiplicative)
   #plot(data_ts)
@@ -235,7 +235,8 @@ tailForecast = function(pred, n=24){
   pred
 }
 
-doAutoARIMA = function(train, h=12, use_box_cox=FALSE, seasonal=TRUE){
+doAutoARIMA = function(train, h=12, use_box_cox=FALSE, 
+                       seasonal=TRUE, stepwise=TRUE, approximation=TRUE){
   print(paste0("Models :: Time-Series :: doAutoARIMA :: START"))
   #use_box_cox = FALSE
   #seasonal = TRUE
@@ -258,7 +259,7 @@ doAutoARIMA = function(train, h=12, use_box_cox=FALSE, seasonal=TRUE){
   train_window = window(data_ts_star, end=train_end_ym)  
   
   arima_model = auto.arima(train, seasonal=seasonal, 
-                           stepwise=FALSE, approximation=FALSE)
+                           stepwise=stepwise, approximation=approximation)
   arima_model
   pred = forecast(arima_model, h=h)
   # plot(pred)
@@ -268,7 +269,7 @@ doAutoARIMA = function(train, h=12, use_box_cox=FALSE, seasonal=TRUE){
     valid_mae = mean(abs(tail(data_ts,n=h)-lambda^pred$mean))
   }else{
     train_mae = mean(abs(arima_model$residuals))
-    valid_mae = mean(abs(tail(data_ts,n=h)-pred$mean))
+    valid_mae = mean(abs(c(tail(data_ts,n=h))-c(pred$mean)))
   }
   print(paste0("train-mae:",train_mae," | valid-mae:",valid_mae))
   
@@ -326,12 +327,17 @@ attachTimeSeriesObservers = function(input, output){
     output[[id]] = renderPlot({
       last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
       
-      preview_start_ym = format(last_ym - ((2*h)/12),"%Y-%m")
+      preview_start_ym = format(last_ym - ((preview_multiplier*h)/12),"%Y-%m")
       preview_start_ym = as.numeric(unlist(strsplit(preview_start_ym,"-")))
-      preview_window = window(t, start=preview_start_ym)
+      preview_window = window(data_ts, start=preview_start_ym)
       
       tailed_results = tailForecast(result[['forecast_fit']], h*2)
-      plot(preview_window)
+      
+      all_points = c(tailed_results$mean, preview_window,
+                     tailed_results$upper[,2], tailed_results$lower[,2])
+      y_range = c(min(all_points), max(all_points))
+      
+      plot(preview_window, ylim=y_range)
       lines(tailed_results$mean, col=50, lwd=3, lty=2)
       lines(tailed_results$lower[,2], col=45, lwd=3, lty=3)
       lines(tailed_results$upper[,2], col=45, lwd=3, lty=3)
