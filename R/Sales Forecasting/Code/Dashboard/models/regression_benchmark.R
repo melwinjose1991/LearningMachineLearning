@@ -187,7 +187,18 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
     output_graph_benchmark = paste0(benchmark_prefix, "graphBenchmark")
     output[[output_graph_benchmark]] = renderPlot({
       
-      plot(results[["t"]])
+      last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
+      valid_start_ym = format(last_ym - (h/12) + (1/12),"%Y-%m")
+      valid_start_ym = as.numeric(unlist(strsplit(valid_start_ym,"-")))
+      
+      lwr = ts(fit_forecast[['forecast']][,'lwr'], frequency=12, 
+               start=valid_start_ym)
+      
+      upr = ts(fit_forecast[['forecast']][,'upr'], frequency=12, 
+               start=valid_start_ym)
+      
+      y_values = c(results[["t"]], lwr, upr)
+      plot(results[["t"]], ylim=c(min(y_values), max(y_values)))
       
       models = vector('character')
       colors = c(2,3,4,5,9)
@@ -204,17 +215,7 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
         }
         
       }
-      
-      last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
-      valid_start_ym = format(last_ym - (h/12) + (1/12),"%Y-%m")
-      valid_start_ym = as.numeric(unlist(strsplit(valid_start_ym,"-")))
-      
-      lwr = ts(fit_forecast[['forecast']][,'lwr'], frequency=12, 
-         start=valid_start_ym)
       lines(lwr, lwd=1, lty=3, col=45)
-      
-      upr = ts(fit_forecast[['forecast']][,'upr'], frequency=12, 
-               start=valid_start_ym)
       lines(upr, lwd=1, lty=3, col=45)
       
       legend("topleft", lwd=2, lty=2, col=colors, legend=models)

@@ -42,7 +42,7 @@ getForecastUI = function(){
   # row 4 - ???
   row_4 = fluidRow()
   
-  tabPanel(title = "Forecast", row_0, row_1, tags$hr(), row_2, row_3, row_4)
+  tabPanel(title = "LRegression", row_0, row_1, tags$hr(), row_2, row_3, row_4)
   
 }
 
