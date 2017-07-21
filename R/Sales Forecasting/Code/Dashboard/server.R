@@ -68,13 +68,14 @@ server = function(input, output, session) {
     output_regression_graph_5 = paste0(regression_prefix, "graphObservedVsFitted")
     output[[output_regression_graph_5]] = renderPlot({
       
-      obs_to_exclude = input[[paste0(products_prefix, product, "|avoid")]]
+      obs_to_exclude = input[[paste0(products_prefix, product_line, "|avoid")]]
       obs_to_exclude = unlist(strsplit(obs_to_exclude,","))
       obs_to_exclude = as.numeric(obs_to_exclude)
       use_rows = setdiff(1:length(product_data), obs_to_exclude)
       
       plot(product_data[use_rows], fit[["regression"]]$fitted.values,
            xlab="Actuals", ylab="Fitted" )
+      lines(product_data[use_rows], product_data[use_rows])
     })
     
     fillVariableTable(session, fit[['regression']])

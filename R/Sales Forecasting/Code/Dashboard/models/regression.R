@@ -232,7 +232,7 @@ doRegression = function(input, selected_vars, y_name, h=0) {
 
   if(h==0){
     
-    obs_to_exclude = input[[paste0(products_prefix, product, "|avoid")]]
+    obs_to_exclude = input[[paste0(products_prefix, product_line, "|avoid")]]
     obs_to_exclude = as.numeric(unlist(strsplit(obs_to_exclude,",")))
     use_rows = setdiff(1:nrow(data), obs_to_exclude)
     
