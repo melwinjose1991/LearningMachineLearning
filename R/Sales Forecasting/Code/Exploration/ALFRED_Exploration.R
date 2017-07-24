@@ -192,6 +192,34 @@ while(1){
 }
 
 
+# Cluster Analysis
+data_num_var = data[,!names(data) %in% c("month","orders_rcvd","t")]
+c = cor(scale(data_num_var))
+c
+
+a = abs(c)
+a
+
+d = dist(a)
+d
+
+h = hclust(d, method = "single")
+h
+
+plot(h)
+
+cuts = cutree(h, h=0.75)
+cuts
+dim(data_num_var)[2] - max(cuts)
+sort(table(cuts))
+
+in_cluster = names(cuts[cuts==53])
+config_data[config_data$series_id %in% in_cluster, "title"]
+
+cor(data_num_var[,in_cluster])
+
+
+
 ## Parameters
 no_vars = dim(data.new)[2]/10
 method = "forward" # exhaustive, forward
