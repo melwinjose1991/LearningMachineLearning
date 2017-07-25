@@ -259,6 +259,8 @@ doLASSO = function(data, input, output, session) {
 
 getLASSOModels = function(data, input, output, session, cv.l2.fit){
   
+  alpha = as.numeric(input[[paste0(feature_selection_prefix, "alpha")]])
+  
   form = as.formula(paste0(product_data_column," ~ ."))
   x = model.matrix(form, data)[, -1]
   y = data[,product_data_column]
@@ -267,7 +269,7 @@ getLASSOModels = function(data, input, output, session, cv.l2.fit){
   best_lambda = cv.l2.fit$lambda.min
   best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
   best_error = cv.l2.fit$cvm[best_lambda_index]
-  best_fit = glmnet(x, y, alpha = 1, lambda = best_lambda)
+  best_fit = glmnet(x, y, alpha=alpha, lambda=best_lambda)
   best_coefs = coef(best_fit)[, 1]
   best_coefs = best_coefs[best_coefs != 0]
   print(best_coefs)
@@ -276,7 +278,7 @@ getLASSOModels = function(data, input, output, session, cv.l2.fit){
   simple_lambda = cv.l2.fit$lambda.1se
   simple_lambda_index = match(simple_lambda, simple_lambda)
   simple_error = cv.l2.fit$cvm[simple_lambda_index]
-  simple_fit = glmnet(x, y, alpha = 1, lambda = simple_lambda)
+  simple_fit = glmnet(x, y, alpha=alpha, lambda=simple_lambda)
   simple_coefs = coef(simple_fit)[, 1]
   simple_coefs = simple_coefs[simple_coefs != 0]
   print(simple_coefs)
