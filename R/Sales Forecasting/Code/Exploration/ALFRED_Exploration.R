@@ -193,7 +193,7 @@ while(1){
 
 
 # Cluster Analysis
-data_num_var = data[,!names(data) %in% c("month","orders_rcvd","t")]
+data_num_var = data.new[,!names(data.new) %in% c("month","orders_rcvd","t")]
 c = cor(scale(data_num_var))
 c
 
@@ -208,15 +208,30 @@ h
 
 plot(h)
 
-cuts = cutree(h, h=0.75)
+cuts = cutree(h, h=0.60)
 cuts
 dim(data_num_var)[2] - max(cuts)
 sort(table(cuts))
 
-in_cluster = names(cuts[cuts==53])
+in_cluster = names(cuts[cuts==275])
 config_data[config_data$series_id %in% in_cluster, "title"]
 
 cor(data_num_var[,in_cluster])
+
+clusters_numbers = as.numeric(names(which(table(cuts)>1)))
+
+remove_cols_ids = vector('character')
+for(cluster_no in unique(clusters_numbers)){
+  #print(names(cuts[cuts == cluster_no]))
+  remove_cols_id = names(cuts[cuts == cluster_no])
+  print(config_data[config_data$series_id %in% remove_cols_id, "title"])
+  remove_cols_ids = c(remove_cols_ids, tail(remove_cols_id, n=length(remove_cols_id)-1))
+  print("=================")
+}
+
+dim(data.new)
+data.new = data.new[, !names(data.new) %in% remove_cols_ids]
+dim(data.new)
 
 
 
@@ -275,21 +290,26 @@ x = model.matrix(form, data.new)
 colnames(x)
 y = data.new[,y_name]
 
-cv.l2.fit = cv.glmnet(x, y, alpha=1, type.measure="mae", lambda=grid, nfolds=12)
-plot(cv.l2.fit)
+for(alpha in c(1)){
+  
+  cv.l2.fit = cv.glmnet(x, y, alpha=alpha, type.measure="mae", lambda=grid, nfolds=48)
+  #plot(cv.l2.fit)
+  
+  ## best model
+  best_lambda = cv.l2.fit$lambda.min
+  best_lambda
+  best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
+  best_lambda_index
+  
+  print(cv.l2.fit$cvm[best_lambda_index])
+  
+}
 
-## best model
-best_lambda = cv.l2.fit$lambda.min
-best_lambda
-best_lambda_index = match(best_lambda, cv.l2.fit$lambda)
-best_lambda_index
 
-cv.l2.fit$cvm[best_lambda_index]
-
-l2.fit = glmnet(x, y, alpha=1, lambda=best_lambda)
+l2.fit = glmnet(x, y, alpha=alpha, lambda=best_lambda)
 coefs = coef(l2.fit)[,1]
 coefs[coefs!=0]
-names(coefs[coefs!=0])
+lasso_x = names(coefs[coefs!=0])[-1]
 
 ## simpler model with 1SE
 simple_lambda = cv.l2.fit$lambda.1se
@@ -318,7 +338,7 @@ df[,y_name] = data.new[,y_name]
 #df[,y_t_name] = transformed
 names(df)
 
-which(abs(stdres(lm_fit))>3)
+#which(abs(stdres(lm_fit))>3)
 outliers = c(36,37,48,84,57,156,27,96,140)
 use_rows = setdiff(1:nrow(df), outliers)
 

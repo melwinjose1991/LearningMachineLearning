@@ -39,6 +39,9 @@ fit = glmnet(x, Y, alpha=1, lambda=grid)
 plot(fit)
 
 
+
+### Techniques to cluster correlated variables ###
+
 ## HClust
 X1 = rnorm(100, sd=10)
 X2 = createVarWithCorr(X1, 0.99)
@@ -53,10 +56,8 @@ X7 = X5 + X6
 cor(X7, X5)
 cor(X7, X6)
 
-cor(X4, X6)
-
-x = as.matrix(data.frame(x1=X1, x2=X2, x3=X3, x4=X4, x5=X5,
-                         x6=X6, x7=X7))
+x = as.matrix(data.frame(x1=X1, x2=X2, x3=X3, x4=X4, x5=X5, x6=X6, x7=X7))
+#x = as.matrix(data.frame(x2=X2, x1=X1, x3=X3, x4=X4, x5=X5, x6=X6, x7=X7))
 
 c = cor(scale(x))
 c
@@ -72,4 +73,34 @@ h
 
 plot(h)
 
-cutree(h, h=0.5)
+cuts = cutree(h, h=0.5)
+cuts
+sort(table(cuts))
+
+
+
+# PCA
+pca = prcomp(x, scale.=TRUE, center=TRUE)
+plot(pca, type="l")
+summary(pca)
+pca$rotation
+
+
+
+# LASSO
+x = as.matrix(data.frame(x1=X1, x2=X2, x3=X3, x4=X4, x5=X5, x6=X6, x7=X7))
+# x = as.matrix(data.frame(x1=X1, x3=X3, x4=X4, x5=X5, x6=X6))
+# x = as.matrix(data.frame(x2=X2, x3=X3, x4=X4, x7=X7, x6=X6))
+Y = X1 + X5 + rnorm(length(X1))
+
+for(alpha in c(0, 0.25, 0.50, 0.75, 1)){
+  grid = 2.71828 ^ seq(-100, 1, length = 1000)
+  cv_fit = cv.glmnet(x, Y, nfolds = 25, alpha=alpha, lambda=grid)
+  #plot(cv_fit)
+  print(cv_fit$cvm[which.min(cv_fit$lambda)])
+  #coef(cv_fit, s="lambda.min")
+
+}
+
+fit = glmnet(x, Y, alpha=1, lambda=grid)
+plot(fit, label=TRUE)
