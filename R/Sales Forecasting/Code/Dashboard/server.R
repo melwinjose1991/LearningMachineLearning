@@ -15,6 +15,9 @@ server = function(input, output, session) {
   ### Feature Selection > Features
   populateFeatures(input, output, session)
 
+  ## Feature Selection > Feature Clusters
+  attachFeatureClustersObservers(input, output, session)
+  
   ### Feature Selection > Feature Selection
   attachObservers(input, output, session, reactive_vars)
   
