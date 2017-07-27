@@ -59,7 +59,7 @@ getRegressionBenchmarkUI = function(){
   output_summary_benchmark = uiOutput(id)
   row_3 = fluidRow(output_summary_benchmark)
   
-  tabPanel(title = "Regression Benchmark", row_1, row_2, row_3)
+  tabPanel(title = "LRegression Benchmark", row_1, row_2, row_3)
   
 }
 
@@ -174,7 +174,7 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
     drift_model = input[[paste0(benchmark_prefix,"methodId|drift")]]
     error_type = input[[paste0(benchmark_prefix,"selectErrorType")]]
     
-    fit_forecast = doRegression(input, reactive_vars[['selected_vars']], 
+    fit_forecast = doRegression(input, reactive_vars[[MODEL_LINEAR_REGRESSION_VARS]], 
                                 product_data_column, h=h)
     
     results = getBenchmarkResults(model_predictions=fit_forecast[['forecast']][,'fit'], 

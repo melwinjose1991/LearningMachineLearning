@@ -4,8 +4,8 @@ library(ggplot2)
 
 if(TRUE){
 
-#product = "2401"
-
+source("const.R")
+  
 source("products/main.R")
 source("extract data/main.R")
 source("feature selection/main.R")

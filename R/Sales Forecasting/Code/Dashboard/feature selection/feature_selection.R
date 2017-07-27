@@ -111,11 +111,6 @@ initFeatureSelectionUI = function() {
   output_coefs = uiOutput(paste0(feature_selection_prefix, "outputLASSOSummary"))
   row_4 = fluidRow(output_coefs)
   
-  # row 5
-  # button_select_them = actionButton(paste0(feature_selection_prefix, "buttonSelectThem"),
-  #                                  label = "Select Them")
-  # row_5 = fluidRow(button_select_them)
-  
   tabFeatureSelection = tabPanel(title = "Feature Selection",
                                  row_1,
                                  row_2,
@@ -169,9 +164,6 @@ readData = function(input, output, session) {
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
     
-    #series_vars = intersect(names(data_series), selected_vars)
-    #data = cbind(data, data_series[, series_vars])
-
     series_vars = intersect(names(data_series), selected_vars)
     if(is.null(dim(data_series[, series_vars]))){
       ## there is just one column from the series
@@ -283,9 +275,9 @@ getLASSOModels = function(data, input, output, session, cv.l2.fit){
   simple_coefs = simple_coefs[simple_coefs != 0]
   print(simple_coefs)
   
-  best_summary = getModelSummary(data, input, output, session, "best_",
+  best_summary = getModelSummary(data, input, output, session, "best",
                                  best_coefs, best_error, best_lambda)
-  simple_summary = getModelSummary(data, input, output, session, "simple_",
+  simple_summary = getModelSummary(data, input, output, session, "simple",
                                    simple_coefs, simple_error, simple_lambda)
   
   list(fit=cv.l2.fit, best_coefs_ui=best_summary[['coefs_ui']], best_coefs_names=names(best_coefs),
@@ -301,11 +293,11 @@ getModelSummary = function(data, input, output, session, model_name, coefs, erro
   error_type = as.character(input[[paste0(feature_selection_prefix, "selectErrorType")]])  
   
   # Error and Lambda
-  error_id = paste0(model_id, "LASSOSummaryError")
+  error_id = paste0(model_id, "_LASSOSummaryError")
   text_error = textInput(error_id, label = error_type, value = error)
   div_error = tags$div(text_error, style="float:left;")
   
-  lambda_id = paste0(model_id, "LASSOSummarylambda")
+  lambda_id = paste0(model_id, "_LASSOSummarylambda")
   text_lambda = textInput(lambda_id, label = "Best log(Lambda)", value = log(lambda))
   div_lambda =   tags$div(text_lambda, style="float:left;")
   
@@ -313,10 +305,10 @@ getModelSummary = function(data, input, output, session, model_name, coefs, erro
   
   
   # Correlation and Plot
-  corr_id = paste0(model_id, "LASSOSummaryVarCorr")
+  corr_id = paste0(model_id, "_LASSOSummaryVarCorr")
   output_var_corr = htmlOutput(corr_id)
   
-  plot_id = paste0(model_id, "LASSOSummaryVarPlot")
+  plot_id = paste0(model_id, "_LASSOSummaryVarPlot")
   output_var_plot = plotOutput(plot_id)
   
   var_summary = fluidRow(output_var_plot, output_var_corr)
@@ -325,7 +317,7 @@ getModelSummary = function(data, input, output, session, model_name, coefs, erro
   # UI Element for each var
   selected_vars = lapply(names(coefs), function(var){ 
     
-    fId = paste0(model_id, "fid|", var)
+    fId = paste0(model_id, "_fid|", var)
     var_name = meta_data[meta_data$series_id==var,"title"]
     
     if(grepl("Intercept",var) | grepl("month",var) | var=="t"){
@@ -383,10 +375,7 @@ getModelSummary = function(data, input, output, session, model_name, coefs, erro
   row_selected_vars = fluidRow(column(width=6, selected_vars),
                                column(width=6, var_summary))
   
-  button_id = paste0(model_id, "buttonSelectThem")
-  button_select_them = actionButton(button_id, label = "Select Model")
-  
-  LASSO_summary = fluidRow(row_summary, tags$hr(), row_selected_vars, button_select_them)
+  LASSO_summary = fluidRow(row_summary, tags$hr(), row_selected_vars)
   
   list(coefs_ui = LASSO_summary)
   
@@ -419,36 +408,9 @@ attachObservers = function(input, output, session, reactive_vars){
       list(menu=tab_menu)
     })
     
-    reactive_vars[['best_selected_vars']] = fit_and_coefs[['best_coefs_names']]
-    reactive_vars[['simple_selected_vars']] = fit_and_coefs[['simple_coefs_names']]
+    reactive_vars[[SELECTED_VARS_LASSO_BEST]] = fit_and_coefs[['best_coefs_names']]
+    reactive_vars[[SELECTED_VARS_LASSO_SIMPLE]] = fit_and_coefs[['simple_coefs_names']]
     
-  })
-  
-  
-  # Select short-listed features for Model and Forecast Tab
-  attachSelectButtonObservers("best_", input, output, session, reactive_vars)
-  attachSelectButtonObservers("simple_", input, output, session, reactive_vars)
-
-}
-
-attachSelectButtonObservers = function(model_name, input, output, session, reactive_vars){
-  
-  button_id = paste0(feature_selection_prefix, model_name, "buttonSelectThem")
-  observeEvent(input[[button_id]], {
-    
-    selected_vars_id = paste0(model_name,"selected_vars")
-    
-    table_regression_varaibles = paste0(regression_prefix, "selectedVariables")
-    output[[table_regression_varaibles]] = renderUI({
-      createVariableTable(reactive_vars[[selected_vars_id]], input, session)
-    })
-    
-    table_forecast_varaibles = paste0(forecast_prefix, "forecastVariables")
-    output[[table_forecast_varaibles]] = renderUI({
-      createForecastVariableTable(reactive_vars[[selected_vars_id]], input, output, session)
-    })
-    
-    reactive_vars[['selected_vars']] = reactive_vars[[selected_vars_id]]
   })
   
 }

@@ -11,6 +11,18 @@ test_color_code = c("#6ACA52", "#C5F274", "#FFF81E", "#F4D214", "#F48414", "#FF5
 
 ## UI Elements
 getRegressionUI = function() {
+  
+  # row - 0 - Use feature of ?
+  id = paste0(regression_prefix, "setsOfFeatures")
+  select_feature_set = selectInput(id, label="Features Sets:", choices=FEAUTRE_SELECTION_ALGORITHMS,
+                                   selected="LASSO_best")
+  
+  id = paste0(regression_prefix, "useFeaturesButton")
+  button_features = actionButton(id, label="Fetch Features")
+  
+  row_0 = fluidRow(column(3, select_feature_set), 
+                   column(3, button_features))
+  
   # row 1 - variables
   text_variables = tags$h4("Variables")
   input_vars = uiOutput(paste0(regression_prefix, "selectedVariables"))
@@ -50,10 +62,7 @@ getRegressionUI = function() {
     column(width = 6, output_graph_stdres.vs.leverage)
   )
   
-  # row 4 - ???
-  row_4 = fluidRow()
-  
-  tabPanel(title = "Regression", row_1, row_2, row_3, row_4)
+  tabPanel(title = "LRegression", row_0,  row_1, row_2, row_3)
 }
 
 
@@ -256,6 +265,8 @@ doRegression = function(input, selected_vars, y_name, h=0) {
   }
 }
 
+
+
 createVariableTable = function(variables, input, session){
   
   vars_titles = list(
@@ -324,5 +335,99 @@ fillVariableTable = function(session, fit){
       updateTextInput(session, paste0(var_id, "|VIF"), value=vifs[[var]])
     }
   }
+  
+}
+
+
+
+attachRegressionObservers = function(input, output, session, reactive_vars){
+  
+  id_1 = paste0(regression_prefix, "useFeaturesButton")
+  observeEvent(input[[id_1]], {
+    
+    model_name = input[[paste0(regression_prefix, "setsOfFeatures")]]
+    selected_vars_id = paste0(SELECTED_VARS_, model_name)
+    
+    table_regression_varaibles = paste0(regression_prefix, "selectedVariables")
+    output[[table_regression_varaibles]] = renderUI({
+      createVariableTable(reactive_vars[[selected_vars_id]], input, session)
+    })
+    
+    table_forecast_varaibles = paste0(forecast_prefix, "forecastVariables")
+    output[[table_forecast_varaibles]] = renderUI({
+      createForecastVariableTable(reactive_vars[[selected_vars_id]], input, output, session)
+    })
+    
+    reactive_vars[[MODEL_LINEAR_REGRESSION_VARS]] = reactive_vars[[selected_vars_id]]
+    
+  })
+  
+  
+  id_2 = paste0(regression_prefix, "buttonBuildRegression")
+  observeEvent(input[[id_2]], {
+    
+    model_name = input[[paste0(regression_prefix, "setsOfFeatures")]]
+    selected_vars_id = paste0(SELECTED_VARS_, model_name)
+    
+    fit = doRegression(input, reactive_vars[[selected_vars_id]], product_data_column)
+    reactive_vars[[MODEL_LINEAR_REGRESSION]] = fit[['regression']]
+    
+    text_tests_id = paste0(regression_prefix, "testResults")
+    output[[text_tests_id]] = renderUI({
+      list_failed_tests = fit[['failed_tests']]
+      no_of_failed_tests = sum(lengths(list_failed_tests))
+      text_failed_tests_count = tags$h4(paste0("#Test Failed : ", no_of_failed_tests), 
+                                        style=paste0("color:", test_color_code[no_of_failed_tests+1],"; font-weight: bold;") )
+      
+      text_failed_tests = vector('character')
+      for(index in names(list_failed_tests)){
+        text_failed_test = list_failed_tests[[index]]
+        text_failed_tests = c(text_failed_tests, text_failed_test)
+      }
+      text_failed_tests = paste0(text_failed_tests, collapse="<br/>")
+      
+      text_reg_summary_F = paste0("<br/><br/>F-statistic : ", summary(fit[['regression']])$fstatistic[1], "<br/>")
+      text_reg_summary_R = paste0("R2 : ", summary(fit[['regression']])$r.squared, "<br/>")
+      text_reg_summary = paste0(text_reg_summary_F, text_reg_summary_R)
+      
+      HTML(paste0(text_failed_tests_count, text_failed_tests, text_reg_summary))
+    })
+    
+    output_regression_graph_1 = paste0(regression_prefix, "graphResidualVsFitted")
+    output[[output_regression_graph_1]] = renderPlot({
+      plot(fit[["regression"]], which=1)
+    })
+    
+    output_regression_graph_2 = paste0(regression_prefix, "graphQQ")
+    output[[output_regression_graph_2]] = renderPlot({
+      plot(fit[["regression"]], which=2)
+    })
+    
+    output_regression_graph_3 = paste0(regression_prefix, "graphStdResVsFitted")
+    output[[output_regression_graph_3]] = renderPlot({
+      plot(fit[["regression"]], which=3)
+    })
+    
+    output_regression_graph_4 = paste0(regression_prefix, "graphStdResVsLeverage")
+    output[[output_regression_graph_4]] = renderPlot({
+      plot(fit[["regression"]], which=4)
+    })
+    
+    output_regression_graph_5 = paste0(regression_prefix, "graphObservedVsFitted")
+    output[[output_regression_graph_5]] = renderPlot({
+      
+      obs_to_exclude = input[[paste0(products_prefix, product_line, "|avoid")]]
+      obs_to_exclude = unlist(strsplit(obs_to_exclude,","))
+      obs_to_exclude = as.numeric(obs_to_exclude)
+      use_rows = setdiff(1:length(product_data), obs_to_exclude)
+      
+      plot(product_data[use_rows], fit[["regression"]]$fitted.values,
+           xlab="Actuals", ylab="Fitted" )
+      lines(product_data[use_rows], product_data[use_rows])
+    })
+    
+    fillVariableTable(session, fit[['regression']])
+    
+  })
   
 }

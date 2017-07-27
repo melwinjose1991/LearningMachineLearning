@@ -271,3 +271,116 @@ getForecastResults=function(y_name="orders_rcvd", forecast_model, input_variable
   results
   
 }
+
+
+
+attachForecastObservers = function(input, output, reactive_vars){
+  
+  forecast_do_forecast = paste0(forecast_prefix, "buttonForecast")
+  observeEvent(input[[forecast_do_forecast]], {
+    print(">>> Forecasting <<<")
+    
+    h = no_of_forecast # Has to be user entered
+    mean_model = FALSE #input[[paste0(forecast_prefix,"methodId|mean")]]
+    naive_model = FALSE #input[[paste0(forecast_prefix,"methodId|naive")]]
+    snaive_model = FALSE #input[[paste0(forecast_prefix,"methodId|snaive")]]
+    drift_model = FALSE #input[[paste0(forecast_prefix,"methodId|drift")]]
+    
+    forecast_model = reactive_vars[[MODEL_LINEAR_REGRESSION]]
+    for(var in reactive_vars[[MODEL_LINEAR_REGRESSION_VARS]]){
+      if(!exists("variable_values")){
+        variable_values = data.frame(row=1:h)
+      }
+      variable_values[,var] = unlist(lapply(1:h, function(i){
+        var_id = paste0(forecast_prefix, "varId|", var, "|value|", i)
+        if(is.logical(input[[var_id]])){
+          ifelse(input[[var_id]],1,0)
+        }else{
+          as.numeric(input[[var_id]])
+        }
+      }))
+    }
+    
+    print(variable_values)
+    
+    last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
+    forecast_start_ym = format(last_ym + (1/12),"%Y-%m")
+    forecast_start_ym = as.numeric(unlist(strsplit(forecast_start_ym,"-")))
+    results = getForecastResults(forecast_model=forecast_model, 
+                                 input_variables=variable_values, 
+                                 h=h, mean_model=mean_model, naive_model=naive_model,
+                                 snaive_model=snaive_model, drift_model=drift_model)
+    
+    
+    ## Plotting graphs
+    output_graph_forecast = paste0(forecast_prefix, "forecastPlot")
+    output[[output_graph_forecast]] = renderPlot({
+      
+      t = ts(results[["t"]], frequency=12, start=product_start_date)
+      plot(t, xlab=product_data_column, ylab="Time")
+      
+      models = vector('character')
+      colors = c(2,3,4,5,9)
+      index = 1
+      for(result in names(results)){
+        
+        if(grepl("line_", result)){
+          if( grepl("upr",result) | grepl("lwr",result) ){
+            t = ts(results[[result]], frequency=12, start=forecast_start_ym)
+            lines(t, col="blue", lty=2)
+          }else{
+            t = ts(results[[result]], frequency=12, start=forecast_start_ym)
+            lines(t, col=colors[index], lwd=2, lty=2)
+            
+            model = unlist(strsplit(result,"_"))[2]
+            models = c(models, model)
+            
+            index = index + 1
+          }
+        }
+        
+      }
+      
+      legend("topleft", lwd=2, lty=2, col=colors, legend=models)
+      
+    })
+    
+    ## Forecast values
+    output_value_forecast = paste0(forecast_prefix, "forecastValue")
+    output[[output_value_forecast]] = renderUI({
+      
+      f_interval = abs(results[['line_modelX_upr']] - results[['line_modelX_lwr']])
+      df = data.frame(forecast = results[['line_modelX']],
+                      lwr = results[['line_modelX_lwr']],
+                      upr = results[['line_modelX_upr']],
+                      interval = round(f_interval,2))
+      
+      text_forecast = sapply(1:nrow(df), function(i){
+        row = df[i,]
+        fit = round(row[['forecast']], 2)
+        lwr = round(row[['lwr']], 2)
+        upr = round(row[['upr']], 2)
+        interval = round(row[['interval']], 2)
+        
+        text = paste0("<tr><td>&nbsp;", i ,"&nbsp</td>",
+                      "<td>&nbsp;", fit ,"&nbsp</td>",
+                      "<td>&nbsp;",lwr,"&nbsp;</td>",
+                      "<td>&nbsp;",upr, "&nbsp;</td>",
+                      "<td>&nbsp;", interval,"&nbsp;</td></tr>")
+        text
+      })
+      text_forecast = paste0(text_forecast, collapse="")
+      text_forecast = paste0("<table><tr><th>#</th>",
+                             "<th>Forecast</th>",
+                             "<th>Lower</th><th>Upper</th>",
+                             "<th>Interval</th></tr>",
+                             text_forecast,"</table>")
+      
+      
+      HTML(text_forecast)
+      
+    })
+    
+  })
+  
+}
