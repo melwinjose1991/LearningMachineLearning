@@ -316,10 +316,11 @@ attachForecastObservers = function(input, output, reactive_vars){
     
     ## Converting to data_frame for iterability
     f_interval = abs(results[['line_modelX_upr']] - results[['line_modelX_lwr']])
-    df = data.frame(forecast = results[['line_modelX']],
-                    lwr = results[['line_modelX_lwr']],
-                    upr = results[['line_modelX_upr']],
-                    interval = round(f_interval,2))
+    df = data.frame(n=1:no_of_forecast)
+    df[,DF_COL_LREG_FORECAST] = results[['line_modelX']]
+    df[,DF_COL_LREG_LWR] = results[['line_modelX_lwr']]
+    df[,DF_COL_LREG_UPR] = results[['line_modelX_upr']]
+    df[,DF_COL_LREG_INTERVAL] = f_interval
     
     ## Saving forecasts for ensembling
     reactive_vars[[FORECAST_LREGRESSION]] = df
@@ -364,10 +365,10 @@ attachForecastObservers = function(input, output, reactive_vars){
       
       text_forecast = sapply(1:nrow(df), function(i){
         row = df[i,]
-        fit = round(row[['forecast']], 2)
-        lwr = round(row[['lwr']], 2)
-        upr = round(row[['upr']], 2)
-        interval = round(row[['interval']], 2)
+        fit = round(row[[DF_COL_LREG_FORECAST]], 2)
+        lwr = round(row[[DF_COL_LREG_LWR]], 2)
+        upr = round(row[[DF_COL_LREG_UPR]], 2)
+        interval = round(row[[DF_COL_LREG_INTERVAL]], 2)
         
         text = paste0("<tr><td>&nbsp;", i ,"&nbsp</td>",
                       "<td>&nbsp;", fit ,"&nbsp</td>",

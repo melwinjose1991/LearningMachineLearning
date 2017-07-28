@@ -34,7 +34,7 @@ getForecastTimeSeriesUI = function(){
 
 
 ## Server Functions
-attachForecastTimeSeriesObservers = function(input, output, session){
+attachForecastTimeSeriesObservers = function(input, output, reactive_vars){
   
   id_1 = paste0(forecast_timeseries_prefix, "buttonForecast")
   observeEvent(input[[id_1]], {
@@ -46,14 +46,16 @@ attachForecastTimeSeriesObservers = function(input, output, session){
     
     result = doAutoARIMA(train, no_of_forecast, in_sample_forecast=FALSE)
     
+    
     # Converting results to data.frame for iterability and ensembling
     h = no_of_forecast
     f_interval = abs(result[["forecast_fit"]]$upper[,2] - result[["forecast_fit"]]$lower[,2])
-    df = data.frame(fit=result[["forecast_fit"]]$mean,
-                    lwr=result[["forecast_fit"]]$lower[,2],
-                    upr=result[["forecast_fit"]]$upper[,2],
-                    interval=f_interval)
-    
+    df = data.frame(n=1:no_of_forecast)
+    df[,DF_COL_TIMESERIES_FORECAST] = result[["forecast_fit"]]$mean
+    df[,DF_COL_TIMESERIES_LWR] = result[["forecast_fit"]]$lower[,2]
+    df[,DF_COL_TIMESERIES_UPR] = result[["forecast_fit"]]$upper[,2]
+    df[,DF_COL_TIMESERIES_INTERVAL] = f_interval
+
     reactive_vars[[FORECAST_TIMESERIES]] = df
     
     
@@ -83,10 +85,10 @@ attachForecastTimeSeriesObservers = function(input, output, session){
       
       text_forecast = sapply(1:nrow(df), function(i){
         row = df[i,]
-        fit = round(row[['fit']], 2)
-        lwr = round(row[['lwr']], 2)
-        upr = round(row[['upr']], 2)
-        interval = abs(upr-lwr)
+        fit = round(row[[DF_COL_TIMESERIES_FORECAST]], 2)
+        lwr = round(row[[DF_COL_TIMESERIES_LWR]], 2)
+        upr = round(row[[DF_COL_TIMESERIES_UPR]], 2)
+        interval = round(row[[DF_COL_TIMESERIES_INTERVAL]],2)
         text = paste0("<tr><td>&nbsp;", i ,"&nbsp</td>",
                       "<td>&nbsp;", fit ,"&nbsp</td>",
                       "<td>&nbsp;",lwr,"&nbsp;</td>",
