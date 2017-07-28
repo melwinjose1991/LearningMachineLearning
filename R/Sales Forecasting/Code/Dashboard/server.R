@@ -31,8 +31,11 @@ server = function(input, output, session) {
   attachBenchmarkObservers(input, output, reactive_vars)
 
     
-  ### Forecast > forecast
+  ### Forecast > Linear Regression
   attachForecastObservers(input, output, reactive_vars)
+  
+  ## Forecast > Time-Series
+  attachForecastTimeSeriesObservers(input, output, session)
   
 }
 

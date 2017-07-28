@@ -8,6 +8,7 @@ timeseries_prefix = paste0(models_prefix, "timeseries_")
 preview_multiplier = 3
 
 
+
 ## UI Elements
 getTimeSeriesUI = function(){
   
@@ -235,41 +236,21 @@ tailForecast = function(pred, n=24){
   pred
 }
 
-doAutoARIMA = function(train, h=12, use_box_cox=FALSE, 
+doAutoARIMA = function(train, h=12, in_sample_forecast=TRUE, 
                        seasonal=TRUE, stepwise=TRUE, approximation=TRUE){
   print(paste0("Models :: Time-Series :: doAutoARIMA :: START"))
-  #use_box_cox = FALSE
-  #seasonal = TRUE
-  
-  data_ts = ts(product_data, frequency=12, 
-               start=product_start_date, end=product_end_date)
-  
-  if(use_box_cox==TRUE){
-    lambda = BoxCox.lambda(data_ts)
-    data_ts_star = BoxCox(data_ts, lambda)
-    print(lambda)
-  }else{
-    data_ts_star = data_ts
-  }
-  #plot(data_ts_star)
-  
-  last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
-  train_end_ym = format(last_ym - (h/12),"%Y-%m")
-  train_end_ym = as.numeric(unlist(strsplit(train_end_ym,"-")))
-  train_window = window(data_ts_star, end=train_end_ym)  
   
   arima_model = auto.arima(train, seasonal=seasonal, 
                            stepwise=stepwise, approximation=approximation)
   arima_model
   pred = forecast(arima_model, h=h)
-  # plot(pred)
   
-  if(use_box_cox==TRUE){
-    train_mae = mean(abs(lambda^arima_model$fitted - data_ts[1:(length(data_ts)-h)]))
-    valid_mae = mean(abs(tail(data_ts,n=h)-lambda^pred$mean))
+  if(in_sample_forecast){
+    train_mae = mean(abs(arima_model$residuals))
+    valid_mae = mean(abs(c(tail(train,n=h))-c(pred$mean)))
   }else{
     train_mae = mean(abs(arima_model$residuals))
-    valid_mae = mean(abs(c(tail(data_ts,n=h))-c(pred$mean)))
+    valid_mae = 0
   }
   print(paste0("train-mae:",train_mae," | valid-mae:",valid_mae))
   

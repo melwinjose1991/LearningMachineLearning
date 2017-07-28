@@ -1,11 +1,14 @@
+print("Forecast :: forecast_lregression.R :: Init")
+
+
+
 ## Globals
 forecast_prefix = paste0(forecast_tab_prefix, "forecast_")
-no_of_forecast = 12
 
 
 
 ## UI Elements
-getForecastUI = function(){
+getForecastLRegressionUI = function(){
   
   # row 0 - ARIMA options
   id = paste0(forecast_prefix, "fastARIMA")
