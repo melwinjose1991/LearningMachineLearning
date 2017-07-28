@@ -43,8 +43,21 @@ attachForecastTimeSeriesObservers = function(input, output, session){
                  start=product_start_date, end=product_end_date)
     
     train = window(data_ts, end=product_end_date)
+    
     result = doAutoARIMA(train, no_of_forecast, in_sample_forecast=FALSE)
     
+    # Converting results to data.frame for iterability and ensembling
+    h = no_of_forecast
+    f_interval = abs(result[["forecast_fit"]]$upper[,2] - result[["forecast_fit"]]$lower[,2])
+    df = data.frame(fit=result[["forecast_fit"]]$mean,
+                    lwr=result[["forecast_fit"]]$lower[,2],
+                    upr=result[["forecast_fit"]]$upper[,2],
+                    interval=f_interval)
+    
+    reactive_vars[[FORECAST_TIMESERIES]] = df
+    
+    
+    # Plotting forecast
     id_2 = paste0(forecast_timeseries_prefix, "forecastPlot")
     output[[id_2]] = renderPlot({
       
@@ -63,14 +76,10 @@ attachForecastTimeSeriesObservers = function(input, output, session){
       lines(result$forecast_fit$upper[,2], col=45, lwd=3, lty=3)
     })
     
+    
+    # Forecast values
     id_3 = paste0(forecast_timeseries_prefix, "forecastValue")
     output[[id_3]] = renderUI({
-      
-      h = no_of_forecast
-      df = data.frame(fit=result[["forecast_fit"]]$mean,
-                      lwr=result[["forecast_fit"]]$lower[,2],
-                      upr=result[["forecast_fit"]]$upper[,2],
-                      actual = tail(product_data, n=h))
       
       text_forecast = sapply(1:nrow(df), function(i){
         row = df[i,]

@@ -314,6 +314,16 @@ attachForecastObservers = function(input, output, reactive_vars){
                                  h=h, mean_model=mean_model, naive_model=naive_model,
                                  snaive_model=snaive_model, drift_model=drift_model)
     
+    ## Converting to data_frame for iterability
+    f_interval = abs(results[['line_modelX_upr']] - results[['line_modelX_lwr']])
+    df = data.frame(forecast = results[['line_modelX']],
+                    lwr = results[['line_modelX_lwr']],
+                    upr = results[['line_modelX_upr']],
+                    interval = round(f_interval,2))
+    
+    ## Saving forecasts for ensembling
+    reactive_vars[[FORECAST_LREGRESSION]] = df
+    
     
     ## Plotting graphs
     output_graph_forecast = paste0(forecast_prefix, "forecastPlot")
@@ -351,12 +361,6 @@ attachForecastObservers = function(input, output, reactive_vars){
     ## Forecast values
     output_value_forecast = paste0(forecast_prefix, "forecastValue")
     output[[output_value_forecast]] = renderUI({
-      
-      f_interval = abs(results[['line_modelX_upr']] - results[['line_modelX_lwr']])
-      df = data.frame(forecast = results[['line_modelX']],
-                      lwr = results[['line_modelX_lwr']],
-                      upr = results[['line_modelX_upr']],
-                      interval = round(f_interval,2))
       
       text_forecast = sapply(1:nrow(df), function(i){
         row = df[i,]

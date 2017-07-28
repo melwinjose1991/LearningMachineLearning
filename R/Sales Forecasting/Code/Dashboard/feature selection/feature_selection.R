@@ -228,7 +228,7 @@ doLASSO = function(data, input, output, session) {
   alpha = as.numeric(input[[paste0(feature_selection_prefix, "alpha")]])
   grid = 2.71828 ^ seq(lambda_start, lambda_end, length = lambda_length)
   
-  obs_to_exclude = input[[paste0(products_prefix, product, "|avoid")]]
+  obs_to_exclude = input[[paste0(products_prefix, product_line, "|avoid")]]
   obs_to_exclude = as.numeric(unlist(strsplit(obs_to_exclude,",")))
   weights = rep(1, nrow(data))
   weights[obs_to_exclude] = 0
