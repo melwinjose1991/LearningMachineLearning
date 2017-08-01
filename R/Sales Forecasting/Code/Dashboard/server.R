@@ -32,12 +32,16 @@ server = function(input, output, session) {
   #     Regression
   attachRegressionObservers(input, output, session, reactive_vars)
   
+  #     Benchmark
+  attachBenchmarkObservers(input, output, reactive_vars)
+  
   #     TimeSeries
   attachTimeSeriesObservers(input, output)
   
-  #     Benchmark
-  attachBenchmarkObservers(input, output, reactive_vars)
+  #     MARS
+  attachMARSObservers(input, output, reactive_vars)
 
+  
     
   ### Forecast ###
   #     Linear Regression

@@ -1,6 +1,7 @@
 library(corrplot)
 library(leaps)
 library(glmnet)
+library(earth)
 
 source("../Common/Utils.R")
 
@@ -48,6 +49,8 @@ for(sub_category_id in unique(config_data$sub_category_id)){
 
 # Removing columns whose values don't change
 data = data[sapply(data, function(x) length(unique(x))>1)]
+
+
 
 ## 1 : Correlation
 # corrplot.mixed(cor(data[,!names(data) %in% c("month")]), upper="circle", lower="number")
@@ -111,7 +114,6 @@ length(findcor_uncorrelated_cols)
 data.new = data[,c("orders_rcvd","month", "t", findcor_uncorrelated_cols)]
 
 
-
 ## CForest :: party
 library(party)
 
@@ -127,7 +129,6 @@ length(significant_vars)
 data.new = data[,c("orders_rcvd","month", "t", significant_vars)]
 
 
-
 ## Boruta
 library(Boruta)
 
@@ -136,7 +137,6 @@ output = Boruta(orders_rcvd~., data=data_num_vars)
 significant_vars = names(output$finalDecision[output$finalDecision %in% c("Confirmed", "Tentative")])
 length(significant_vars)
 data.new = data[,c("orders_rcvd","month", "t", significant_vars)]
-
 
 
 # LASSO + VIF - recursive elimination
@@ -193,7 +193,7 @@ while(1){
 
 
 # Cluster Analysis
-data_num_var = data.new[,!names(data.new) %in% c("month","orders_rcvd","t")]
+data_num_var = data[,!names(data) %in% c("month","orders_rcvd","t")]
 c = cor(scale(data_num_var))
 c
 
@@ -208,12 +208,12 @@ h
 
 plot(h)
 
-cuts = cutree(h, h=0.60)
+cuts = cutree(h, h=0.50)
 cuts
 dim(data_num_var)[2] - max(cuts)
 sort(table(cuts))
 
-in_cluster = names(cuts[cuts==275])
+in_cluster = names(cuts[cuts==82])
 config_data[config_data$series_id %in% in_cluster, "title"]
 
 cor(data_num_var[,in_cluster])
@@ -229,8 +229,8 @@ for(cluster_no in unique(clusters_numbers)){
   print("=================")
 }
 
-dim(data.new)
-data.new = data.new[, !names(data.new) %in% remove_cols_ids]
+dim(data)
+data.new = data[, !names(data) %in% remove_cols_ids]
 dim(data.new)
 
 
@@ -323,6 +323,21 @@ l2.fit = glmnet(x, y, alpha=1, lambda=simple_lambda)
 coefs = coef(l2.fit)[,1]
 coefs[coefs!=0]
 names(coefs[coefs!=0])
+
+
+### MARS ###
+train_rows = sample(1:156, 156, replace=FALSE)
+mars = earth(orders_rcvd~., data=data.new[train_rows, ], 
+             pmethod="exhaustive", nfold=13, nprune=20, degree=1,
+             minspan=3, endspan=3)
+summary(mars)
+plot(mars)
+
+pred = predict(mars, newdata=data.new[145:156,])
+pred
+plot(ts(pred, frequency=12))
+valid_mae = mean(abs(pred-data.new[145:156,"orders_rcvd"]))
+valid_mae
 
 
 

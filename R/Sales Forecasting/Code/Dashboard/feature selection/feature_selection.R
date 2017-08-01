@@ -123,7 +123,7 @@ initFeatureSelectionUI = function() {
 
 
 ## Server Functions
-readData = function(input, output, session) {
+readData = function(input) {
   print("Feature Selection :: Feature Selection :: readData() :: INIT")
   
   input_value = reactiveValuesToList(input)
@@ -175,7 +175,7 @@ readData = function(input, output, session) {
   }
   
   print("Feature Selection :: Feature Selection :: readData() :: EXIT")
-  filterFeatures(data, input, output, session)
+  data
   
 }
 
@@ -392,7 +392,8 @@ attachObservers = function(input, output, session, reactive_vars){
   observeEvent(input[[featureSelection_LASSO]], {
     
     # Function Flow : readData > filterFeatures > doLASSO
-    fit_and_coefs = readData(input, output, session)
+    data = readData(input)
+    fit_and_coefs = filterFeatures(data, input, output, session)
     
     output_LASSOgraph = paste0(feature_selection_prefix, "outputLASSOGraph")
     output[[output_LASSOgraph]] = renderPlot({
