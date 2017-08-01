@@ -14,13 +14,15 @@ SELECTED_VARS_FORWARD = paste0(SELECTED_VARS_, "FORWARD")
 
 # Models
 MODEL_ = "MODEL"
-MODELS = c("LREGRESSION", "TIMESERIES")
-MODEL_COLORS = c("red", "blue") # green for ensemble
+MODELS = c("LREGRESSION", "TIMESERIES", "MARS")
+MODEL_COLORS = c("red", "blue", "gray") # green for ensemble
 
 MODEL_LINEAR_REGRESSION = paste0(MODEL_, MODELS[1])
 MODEL_LINEAR_REGRESSION_VARS = paste0(MODEL_LINEAR_REGRESSION, "_VARS")
 
 MODEL_TIMESERIES = paste0(MODEL_, MODELS[2])
+
+MODEL_MARS = paste0(MODEL_, MODELS[3])
 
 
 
@@ -41,6 +43,8 @@ DF_COL_TIMESERIES_LWR = paste0(MODELS[2],"_lwr")
 DF_COL_TIMESERIES_UPR = paste0(MODELS[2],"_upr")
 DF_COL_TIMESERIES_INTERVAL = paste0(MODELS[2],"_interval")
 
+DF_COL_MARS_FORECAST = paste0(MODELS[1],"_forecast")
+DF_COL_MARS_INTERVAL = paste0(MODELS[1],"_interval")
 
 
 # Ensemble 
