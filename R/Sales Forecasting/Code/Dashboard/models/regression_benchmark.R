@@ -182,7 +182,7 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
                                   snaive_model=snaive_model, drift_model=drift_model,
                                   error_type=error_type)
     
-    df_benchmark_fit[,BENCHMARK_LREGRESSION] <<- fit_forecast[['forecast']][,'fit']
+    df_benchmark_fit[,BENCHMARK_LREGRESSION] <<- round(fit_forecast[['forecast']][,'fit'],2)
     
     ## Plotting graphs
     output_graph_benchmark = paste0(benchmark_prefix, "graphBenchmark")

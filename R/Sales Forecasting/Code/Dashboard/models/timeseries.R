@@ -324,7 +324,7 @@ attachTimeSeriesObservers = function(input, output){
       lines(tailed_results$upper[,2], col=45, lwd=3, lty=3)
     })
     
-    df_benchmark_fit[,BENCHMARK_TIMESERIES] <<- result[["forecast_fit"]]$mean
+    df_benchmark_fit[,BENCHMARK_TIMESERIES] <<- round(result[["forecast_fit"]]$mean,2)
     id = paste0(timeseries_prefix, "forecastSummary")
     output[[id]] = renderUI({
       

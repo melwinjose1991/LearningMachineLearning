@@ -124,7 +124,7 @@ attachMARSObservers = function(input, output, reactive_vars){
     df_1 = data.frame(n=1:h)
     df_1[,"fit"] = tail(mars$fitted.values, n=h)
     df_1[,"error"] = tail(mars$residuals, n=h)
-    df_benchmark_fit[,BENCHMARK_MARS] <<- df_1[,"fit"]
+    df_benchmark_fit[,BENCHMARK_MARS] <<- round(df_1[,"fit"], 2)
     
     output[[id_1_4]] = renderUI({
       table_header = paste0("<table><tr>",
