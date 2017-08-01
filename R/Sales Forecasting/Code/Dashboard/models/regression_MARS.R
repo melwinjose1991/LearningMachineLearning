@@ -23,18 +23,17 @@ getMARSUI = function() {
   id = paste0(mars_prefix, "doMARS")
   button_do_mars = actionButton(id, label="MARS")
   
-  row_0 = fluidRow(select_pmethod, numeric_nfolds, button_do_mars)
+  row_0 = fluidRow(column(3, select_pmethod), 
+                   column(3, numeric_nfolds), 
+                   column(3, button_do_mars)
+  )
   
   
   # row - 1 : Plots
-  id = paste0(mars_prefix, "modelSelectionPlot")
-  plot_model_selection = plotOutput(id)
-  
   id = paste0(mars_prefix, "insamplePredictionPlot")
   plot_insample_prediction = plotOutput(id)
   
-  row_1 = fluidRow(column(6, plot_model_selection),
-                   column(6, plot_insample_prediction))
+  row_1 = fluidRow(plot_insample_prediction)
   
   
   # row - 2 : Model Summary
@@ -44,8 +43,13 @@ getMARSUI = function() {
   id = paste0(mars_prefix, "insamplePredictionValues")
   html_prediction_values = uiOutput(id)
   
-  row_2 = fluidRow(column(6, html_selected_model),
-                   column(6, html_prediction_values))
+  id = paste0(mars_prefix, "insamplePredictionError")
+  html_prediction_error = uiOutput(id)
+  
+  row_2 = fluidRow(column(5, html_selected_model),
+                   column(4, html_prediction_values),
+                   column(3, html_prediction_error)
+  )
 
     
   tabPanel(title = "MARS", row_0,  row_1, row_2)
@@ -72,11 +76,7 @@ attachMARSObservers = function(input, output, reactive_vars){
                  nfold=nfolds, nprune=20, degree=1,
                  minspan=3, endspan=3)
     
-    id_1_1 = paste0(mars_prefix, "modelSelectionPlot")
-    output[[id_1_1]] = renderPlot({
-      plot(mars, which=1)
-    })
-    
+    ## Benchmark Forecast Plot
     id_1_2 = paste0(mars_prefix, "insamplePredictionPlot")
     output[[id_1_2]] = renderPlot({
       
@@ -96,11 +96,12 @@ attachMARSObservers = function(input, output, reactive_vars){
       y_min = min(win, pred)
       y_max = max(win, pred)
       
-      plot(win, ylim=c(y_min, y_max))
+      plot(win, ylim=c(y_min, y_max), ylab=product_data_column)
       lines(ts(pred, frequency=12, start=valid_start_ym), 
             col="red", lwd=2, lty=2)
     })
     
+    ## Selected Model
     id_1_3 = paste0(mars_prefix, "selectedModel")
     df = as.data.frame(mars$coefficients)
     df[,"var"] = row.names(mars$coefficients)
@@ -120,6 +121,7 @@ attachMARSObservers = function(input, output, reactive_vars){
       
     })
     
+    ## Benchmark Forecast Values Table
     id_1_4 = paste0(mars_prefix, "insamplePredictionValues")
     df_1 = data.frame(n=1:h)
     df_1[,"fit"] = tail(mars$fitted.values, n=h)
@@ -140,20 +142,16 @@ attachMARSObservers = function(input, output, reactive_vars){
       rows = paste0(rows, collapse="")
       table_fit_error = paste0(table_header, rows, "</table>")
       
-      pred_mae = paste0("<hr/><b>MAE for last ",h," points</b> : ",
-                        mean(abs(tail(mars$residuals, n=h))))
-      
-      full_mae = paste0("<hr/><b>MAE for ",product_data_obeservations," points</b> : ",
-                   mean(abs(mars$residuals)))
-      
-      to_print = paste0(table_fit_error, pred_mae, full_mae)
-
-      HTML(to_print)
-            
+      HTML(table_fit_error)
     })
     
-    reactive_vars[[MODEL_MARS]] = mars
-    
+    ## Benchmark Forecast Error
+    pred_mae = paste0("<b>MAE</b> : ",
+                      mean(abs(tail(mars$residuals, n=h))))
+    id_1_5 = paste0(mars_prefix, "insamplePredictionError")
+    output[[id_1_5]] = renderUI({
+          HTML(pred_mae)
+    })
   })
   
 }

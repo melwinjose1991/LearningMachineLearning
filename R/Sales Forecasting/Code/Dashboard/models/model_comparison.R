@@ -11,9 +11,10 @@ getModelComparisonUI = function(){
                                      choices=MODELS, selected=MODELS)
   
   id = paste0(comparison_prefix, "plotButton")
-  button_plot = actionButton(id, label="plot")
+  button_plot = actionButton(id, label="Compare")
   
-  row_1 = fluidRow(select_models, button_plot)
+  row_1 = fluidRow(column(10, select_models), 
+                   column(2, button_plot))
   
   
   # row - 2 : Plot

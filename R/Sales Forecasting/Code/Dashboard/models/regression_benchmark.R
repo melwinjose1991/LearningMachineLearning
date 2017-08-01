@@ -50,14 +50,20 @@ getRegressionBenchmarkUI = function(){
   )
   
   # row_2 - graphs
-  id = paste0(benchmark_prefix, "graphBenchmark")
-  output_graph_benchmark = plotOutput(id)
-  row_2 = fluidRow(output_graph_benchmark)
+  id = paste0(benchmark_prefix, "benchmarkPlot")
+  graph_benchmark = plotOutput(id)
+  row_2 = fluidRow(graph_benchmark)
   
   # row_3 - summary
-  id = paste0(benchmark_prefix, "summaryBenchmark")
-  output_summary_benchmark = uiOutput(id)
-  row_3 = fluidRow(output_summary_benchmark)
+  id = paste0(benchmark_prefix, "benchmarkTable")
+  plot_benchmark = uiOutput(id)
+  
+  id = paste0(benchmark_prefix, "benchmarkError")
+  text_benchmark_error = uiOutput(id)
+  
+  row_3 = fluidRow(column(6, plot_benchmark), 
+                   column(6, text_benchmark_error)
+  )
   
   tabPanel(title = "LRegression Benchmark", row_1, row_2, row_3)
   
@@ -184,8 +190,8 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
     
     df_benchmark_fit[,BENCHMARK_LREGRESSION] <<- round(fit_forecast[['forecast']][,'fit'],2)
     
-    ## Plotting graphs
-    output_graph_benchmark = paste0(benchmark_prefix, "graphBenchmark")
+    ## Benchmark Forecast
+    output_graph_benchmark = paste0(benchmark_prefix, "benchmarkPlot")
     output[[output_graph_benchmark]] = renderPlot({
       
       last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
@@ -199,7 +205,7 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
                start=valid_start_ym)
       
       y_values = c(results[["t"]], lwr, upr)
-      plot(results[["t"]], ylim=c(min(y_values), max(y_values)))
+      plot(results[["t"]], ylim=c(min(y_values), max(y_values)), ylab=product_data_column)
       
       models = vector('character')
       colors = c(2,3,4,5,9)
@@ -223,29 +229,14 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
       
     })
     
-    ## Reporting summary
-    output_summary_benchmark = paste0(benchmark_prefix, "summaryBenchmark")
-    output[[output_summary_benchmark]] = renderUI({
-      
-      # Benchmark Models
-      text_errors = vector('character')
-      for(result in names(results)){
-        
-        if(grepl("error_", result)){
-          
-          model = unlist(strsplit(result,"_"))[2]
-          model_summary = paste0(error_type, " for ", 
-                                 model, " = ", results[[result]], "<br/>")
-          text_errors = c(text_errors, model_summary)
-        }
-        
-      }
-      text_errors = paste0(text_errors, collapse="")
+    ## Benchmark Forecast Table
+    plot_benchmark = paste0(benchmark_prefix, "benchmarkTable")
+    output[[plot_benchmark]] = renderUI({
       
       # Prediction Interval
       df = as.data.frame(fit_forecast[['forecast']])
       df = cbind(df, actual=tail(product_data,n=h))
-      text_interval = sapply(1:nrow(df), function(i){
+      rows_values = sapply(1:nrow(df), function(i){
         row = df[i,]
         fit = round(row[['fit']], 2)
         actual = round(row[['actual']], 2)
@@ -261,15 +252,34 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
                       "<td>&nbsp;", interval,"&nbsp;</td></tr>")
         text
       })
-      text_interval = paste0(text_interval, collapse="")
-      text_interval = paste0("<table><tr><th>#</th>",
+      rows_values = paste0(rows_values, collapse="")
+      table_benchmark = paste0("<table><tr><th>#</th>",
                              "<th>Forecast</th><th>Error</th>",
                              "<th>Lower</th><th>Upper</th>",
                              "<th>Interval</th></tr>",
-                             text_interval,"</table>")
+                             rows_values,"</table>")
       
-      text_summary = paste0(text_errors, "<br/>", text_interval)
-      HTML(text_summary)
+      HTML(table_benchmark)
+    })
+    
+    ## Benchmark Error
+    plot_benchmark = paste0(benchmark_prefix, "benchmarkError")
+    output[[plot_benchmark]] = renderUI({
+      
+      text_errors = vector('character')
+      for(result in names(results)){
+        
+        if(grepl("error_", result)){
+          
+          model = unlist(strsplit(result,"_"))[2]
+          model_summary = paste0(error_type, " for ", 
+                                 model, " = ", results[[result]], "<br/>")
+          text_errors = c(text_errors, model_summary)
+        }
+        
+      }
+      text_errors = paste0(text_errors, collapse="")
+      HTML(text_errors)
     })
     
   })

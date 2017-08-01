@@ -24,42 +24,29 @@ getTimeSeriesUI = function(){
                               choiceValues=c("decompose-naive", "decompose-snaive",
                                              "non-arima","arima"))
   
-  row_1_1 = fluidRow(column(4, input_numeric_h),
-                     column(8, input_method))
-    
-  
-  id = paste0(timeseries_prefix, "hasTrend")
-  input_trend = checkboxInput(id, "Trend ?", value=TRUE)
-  id = paste0(timeseries_prefix, "trendWindow")
-  input_numeric_trend = numericInput(id, "Trend Window", 
-                                 value=3, min=0, max=12, step=1, width="50%")
-  
-  
-  id = paste0(timeseries_prefix, "hasSeasonality")
-  input_season = checkboxInput(id, "Seasonality ?", value=TRUE)
-  id = paste0(timeseries_prefix, "seasonalityWindow")
-  input_numeric_season = numericInput(id, "Seasonal Window", 
-                                     value=3, min=0, max=12, step=1, width="50%")
-  
-  row_1_2 = fluidRow(column(2, input_trend),
-                     column(4, input_numeric_trend),
-                     column(2, input_season),
-                     column(4, input_numeric_season))
-  
   id = paste0(timeseries_prefix, "buildModel")
   input_forecast_button = actionButton(id, label="Build Model")
   
-  row_1 = fluidRow(row_1_1, input_forecast_button)
+  row_1 = fluidRow(column(3, input_numeric_h),
+                     column(7, input_method),
+                     column(2, input_forecast_button))
+  
   
   # Row-2 : Plot
   id = paste0(timeseries_prefix, "forecastPlot")
   output_forecast = plotOutput(id)
   row_2 = fluidRow(output_forecast)
   
+  
   # Row-3 : Summary
-  id = paste0(timeseries_prefix, "forecastSummary")
-  output_summary = htmlOutput(id)
-  row_3 = fluidRow(output_summary)
+  id = paste0(timeseries_prefix, "forecastTable")
+  output_forecast_table = htmlOutput(id)
+  
+  id = paste0(timeseries_prefix, "forecastError")
+  output_forecast_error = htmlOutput(id)
+  
+  row_3 = fluidRow(column(5, output_forecast_table),
+                   column(4, output_forecast_error))
   
   tabPanel(title="Time Series", row_1, row_2, row_3)
 }
@@ -280,6 +267,7 @@ attachTimeSeriesObservers = function(input, output){
   
   id = paste0(timeseries_prefix, "buildModel")
   observeEvent(input[[id]],{
+    
     h = input[[paste0(timeseries_prefix, "h")]]
     id = paste0(timeseries_prefix, "method")
     
@@ -304,6 +292,7 @@ attachTimeSeriesObservers = function(input, output){
       result = doAutoARIMA(train, h)
     }
     
+    ## Forecast Plot
     id = paste0(timeseries_prefix, "forecastPlot")
     output[[id]] = renderPlot({
       last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
@@ -318,17 +307,16 @@ attachTimeSeriesObservers = function(input, output){
                      tailed_results$upper[,2], tailed_results$lower[,2])
       y_range = c(min(all_points), max(all_points))
       
-      plot(preview_window, ylim=y_range)
+      plot(preview_window, ylim=y_range, ylab=product_data_column)
       lines(tailed_results$mean, col=50, lwd=3, lty=2)
       lines(tailed_results$lower[,2], col=45, lwd=3, lty=3)
       lines(tailed_results$upper[,2], col=45, lwd=3, lty=3)
     })
     
+    ## Forecast Table
     df_benchmark_fit[,BENCHMARK_TIMESERIES] <<- round(result[["forecast_fit"]]$mean,2)
-    id = paste0(timeseries_prefix, "forecastSummary")
+    id = paste0(timeseries_prefix, "forecastTable")
     output[[id]] = renderUI({
-      
-      text_error = paste0("MAE : ", result[['error']])
       
       df = data.frame(fit=result[["forecast_fit"]]$mean,
                       lwr=result[["forecast_fit"]]$lower[,2],
@@ -359,8 +347,14 @@ attachTimeSeriesObservers = function(input, output){
                              "<th>Interval</th></tr>",
                              text_forecast,"</table>")
       
-      text_summary = paste0(text_error, "<br/>", text_forecast)
-      HTML(text_summary)
+      HTML(text_forecast)
+    })
+    
+    ## Forecast Error
+    text_error = paste0("MAE : ", round(result[['error']],2) )
+    id = paste0(timeseries_prefix, "forecastError")
+    output[[id]] = renderUI({
+      HTML(text_error)
     })
     
   })
