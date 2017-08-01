@@ -15,14 +15,27 @@ SELECTED_VARS_FORWARD = paste0(SELECTED_VARS_, "FORWARD")
 # Models
 MODEL_ = "MODEL"
 MODELS = c("LREGRESSION", "TIMESERIES", "MARS")
-MODEL_COLORS = c("red", "blue", "gray") # green for ensemble
+MODEL_COLORS = c("red", "blue", "gray") 
+# green for ensemble
 
 MODEL_LINEAR_REGRESSION = paste0(MODEL_, MODELS[1])
 MODEL_LINEAR_REGRESSION_VARS = paste0(MODEL_LINEAR_REGRESSION, "_VARS")
 
 MODEL_TIMESERIES = paste0(MODEL_, MODELS[2])
-
 MODEL_MARS = paste0(MODEL_, MODELS[3])
+
+
+
+# Benchmark
+no_of_benchmark_fits = 12
+df_benchmark_fit = data.frame(n=1:no_of_benchmark_fits)
+
+BENCHMARK_ = "BENCHMARK_"
+
+# Just store the fitted.values for last 12 months
+BENCHMARK_LREGRESSION = paste0(BENCHMARK_, MODELS[1])
+BENCHMARK_TIMESERIES = paste0(BENCHMARK_, MODELS[2])
+BENCHMARK_MARS = paste0(BENCHMARK_, MODELS[3])
 
 
 

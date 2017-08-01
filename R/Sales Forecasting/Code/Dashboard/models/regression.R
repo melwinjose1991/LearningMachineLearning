@@ -175,53 +175,6 @@ verifyRegressionModel=function(fit, df_vars){
 
 
 
-getData = function(vars_id, y_name){
-
-  config_data = meta_data[meta_data$series_id %in% vars_id, ]
-  
-  # Y
-  revenue_file = paste0(data_folder, "/", product_line, "/Revenue.csv")
-  data = read.csv(revenue_file, header = TRUE, sep = ",")
-  data$month = as.factor(data$month)
-  data = data[,!names(data) %in% c("month_str")]
-  
-  # X
-  for (sub_category_id in unique(config_data$sub_category_id)) {
-    
-    category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "category_name"])
-    sub_category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "sub_category_name"])
-    
-    file = paste0(FRED_folder, "/", as.character(category_name), 
-                  "/", as.character(sub_category_name) )
-    
-    if (sa_OR_nsa == "Not Seasonally Adjusted") {
-      file = paste0(file, "_nsa.csv")
-    } else{
-      file = paste0(file, "_sa.csv")
-    }
-    print(paste0("Reading file : ", file))
-    data_series = read.csv(file, header = TRUE, sep = ",")
-    
-    series_vars = intersect(names(data_series), vars_id)
-    if(is.null(dim(data_series[, series_vars]))){
-      ## there is just one column from the series
-      data[,series_vars] = data_series[, series_vars]
-    }else{
-      data = cbind(data, data_series[, series_vars])  
-    }
-    
-    
-  }
-  
-  form = as.formula("period_id~.")
-  data_mat = model.matrix(form, data=data)
-  print(c(vars_id, y_name))
-  data_mat = data_mat[,c(vars_id, y_name)]
-  data_mat
-}
-
-
-
 doRegression = function(input, selected_vars, y_name, h=0) {
   
   print(selected_vars)

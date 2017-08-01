@@ -40,6 +40,9 @@ server = function(input, output, session) {
   
   #     MARS
   attachMARSObservers(input, output, reactive_vars)
+  
+  #     Model Comparison
+  attachModelComparisonObservers(input, output, reactive_vars)
 
   
     

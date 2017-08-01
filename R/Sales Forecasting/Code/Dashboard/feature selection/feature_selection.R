@@ -181,6 +181,53 @@ readData = function(input) {
 
 
 
+getData = function(vars_id, y_name){
+  
+  config_data = meta_data[meta_data$series_id %in% vars_id, ]
+  
+  # Y
+  revenue_file = paste0(data_folder, "/", product_line, "/Revenue.csv")
+  data = read.csv(revenue_file, header = TRUE, sep = ",")
+  data$month = as.factor(data$month)
+  data = data[,!names(data) %in% c("month_str")]
+  
+  # X
+  for (sub_category_id in unique(config_data$sub_category_id)) {
+    
+    category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "category_name"])
+    sub_category_name = unique(config_data[config_data$sub_category_id==sub_category_id, "sub_category_name"])
+    
+    file = paste0(FRED_folder, "/", as.character(category_name), 
+                  "/", as.character(sub_category_name) )
+    
+    if (sa_OR_nsa == "Not Seasonally Adjusted") {
+      file = paste0(file, "_nsa.csv")
+    } else{
+      file = paste0(file, "_sa.csv")
+    }
+    print(paste0("Reading file : ", file))
+    data_series = read.csv(file, header = TRUE, sep = ",")
+    
+    series_vars = intersect(names(data_series), vars_id)
+    if(is.null(dim(data_series[, series_vars]))){
+      ## there is just one column from the series
+      data[,series_vars] = data_series[, series_vars]
+    }else{
+      data = cbind(data, data_series[, series_vars])  
+    }
+    
+    
+  }
+  
+  form = as.formula("period_id~.")
+  data_mat = model.matrix(form, data=data)
+  print(c(vars_id, y_name))
+  data_mat = data_mat[,c(vars_id, y_name)]
+  data_mat
+}
+
+
+
 filterFeatures = function(data, input, output, session) {
   print("Feature Selection :: Feature Selection :: filterFeatures() :: INIT")
   
@@ -280,8 +327,12 @@ getLASSOModels = function(data, input, output, session, cv.l2.fit){
   simple_summary = getModelSummary(data, input, output, session, "simple",
                                    simple_coefs, simple_error, simple_lambda)
   
-  list(fit=cv.l2.fit, best_coefs_ui=best_summary[['coefs_ui']], best_coefs_names=names(best_coefs),
-       simple_coefs_ui=simple_summary[['coefs_ui']], simple_coefs_names=names(simple_coefs))
+  list(fit=cv.l2.fit, 
+       best_fit=best_fit,
+          best_coefs_ui=best_summary[['coefs_ui']], best_coefs_names=names(best_coefs),
+       simple_fit=simple_fit,
+          simple_coefs_ui=simple_summary[['coefs_ui']], simple_coefs_names=names(simple_coefs)
+       )
 }
 
 
@@ -382,6 +433,22 @@ getModelSummary = function(data, input, output, session, model_name, coefs, erro
 }
 
 
+saveBenchMarkResults = function(reactive_vars){
+  
+  lasso_model = reactive_vars[[MODEL_LASSO]]
+  
+  selected_vars_id = paste0(SELECTED_VARS_LASSO, "best")
+  x = getData(reactive_vars[[selected_vars_id]], product_data_column)
+  best_fitted_values = predict(lasso_model, s="lambda.min", newx=x)
+  df_benchmark_fit[, BENCHMARK_LASSO_BEST] <<- tail(best_fitted_values, n=no_of_benchmark_fits)
+  
+  selected_vars_id = paste0(SELECTED_VARS_LASSO, "simple")
+  x = getData(reactive_vars[[selected_vars_id]])
+  simple_fitted_values = predict(lasso_model, s="lambda.1se", newx=x)
+  df_benchmark_fit[, BENCHMARK_LASSO_SIMPLE] <<- tail(simple_fitted_values, n=no_of_benchmark_fits)
+  
+}
+
 
 attachObservers = function(input, output, session, reactive_vars){
   
@@ -409,8 +476,12 @@ attachObservers = function(input, output, session, reactive_vars){
       list(menu=tab_menu)
     })
     
+    reactive_vars[[MODEL_LASSO]] = fit_and_coefs[["fit"]]
+    
     reactive_vars[[SELECTED_VARS_LASSO_BEST]] = fit_and_coefs[['best_coefs_names']]
     reactive_vars[[SELECTED_VARS_LASSO_SIMPLE]] = fit_and_coefs[['simple_coefs_names']]
+    
+    ## saveBenchMarkResults(reactive_vars)
     
   })
   
