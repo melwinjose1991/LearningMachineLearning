@@ -101,8 +101,13 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
       }
       df_benchmark_fit[i,"best_model"] <<- best_model
     }
-    
-    ## Forecast Values Table
+    for(model in MODELS){
+      if(model %in% models_to_use){
+        error = df_benchmark_fit[,"actuals"] - df_benchmark_fit[,paste0(BENCHMARK_,model)]
+        df_benchmark_fit[,paste0(BENCHMARK_,model,"_ERROR")] <<- round(error, 2)
+      }
+    }    
+
     id_1_2 = paste0(comparison_prefix, "forecastSummary")    
     output[[id_1_2]] = renderUI({
       
@@ -112,8 +117,7 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
         for(model in MODELS){
           if(model %in% models_to_use){
             fit = row[[paste0(BENCHMARK_,model)]]
-            actual = row[["actuals"]]
-            error = round(abs(fit-actual), 2)
+            error = row[[paste0(BENCHMARK_,model,"_ERROR")]]
             if(model==row[["best_model"]]){
               tr_td = paste0(tr_td, 
                              "<td style='background-color:#87e595'>&nbsp;",fit,"&nbsp;</td>",
@@ -129,15 +133,27 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
       })
       benchmark_rows = paste0(benchmark_rows, collapse="")
       
+      benchmark_error_summary = paste0("<tr><td></td>")
+      for(model in MODELS){
+        if(model %in% models_to_use){
+          benchmark_error_summary = paste0(benchmark_error_summary, "<td></td>")
+          error = mean(abs(df_benchmark_fit[,paste0(BENCHMARK_,model,"_ERROR")]))
+          error = paste0("<td>", error, "</td>")
+          benchmark_error_summary =paste0(benchmark_error_summary, error)
+        }
+      }
+      benchmark_error_summary = paste0(benchmark_error_summary, "</tr>")
+                                       
+      
       table_header = sapply(MODELS, function(model){
         if(model %in% models_to_use){
-          paste0("<th>&nbsp;",model,"-fit&nbsp;</th>",
-                 "<th>&nbsp;",model,"-error&nbsp;</th>")
+          paste0("<th>&nbsp;",model,"&nbsp;</th>",
+                 "<th>&nbsp;error&nbsp;</th>")
         }
       })
       table_header = paste0(table_header, collapse="")
       table_forecast = paste0("<table><tr><td>#</td>", table_header, "</tr>",
-                            benchmark_rows, "</table>")
+                            benchmark_rows, benchmark_error_summary, "</table>")
       
       HTML(table_forecast)
     })
