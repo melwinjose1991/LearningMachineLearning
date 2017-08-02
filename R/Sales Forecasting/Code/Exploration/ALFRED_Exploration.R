@@ -326,14 +326,14 @@ names(coefs[coefs!=0])
 
 
 ### MARS ###
-train_rows = sample(1:156, 156, replace=FALSE)
+train_rows = 1:144 # sample(1:156, 156, replace=FALSE)
 mars = earth(orders_rcvd~., data=data.new[train_rows, ], 
              pmethod="exhaustive", nfold=13, nprune=20, degree=1,
              minspan=3, endspan=3)
 summary(mars)
 plot(mars)
 
-pred = predict(mars, newdata=data.new[145:156,])
+pred = predict(mars, newdata=data.new[-train_rows,])
 pred
 plot(ts(pred, frequency=12))
 valid_mae = mean(abs(pred-data.new[145:156,"orders_rcvd"]))

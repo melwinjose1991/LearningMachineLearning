@@ -1,6 +1,8 @@
 print("Models :: Regression-MARS :: Init")
-library(earth)
 
+
+
+library(earth)
 
 ## Globals
 mars_prefix = paste0(models_prefix, "mars_")
@@ -71,10 +73,15 @@ attachMARSObservers = function(input, output, reactive_vars){
     print(pmethod)
     
     data = readData(input)
+    train_rows = 1:(nrow(data)-h)
+    
     form = as.formula(paste0(product_data_column, "~."))
-    mars = earth(form, data=data, pmethod=pmethod, 
+    mars = earth(form, data=data[train_rows, ], pmethod=pmethod, 
                  nfold=nfolds, nprune=20, degree=1,
                  minspan=3, endspan=3)
+    
+    pred = predict(mars, newdata=data[-train_rows,])
+    residual = tail(product_data, n=h) - pred
     
     ## Benchmark Forecast Plot
     id_1_2 = paste0(mars_prefix, "insamplePredictionPlot")
@@ -91,7 +98,6 @@ attachMARSObservers = function(input, output, reactive_vars){
       
       t = ts(product_data, frequency=12, start=product_start_date, end=product_end_date)
       win = window(t, start=preview_start_ym)
-      pred = tail(mars$fitted.values,n=h)
       
       y_min = min(win, pred)
       y_max = max(win, pred)
@@ -124,8 +130,8 @@ attachMARSObservers = function(input, output, reactive_vars){
     ## Benchmark Forecast Values Table
     id_1_4 = paste0(mars_prefix, "insamplePredictionValues")
     df_1 = data.frame(n=1:h)
-    df_1[,"fit"] = tail(mars$fitted.values, n=h)
-    df_1[,"error"] = tail(mars$residuals, n=h)
+    df_1[,"fit"] = pred
+    df_1[,"error"] = residual
     df_benchmark_fit[,BENCHMARK_MARS] <<- round(df_1[,"fit"], 2)
     
     output[[id_1_4]] = renderUI({
@@ -146,8 +152,7 @@ attachMARSObservers = function(input, output, reactive_vars){
     })
     
     ## Benchmark Forecast Error
-    pred_mae = paste0("<b>MAE</b> : ",
-                      mean(abs(tail(mars$residuals, n=h))))
+    pred_mae = paste0("<b>MAE</b> : ", mean(abs(residual)))
     id_1_5 = paste0(mars_prefix, "insamplePredictionError")
     output[[id_1_5]] = renderUI({
           HTML(pred_mae)

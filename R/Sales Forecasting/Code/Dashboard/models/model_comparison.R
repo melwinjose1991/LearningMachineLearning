@@ -35,6 +35,12 @@ getModelComparisonUI = function(){
 
 
 ## Server Functions
+getBenchmarkEnsembleMean = function(models_to_use){
+  models_to_use = paste0(BENCHMARK_, models_to_use)
+  df = df_benchmark_fit[, models_to_use]
+  rowMeans(df)
+}
+
 attachModelComparisonObservers = function(input, output, reactive_vars){
   
   id_1 = paste0(comparison_prefix, "plotButton")
@@ -53,10 +59,16 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
     t = ts(product_data, frequency=12, start=product_start_date, end=product_end_date)
     preview_window = window(t, start=preview_start_ym)
     
+    ## Calculating Ensemble_Mean
+    if("ENSEMBLE_MEAN" %in% models_to_use){
+      models = setdiff(models_to_use, "ENSEMBLE_MEAN")
+      df_benchmark_fit[,BENCHMARK_ENSEMBLE_MEAN] <<- round(getBenchmarkEnsembleMean(models), 2)
+    }
+    
     ## Ploting graph
     id_1_1 = paste0(comparison_prefix, "plotComparison")
     output[[id_1_1]] = renderPlot({
-      plot(preview_window, lwd=2)
+      plot(preview_window, lwd=2, ylab=product_data_column)
       
       for(model in MODELS){
         if(model %in% models_to_use){
@@ -89,7 +101,8 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
       }
       df_benchmark_fit[i,"best_model"] <<- best_model
     }
-        
+    
+    ## Forecast Values Table
     id_1_2 = paste0(comparison_prefix, "forecastSummary")    
     output[[id_1_2]] = renderUI({
       

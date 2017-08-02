@@ -476,7 +476,7 @@ attachObservers = function(input, output, session, reactive_vars){
       list(menu=tab_menu)
     })
     
-    reactive_vars[[MODEL_LASSO]] = fit_and_coefs[["fit"]]
+    # reactive_vars[[MODEL_LASSO]] = fit_and_coefs[["fit"]]
     
     reactive_vars[[SELECTED_VARS_LASSO_BEST]] = fit_and_coefs[['best_coefs_names']]
     reactive_vars[[SELECTED_VARS_LASSO_SIMPLE]] = fit_and_coefs[['simple_coefs_names']]
