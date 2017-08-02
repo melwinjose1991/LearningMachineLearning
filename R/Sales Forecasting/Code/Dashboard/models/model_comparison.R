@@ -84,10 +84,15 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
     ## Populating Forecast
     df_benchmark_fit[,"actuals"] <<- round(tail(product_data, n=h), 2)
     df_benchmark_fit[,"best_model"] <<- rep("-", no_of_forecast)
+    df_benchmark_fit[,"worst_model"] <<- rep("-", no_of_forecast)
+    
     for(i in 1:no_of_benchmark_fits){
       row = df_benchmark_fit[i,]
       min_error = .Machine$integer.max
+      max_error = 0
       best_model = "-"
+      worst_model = "-"
+      
       for(model in MODELS){
         if(model %in% models_to_use){
           fit = row[[paste0(BENCHMARK_,model)]]
@@ -97,10 +102,17 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
             min_error = error
             best_model = model
           }
+          if(error > max_error){
+            max_error = error
+            worst_model = model
+          }
         }
       }
+      
       df_benchmark_fit[i,"best_model"] <<- best_model
+      df_benchmark_fit[i,"worst_model"] <<- worst_model
     }
+    
     for(model in MODELS){
       if(model %in% models_to_use){
         error = df_benchmark_fit[,"actuals"] - df_benchmark_fit[,paste0(BENCHMARK_,model)]
@@ -122,6 +134,11 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
               tr_td = paste0(tr_td, 
                              "<td style='background-color:#87e595'>&nbsp;",fit,"&nbsp;</td>",
                              "<td style='background-color:#87e595'>&nbsp;",error,"&nbsp;</td>")
+              
+            }else if(model==row[["worst_model"]]){
+              tr_td = paste0(tr_td, 
+                             "<td style='background-color:#ff793f'>&nbsp;",fit,"&nbsp;</td>",
+                             "<td style='background-color:#ff793f'>&nbsp;",error,"&nbsp;</td>")
             }else{
               tr_td = paste0(tr_td, 
                              "<td>&nbsp;",fit,"&nbsp;</td>",
@@ -138,6 +155,7 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
         if(model %in% models_to_use){
           benchmark_error_summary = paste0(benchmark_error_summary, "<td></td>")
           error = mean(abs(df_benchmark_fit[,paste0(BENCHMARK_,model,"_ERROR")]))
+          error = round(error, 2)
           error = paste0("<td>", error, "</td>")
           benchmark_error_summary =paste0(benchmark_error_summary, error)
         }

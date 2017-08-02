@@ -5,7 +5,7 @@ library(tseries)
 
 ## Globals
 timeseries_prefix = paste0(models_prefix, "timeseries_")
-preview_multiplier = 3
+preview_multiplier = 2
 
 
 
@@ -223,7 +223,7 @@ tailForecast = function(pred, n=24){
   pred
 }
 
-doAutoARIMA = function(train, h=12, in_sample_forecast=TRUE, 
+doAutoARIMA = function(train, h=12, in_sample_forecast=TRUE, actuals,
                        seasonal=TRUE, stepwise=TRUE, approximation=TRUE){
   print(paste0("Models :: Time-Series :: doAutoARIMA :: START"))
   
@@ -234,7 +234,7 @@ doAutoARIMA = function(train, h=12, in_sample_forecast=TRUE,
   
   if(in_sample_forecast){
     train_mae = mean(abs(arima_model$residuals))
-    valid_mae = mean(abs(c(tail(train,n=h))-c(pred$mean)))
+    valid_mae = mean(abs(actuals-pred$mean))
   }else{
     train_mae = mean(abs(arima_model$residuals))
     valid_mae = 0
@@ -289,7 +289,7 @@ attachTimeSeriesObservers = function(input, output){
       result = getBestNonArimaModelError(train, h=h)
       
     }else if(input[[id]]=="arima"){
-      result = doAutoARIMA(train, h)
+      result = doAutoARIMA(train, h, actuals=tail(data_ts, n=h))
     }
     
     ## Forecast Plot
@@ -327,7 +327,7 @@ attachTimeSeriesObservers = function(input, output){
         row = df[i,]
         fit = round(row[['fit']], 2)
         actual = round(row[['actual']], 2)
-        error = round(abs(fit-actual), 2)
+        error = round(fit-actual, 2)
         lwr = round(row[['lwr']], 2)
         upr = round(row[['upr']], 2)
         interval = abs(upr-lwr)
