@@ -39,12 +39,12 @@ BENCHMARK_MARS = paste0(BENCHMARK_, MODELS[3])
 BENCHMARK_ENSEMBLE_MEAN = paste0(BENCHMARK_, MODELS[4])
 
 
+
 # Forecasted Values
+no_of_forecast = 12
+df_forecast_fit = data.frame(n=1:no_of_forecast)
+
 FORECAST_ = "FORECAST_"
-
-FORECAST_LREGRESSION = paste0(FORECAST_, MODELS[1])
-FORECAST_TIMESERIES = paste0(FORECAST_, MODELS[2])
-
 
 DF_COL_LREG_FORECAST = paste0(MODELS[1],"_forecast")
 DF_COL_LREG_LWR = paste0(MODELS[1],"_lwr")
@@ -56,9 +56,12 @@ DF_COL_TIMESERIES_LWR = paste0(MODELS[2],"_lwr")
 DF_COL_TIMESERIES_UPR = paste0(MODELS[2],"_upr")
 DF_COL_TIMESERIES_INTERVAL = paste0(MODELS[2],"_interval")
 
-DF_COL_MARS_FORECAST = paste0(MODELS[1],"_forecast")
-DF_COL_MARS_INTERVAL = paste0(MODELS[1],"_interval")
+DF_COL_MARS_FORECAST = paste0(MODELS[3],"_forecast")
+DF_COL_MARS_INTERVAL = paste0(MODELS[3],"_interval")
+
+DF_COL_ENSEMBLE_MEAN_FORECAST = paste0(MODELS[4],"_forecast")
 
 
 # Ensemble 
 ENSEMBLE_TECHNIQUES = c("AVERAGE", "BEST-BY-MONTH")
+

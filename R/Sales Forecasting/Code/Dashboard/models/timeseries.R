@@ -223,7 +223,7 @@ tailForecast = function(pred, n=24){
   pred
 }
 
-doAutoARIMA = function(train, h=12, in_sample_forecast=TRUE, actuals,
+doAutoARIMA = function(train, h=12, in_sample_forecast=TRUE, actuals=NULL,
                        seasonal=TRUE, stepwise=TRUE, approximation=TRUE){
   print(paste0("Models :: Time-Series :: doAutoARIMA :: START"))
   

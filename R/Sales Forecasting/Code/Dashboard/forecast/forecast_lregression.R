@@ -89,7 +89,7 @@ createForecastVariableTable = function(variables, input, output, session){
         series_ts = ts(series, frequency=12, 
                      start=product_start_date, end=product_end_date)
         fast_arima = input[[paste0(forecast_prefix, "fastARIMA")]]
-        var_forecast = doAutoARIMA(series_ts, no_of_forecast, 
+        var_forecast = doAutoARIMA(series_ts, no_of_forecast, in_sample_forecast=FALSE,
                                    stepwise=fast_arima, approximation=fast_arima)
         
         # plotting graph
@@ -323,7 +323,7 @@ attachForecastObservers = function(input, output, reactive_vars){
     df[,DF_COL_LREG_INTERVAL] = f_interval
     
     ## Saving forecasts for ensembling
-    reactive_vars[[FORECAST_LREGRESSION]] = df
+    df_forecast_fit[[DF_COL_LREG_FORECAST]] <<- results[['line_modelX']]
     
     
     ## Plotting graphs

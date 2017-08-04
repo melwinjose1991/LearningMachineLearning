@@ -56,8 +56,7 @@ attachForecastTimeSeriesObservers = function(input, output, reactive_vars){
     df[,DF_COL_TIMESERIES_UPR] = result[["forecast_fit"]]$upper[,2]
     df[,DF_COL_TIMESERIES_INTERVAL] = f_interval
 
-    reactive_vars[[FORECAST_TIMESERIES]] = df
-    
+    df_forecast_fit[[DF_COL_TIMESERIES_FORECAST]] <<- result[["forecast_fit"]]$mean 
     
     # Plotting forecast
     id_2 = paste0(forecast_timeseries_prefix, "forecastPlot")
