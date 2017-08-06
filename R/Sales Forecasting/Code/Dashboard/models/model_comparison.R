@@ -38,7 +38,11 @@ getModelComparisonUI = function(){
 getBenchmarkEnsembleMean = function(models_to_use){
   models_to_use = paste0(BENCHMARK_, models_to_use)
   df = df_benchmark_fit[, models_to_use]
-  rowMeans(df)
+  if(is.null(dim(df))){
+    df
+  }else{
+    rowMeans(df)
+  }
 }
 
 attachModelComparisonObservers = function(input, output, reactive_vars){
