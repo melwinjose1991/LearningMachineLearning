@@ -339,7 +339,20 @@ plot(ts(pred, frequency=12))
 valid_mae = mean(abs(pred-data.new[145:156,"orders_rcvd"]))
 valid_mae
 
-
+getVarNameFromTerm = function(term){
+  term = substr(term, 3, nchar(term)-1)
+  term = unlist(strsplit(term,"-"))
+  print(term)
+  if(!is.na(as.numeric(term[1]))){ # Is the first term numeric ?
+    term[2]
+  }else{
+    if(term[1]==""){
+      term[3]      
+    }else{
+      term[1]
+    }
+  }
+}
 
 ## Regression Analysis
 #y_t_name = "orders_rcvd_t"
@@ -354,7 +367,7 @@ df[,y_name] = data.new[,y_name]
 names(df)
 
 #which(abs(stdres(lm_fit))>3)
-outliers = c(36,37,48,84,57,156,27,96,140)
+# outliers = c(36,37,48,84,57,156,27,96,140)
 use_rows = setdiff(1:nrow(df), outliers)
 
 regression_formula = as.formula(paste0(y_name,"~",paste(lasso_x, collapse="+")))
