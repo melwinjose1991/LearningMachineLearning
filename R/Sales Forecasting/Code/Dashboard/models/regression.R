@@ -15,7 +15,7 @@ getRegressionUI = function() {
   # row - 0 - Use feature of ?
   id = paste0(regression_prefix, "setsOfFeatures")
   select_feature_set = selectInput(id, label="Features Sets:", choices=FEAUTRE_SELECTION_ALGORITHMS,
-                                   selected="LASSO_best")
+                                   selected="LASSO_simple")
   
   id = paste0(regression_prefix, "useFeaturesButton")
   button_features = actionButton(id, label="Fetch Features")

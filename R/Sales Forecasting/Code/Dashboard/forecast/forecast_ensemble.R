@@ -58,6 +58,9 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
     preview_start_ym = format(last_ym - ((1*h)/12),"%Y-%m")
     preview_start_ym = as.numeric(unlist(strsplit(preview_start_ym,"-")))
     
+    forecast_start_ym = format(last_ym + (1/12),"%Y-%m")
+    forecast_start_ym = as.numeric(unlist(strsplit(forecast_start_ym,"-")))
+    
     forecast_end_ym = format(last_ym +(no_of_forecast/12), "%Y-%m")
     forecast_end_ym = as.numeric(unlist(strsplit(forecast_end_ym, "-")))
     
@@ -74,16 +77,24 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
     y_max = max(df_forecast_fit[,!names(df_forecast_fit) %in% "n"], plot_window, na.rm=TRUE)
     y_range = c(y_min, y_max)
     
+    
     # Ploting the ensemble forecast
+    old_forecast_window = window(product_forecast_data, start=forecast_start_ym, 
+                                 end=forecast_end_ym, extend=TRUE)
+    
     id_2 = paste0(forecast_ensemble_prefix, "ensemblePlot")
     output[[id_2]] = renderPlot({
       plot(plot_window, ylim=y_range, ylab=product_data_column )
-      for(index in 1:length(MODELS)){
-        if(MODELS[index] %in% models_to_use){
-          lines(df_forecast_fit[,paste0(MODELS[index],"_forecast")], 
-                col=MODEL_COLORS[index], lwd=3, lty=2)
+      lines(old_forecast_window, col="orange", lty=2, lwd=3)
+      
+      for(model in MODELS){
+        if(model %in% models_to_use){
+          lines(df_forecast_fit[,paste0(model,"_forecast")], 
+                col=MODEL_COLORS[which(MODELS==model)], 
+                lty=ifelse(grepl("ENSEMBLE", model), 2, 3), 
+                lwd=ifelse(grepl("ENSEMBLE", model), 3, 1))
         }
-      }  
+      } 
       
       legend("topleft", lwd=2, lty=2, col=MODEL_COLORS, 
              legend=MODELS)
@@ -98,7 +109,7 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
         row = df_forecast_fit[i,]
         tr_td = paste0("<tr><td>",i,"</td>")
         for(model in models_to_use){
-            fit = row[[paste0(model, "_forecast")]]
+            fit = round(row[[paste0(model, "_forecast")]], 2)
             tr_td = paste0(tr_td, "<td>&nbsp;",fit,"&nbsp;</td>")
         }
         tr_td = paste0(tr_td, "</tr>")

@@ -47,7 +47,7 @@ initFeatureSelectionUI = function() {
     textInput(
       paste0(feature_selection_prefix, "kFolds"),
       "k-folds",
-      value = "24",
+      value = "13",
       width = row_1_textInput_width
     ),
     textInput(
@@ -78,13 +78,13 @@ initFeatureSelectionUI = function() {
       "Boruta:Var-Imp" = "boruta_var_imp_filter",
       "LASSO+VIF" = "lasso_vif_filter"
     ),
-    selected="direct_corr"
+    selected="caret_corr_filter"
   )
   
   column_threshold = textInput(
     paste0(feature_selection_prefix, "filterThreshold"),
     "threshold",
-    value = "0.99",
+    value = "0.75",
     width = row_1_textInput_width
   )
   
