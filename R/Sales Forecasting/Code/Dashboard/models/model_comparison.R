@@ -89,7 +89,8 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
         }
       }
       
-      legend("topleft", lwd=2, lty=2, col=MODEL_COLORS, legend=MODELS)
+      legend("topleft", lwd=2, lty=2, col=c(MODEL_COLORS,"orange"), 
+             legend=c(MODELS,"OLD_FORECAST"))
     })
     
     

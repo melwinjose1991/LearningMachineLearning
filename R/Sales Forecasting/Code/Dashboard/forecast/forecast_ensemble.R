@@ -73,15 +73,16 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
     ensemble_forecast = ts(ensemble_forecast, frequency=12, end=forecast_end_ym)
     df_forecast_fit[,DF_COL_ENSEMBLE_MEAN_FORECAST] <<- ensemble_forecast
     
+    old_forecast_window = window(product_forecast_data, start=forecast_start_ym, 
+                                 end=forecast_end_ym, extend=TRUE)
+    df_forecast_fit[,"old_forecast"] <<- round(old_forecast_window, 2)
+    
     y_min = min(df_forecast_fit[,!names(df_forecast_fit) %in% "n"], plot_window, na.rm=TRUE)
     y_max = max(df_forecast_fit[,!names(df_forecast_fit) %in% "n"], plot_window, na.rm=TRUE)
     y_range = c(y_min, y_max)
     
     
     # Ploting the ensemble forecast
-    old_forecast_window = window(product_forecast_data, start=forecast_start_ym, 
-                                 end=forecast_end_ym, extend=TRUE)
-    
     id_2 = paste0(forecast_ensemble_prefix, "ensemblePlot")
     output[[id_2]] = renderPlot({
       plot(plot_window, ylim=y_range, ylab=product_data_column )
@@ -96,8 +97,8 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
         }
       } 
       
-      legend("topleft", lwd=2, lty=2, col=MODEL_COLORS, 
-             legend=MODELS)
+      legend("topleft", lwd=2, lty=2, col=c(MODEL_COLORS,"orange"), 
+             legend=c(MODELS,"OLD_FORECAST"))
     })
     
     # Table 
@@ -112,6 +113,7 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
             fit = round(row[[paste0(model, "_forecast")]], 2)
             tr_td = paste0(tr_td, "<td>&nbsp;",fit,"&nbsp;</td>")
         }
+        tr_td = paste0(tr_td, "<td>&nbsp;",row[["old_forecast"]], "&nbsp;</td>")
         tr_td = paste0(tr_td, "</tr>")
         
       })
@@ -123,6 +125,7 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
         }
       })
       table_header = paste0(table_header, collapse="")
+      table_header = paste0(table_header, "<th>&nbsp;OLD_FORECAST&nbsp;</th>")
       table_forecast = paste0("<table><tr><td>#</td>", table_header, "</tr>",
                               forecast_rows, "</table>")
       
