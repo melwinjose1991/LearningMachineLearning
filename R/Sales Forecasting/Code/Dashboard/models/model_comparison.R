@@ -63,16 +63,22 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
     t = ts(product_data, frequency=12, start=product_start_date, end=product_end_date)
     preview_window = window(t, start=preview_start_ym)
     
+    
     ## Calculating Ensemble_Mean
     if("ENSEMBLE_MEAN" %in% models_to_use){
       models = setdiff(models_to_use, "ENSEMBLE_MEAN")
       df_benchmark_fit[,BENCHMARK_ENSEMBLE_MEAN] <<- round(getBenchmarkEnsembleMean(models), 2)
     }
     
+    
     ## Ploting graph
+    old_forecast_window = window(product_forecast_data, start=valid_start_ym, 
+                             end=product_end_date, extend=TRUE)
+    
     id_1_1 = paste0(comparison_prefix, "plotComparison")
     output[[id_1_1]] = renderPlot({
       plot(preview_window, lwd=2, ylab=product_data_column)
+      lines(old_forecast_window, col="orange", lty=2, lwd=2)
       
       for(model in MODELS){
         if(model %in% models_to_use){
@@ -81,14 +87,16 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
         }
       }
       
-      legend("topleft", lwd=2, lty=2, col=MODEL_COLORS, 
-             legend=MODELS)
+      legend("topleft", lwd=2, lty=2, col=MODEL_COLORS, legend=MODELS)
     })
+    
     
     ## Populating Forecast
     df_benchmark_fit[,"actuals"] <<- round(tail(product_data, n=h), 2)
     df_benchmark_fit[,"best_model"] <<- rep("-", no_of_forecast)
     df_benchmark_fit[,"worst_model"] <<- rep("-", no_of_forecast)
+    df_benchmark_fit[,"old_forecast"] <<- round(old_forecast_window, 2)
+    df_benchmark_fit[,"old_forecast_error"] <<- round(old_forecast_window - df_benchmark_fit[,"actuals"], 2)
     
     for(i in 1:no_of_benchmark_fits){
       row = df_benchmark_fit[i,]
@@ -150,7 +158,11 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
             }
           }
         }
-        tr_td = paste0(tr_td, "</tr>")
+        
+        old_forecast = paste0("<td>", row[["old_forecast"]], "</td>",
+                              "<td>", row[["old_forecast_error"]], "</td>")
+        
+        tr_td = paste0(tr_td, old_forecast, "</tr>")
       })
       benchmark_rows = paste0(benchmark_rows, collapse="")
       
@@ -164,6 +176,9 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
           benchmark_error_summary =paste0(benchmark_error_summary, error)
         }
       }
+      old_forecast_mae = round( mean(abs(df_benchmark_fit[,"old_forecast_error"]), na.rm=TRUE), 2 )
+      benchmark_error_summary = paste0(benchmark_error_summary, "<td></td>",
+                                       "<td>", old_forecast_mae, "</td>")
       benchmark_error_summary = paste0(benchmark_error_summary, "</tr>")
                                        
       
@@ -174,6 +189,10 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
         }
       })
       table_header = paste0(table_header, collapse="")
+      table_header = paste0(table_header,"<th>OLD_FORECAST</th>",
+                            "<th>&nbsp;error&nbsp;</th>")
+      
+      
       table_forecast = paste0("<table><tr><td>#</td>", table_header, "</tr>",
                             benchmark_rows, benchmark_error_summary, "</table>")
       

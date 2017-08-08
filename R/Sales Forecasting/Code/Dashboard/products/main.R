@@ -5,6 +5,7 @@ data_folder = paste0("../../Data")
 data_folders_to_skip = c("External Data")
 
 products = vector('character')
+
 product_line = "1234"
 product_start_date = vector('integer')
 product_end_date = vector('integer')
@@ -12,6 +13,11 @@ product_last_year_index = 0
 product_data = vector('numeric')
 product_data_column = "1234"
 product_data_obeservations = 48
+
+product_forecast_data = vector('numeric')
+product_forecast_start_date = vector('numeric')
+product_forecast_end_date = vector('numeric')
+
 columns_to_skip = c("period_id", "month", "year", "month_str", "t")
 product_code_mapping = list("2401"="2401 - DTR", "2404"="2404 - SPT")
 
@@ -19,7 +25,7 @@ product_code_mapping = list("2401"="2401 - DTR", "2404"="2404 - SPT")
 ## UI Elements
 getProductData = function(product, column_name){
   product_folder = paste0(data_folder,"/",product)
-  revenue_file = list.files(product_folder, full.names=TRUE)
+  revenue_file = paste0(product_folder,"/Revenue.csv")
   product_df = read.csv(revenue_file)
   product_df[,column_name]
 }
@@ -29,7 +35,7 @@ getProductTabPanel = function(product){
   print(paste0("getProductTabPanel() :: INIT"))
   
   product_folder = paste0(data_folder,"/",product)
-  revenue_file = list.files(product_folder, full.names=TRUE)
+  revenue_file = paste0(product_folder,"/Revenue.csv")
   product_df = read.csv(revenue_file)
   y_df = product_df[,!names(product_df) %in% columns_to_skip]
   revenue_cols = names(y_df)
@@ -127,7 +133,7 @@ attachProductsObservers = function(input, output, session, reactive_vars){
   lapply(products, FUN=function(product){
     
     product_folder = paste0(data_folder,"/",product)
-    revenue_file = list.files(product_folder, full.names=TRUE)
+    revenue_file = paste0(product_folder,"/Revenue.csv")
     product_df = read.csv(revenue_file)
     
     y_df = product_df[,!names(product_df) %in% columns_to_skip]
@@ -141,8 +147,8 @@ attachProductsObservers = function(input, output, session, reactive_vars){
     
     x = product_df$t
     y = y_df[,revenue_cols[1]]
-    
-    
+
+        
     # selecting columns within product
     button_id = paste0(products_prefix, "pId|",product,"|Columns")
     observeEvent(input[[button_id]],{
@@ -235,6 +241,25 @@ attachProductsObservers = function(input, output, session, reactive_vars){
       product_data <<- tmp
       product_data_column <<- column_name
       product_data_obeservations <<- length(tmp)
+      
+      forecast_file = paste0(product_folder,"/Forecast.csv")
+      if(file.exists(forecast_file)){
+        
+        forecast_df = read.csv(forecast_file)  
+        
+        forecast_start_year = forecast_df[1,"year"]
+        forecast_start_month = forecast_df[1,"month"]
+        
+        forecast_end_year = tail(forecast_df[,"year"], n=1)
+        forecast_end_month = tail(forecast_df[,"month"], n=1)
+        
+        product_forecast_start_date <<- c(forecast_start_year, forecast_start_month)
+        product_forecast_end_date <<- c(forecast_end_year, forecast_end_month)
+        product_forecast_data <<- ts(forecast_df[,"forecast"], frequency=12, 
+                                     start=product_forecast_start_date, end=product_forecast_end_date)
+                
+      }
+      
     })
     
   })
