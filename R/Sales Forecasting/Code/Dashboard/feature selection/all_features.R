@@ -12,10 +12,21 @@ all_features_prefix = paste0(features_prefix, "features_")
 ## UI Elements
 initAllFeaturesUI = function(){
   
-  all_features_id = paste0(all_features_prefix,"all_features_box")
-  tab_all_features = tabPanel(title = "Features",
-                              uiOutput(all_features_id))
-  tab_all_features
+  months = 1:12
+  months = paste0("month",months)
+  
+  # row:0 - internal features
+  id = paste0(all_features_prefix, "internalFeatures")
+  check_internal_features = checkboxGroupInput(id, label="Internal Features", 
+                                          choices=months, selected=months, inline=TRUE) 
+  row_0 = fluidRow(check_internal_features)
+  
+  # row:1 - external features
+  all_features_id = paste0(all_features_prefix, "all_features_box")
+  ui_all_features = uiOutput(all_features_id)
+  row_1 = fluidRow(ui_all_features)
+  
+  tabPanel(title = "Features", row_0, row_1)
 }
 
 
@@ -123,5 +134,18 @@ populateFeatures = function(input, output, session){
     })
     
   })
+  
+}
+
+removeUnselectedMonths = function(input, x){
+  
+  months = 2:12
+  months = paste0("month",months)
+  
+  months_to_include = input[[paste0(all_features_prefix, "internalFeatures")]]
+  
+  months_to_exclude = setdiff(months, months_to_include)
+  
+  x[,!colnames(x) %in% months_to_exclude]
   
 }

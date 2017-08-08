@@ -280,11 +280,12 @@ doLASSO = function(data, input, output, session) {
   weights = rep(1, nrow(data))
   weights[obs_to_exclude] = 0
   
+  
   # Varaibles and Predictors
   form = as.formula(paste0(product_data_column," ~ ."))
   x = model.matrix(form, data)[, -1]
+  x = removeUnselectedMonths(input, x)
   y = data[,product_data_column]
-  
   
   # LASSO
   cv.l2.fit = cv.glmnet(x, y, type.measure = error_type,
@@ -302,6 +303,7 @@ getLASSOModels = function(data, input, output, session, cv.l2.fit){
   
   form = as.formula(paste0(product_data_column," ~ ."))
   x = model.matrix(form, data)[, -1]
+  x = removeUnselectedMonths(input, x)
   y = data[,product_data_column]
   
   # best model

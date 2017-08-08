@@ -78,12 +78,14 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
     id_1_1 = paste0(comparison_prefix, "plotComparison")
     output[[id_1_1]] = renderPlot({
       plot(preview_window, lwd=2, ylab=product_data_column)
-      lines(old_forecast_window, col="orange", lty=2, lwd=2)
+      lines(old_forecast_window, col="orange", lty=2, lwd=3)
       
       for(model in MODELS){
         if(model %in% models_to_use){
           t = ts(df_benchmark_fit[[paste0(BENCHMARK_,model)]], frequency=12, start=valid_start_ym)
-          lines(t, col=MODEL_COLORS[which(MODELS==model)], lty=2, lwd=2)
+          lines(t, col=MODEL_COLORS[which(MODELS==model)], 
+                lty=ifelse(grepl("ENSEMBLE", model), 2, 3), 
+                lwd=ifelse(grepl("ENSEMBLE", model), 3, 1))
         }
       }
       

@@ -288,6 +288,14 @@ y_name = "orders_rcvd"
 form = as.formula(paste0(y_name,"~."))
 x = model.matrix(form, data.new)
 colnames(x)
+
+months = 2:12
+months = paste0("month",months)
+months_to_include = c(2,3,4,5,6)
+months_to_include = paste0("month", months_to_include)
+months_to_exclude = setdiff(months, months_to_include)
+x[,!colnames(x) %in% months_to_exclude]
+
 y = data.new[,y_name]
 
 for(alpha in c(1)){
@@ -323,6 +331,7 @@ l2.fit = glmnet(x, y, alpha=1, lambda=simple_lambda)
 coefs = coef(l2.fit)[,1]
 coefs[coefs!=0]
 names(coefs[coefs!=0])
+
 
 
 ### MARS ###
