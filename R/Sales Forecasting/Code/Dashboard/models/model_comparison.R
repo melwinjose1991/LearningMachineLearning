@@ -85,7 +85,7 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
           t = ts(df_benchmark_fit[[paste0(BENCHMARK_,model)]], frequency=12, start=valid_start_ym)
           lines(t, col=MODEL_COLORS[which(MODELS==model)], 
                 lty=ifelse(grepl("ENSEMBLE", model), 2, 3), 
-                lwd=ifelse(grepl("ENSEMBLE", model), 3, 1))
+                lwd=ifelse(grepl("ENSEMBLE", model), 4, 1))
         }
       }
       
@@ -169,20 +169,38 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
       })
       benchmark_rows = paste0(benchmark_rows, collapse="")
       
-      benchmark_error_summary = paste0("<tr><td></td>")
+      benchmark_summary = paste0("<tr><td>Mean/Total</td>")
       for(model in MODELS){
         if(model %in% models_to_use){
-          benchmark_error_summary = paste0(benchmark_error_summary, "<td></td>")
-          error = mean(abs(df_benchmark_fit[,paste0(BENCHMARK_,model,"_ERROR")]))
-          error = round(error, 2)
-          error = paste0("<td>", error, "</td>")
-          benchmark_error_summary =paste0(benchmark_error_summary, error)
+          
+          yearly_total = sum(abs(df_benchmark_fit[,paste0(BENCHMARK_,model)]))
+          benchmark_summary = paste0(benchmark_summary, 
+                                     "<td>&nbsp;", yearly_total, "&nbsp;</td>")
+          
+          total_error = sum(abs(df_benchmark_fit[,paste0(BENCHMARK_,model,"_ERROR")]))
+          total_error = round(total_error, 2)
+          
+          mae = mean(abs(df_benchmark_fit[,paste0(BENCHMARK_,model,"_ERROR")]))
+          mae = round(mae, 2)
+          
+          error = paste0("<td>&nbsp;", mae, "&nbsp;/&nbsp;",
+                         total_error, "&nbsp;</td>")
+          benchmark_summary =paste0(benchmark_summary, error)
         }
       }
-      old_forecast_mae = round( mean(abs(df_benchmark_fit[,"old_forecast_error"]), na.rm=TRUE), 2 )
-      benchmark_error_summary = paste0(benchmark_error_summary, "<td></td>",
-                                       "<td>", old_forecast_mae, "</td>")
-      benchmark_error_summary = paste0(benchmark_error_summary, "</tr>")
+      
+      old_forecast_yearly = round(df_benchmark_fit[1,"old_forecast"]*12, 2)
+      old_forecast_mae = round(mean(abs(df_benchmark_fit[,"old_forecast_error"]), 
+                                     na.rm=TRUE), 2)
+      old_forecast_total_error = round(mean(abs(df_benchmark_fit[,"old_forecast_error"]), 
+                                            na.rm=TRUE), 2)
+      
+      benchmark_summary = paste0(benchmark_summary, 
+                                 "<td>&nbsp;",old_forecast_yearly,"&nbsp;</td>",
+                                 "<td>&nbsp;", old_forecast_mae, "&nbsp;/&nbsp;", 
+                                 old_forecast_total_error, "&nbsp;</td>")
+      
+      benchmark_summary = paste0(benchmark_summary, "</tr>")
                                        
       
       table_header = sapply(MODELS, function(model){
@@ -197,7 +215,7 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
       
       
       table_forecast = paste0("<table><tr><td>#</td>", table_header, "</tr>",
-                            benchmark_rows, benchmark_error_summary, "</table>")
+                            benchmark_rows, benchmark_summary, "</table>")
       
       HTML(table_forecast)
     })
