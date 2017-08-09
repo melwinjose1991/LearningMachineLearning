@@ -103,7 +103,7 @@ attachFREDObservers = function(input){
     sub_categories_id = vector('character')
     for (key in names(input_value)) {
       #print(key)
-      if( grepl("subCatId",key) & input_value[[key]] == TRUE) {
+      if( grepl("subCatId",key) && input_value[[key]] == TRUE) {
         sub_categories_id = c(sub_categories_id, unlist(strsplit(key, "\\|"))[2])
       }
     }
