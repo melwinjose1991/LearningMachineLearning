@@ -1,6 +1,9 @@
 # products > main.R
 
+
+
 products_prefix = "products_"
+
 data_folder = paste0("../../Data")
 data_folders_to_skip = c("External Data")
 
@@ -22,6 +25,7 @@ columns_to_skip = c("period_id", "month", "year", "month_str", "t")
 product_code_mapping = list("2401"="2401 - DTR", "2404"="2404 - SPT")
 
 
+
 ## UI Elements
 getProductData = function(product, column_name){
   product_folder = paste0(data_folder,"/",product)
@@ -29,6 +33,7 @@ getProductData = function(product, column_name){
   product_df = read.csv(revenue_file)
   product_df[,column_name]
 }
+
 
 
 getProductTabPanel = function(product){
@@ -162,8 +167,6 @@ attachProductsObservers = function(input, output, session, reactive_vars){
         ticks_at = (0:(max(years)-min(years)+1))*12
         ticks_label = ticks_at
         ticks_label[1] = 1
-        # time_series = ts(y, frequency=12, start=c(start_year, start_month))
-        # plot(time_series, xlab="Time", ylab=column_name)
         
         ggplot(mapping=aes(x, y)) + geom_line() +
           scale_x_continuous(breaks = ticks_at, labels=period_id[ticks_label]) +
@@ -179,13 +182,11 @@ attachProductsObservers = function(input, output, session, reactive_vars){
       column_name =  input[[button_id]]
       row = nearPoints(df=product_df, input[[plot_click_id]], 
                        xvar="t", yvar=column_name, threshold=10, maxpoints=1)
-      #print(row)
       
       if(nrow(row)>0){
         id = paste0(products_prefix, product, "|avoid")
         current_obs_str = input[[id]]
         
-        #current_obs_str = "2,3"
         current_obs = as.numeric(unlist(strsplit(current_obs_str,",")))
         new_obs = as.numeric(row["t"])  
         #new_obs = 1
@@ -197,7 +198,6 @@ attachProductsObservers = function(input, output, session, reactive_vars){
             new_obs = paste0(current_obs_str, ",", new_obs)
           }
         }
-        #new_obs
         
         updateTextInput(session, id, value=new_obs)
       }
@@ -211,7 +211,6 @@ attachProductsObservers = function(input, output, session, reactive_vars){
       column_name =  input[[button_id]]
       row = nearPoints(df=product_df, input[[plot_hover_id]], 
                        xvar="t", yvar=column_name, threshold=10, maxpoints=1)
-      #print(row)
       
       id = paste0(products_prefix, product, "|hovered")
       if(nrow(row)>0){

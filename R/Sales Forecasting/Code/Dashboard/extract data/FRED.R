@@ -1,13 +1,16 @@
 library(FredR)
 
 
+
 FRED_prefix = paste0(extract_tab_prefix, "FRED_")
 FRED_folder = paste0(external_data_folder,"/FRED")
 
 categories_file = paste0(FRED_folder, "/categories.csv" )
 sub_categories_file = paste0(FRED_folder, "/sub_categories.csv" )
 meta_file = paste0(FRED_folder, "/meta_data.csv" )
+
 meta_data = data.frame()
+# stores meta-data of series like id, name, etc
 
 api.key = "b96673bc1d92a335c6306c864e046827"
 
@@ -19,7 +22,13 @@ fred = FredR(api.key)
 
 
 
-## Fetching available subcategories - RUN ONCE
+### Fetching available subcategories
+#     Reads categories.csv, fetches categories 
+#     with fetch=yes. Writes available sub-categories
+#     into sub_categories.csv
+#   NOTE :  run it once to create sub_categories.csv
+#           which is required for the functioning of
+#           the tool
 if(FALSE){
   
   categories_df = read.csv(categories_file)
@@ -78,7 +87,11 @@ getFREDUI = function(){
 }
 
 
+
 ## Server Functions
+
+# Checking if the series has enough data points
+# and missing values
 isSeriesOKAY=function(series){
   
   if(dim(series)[1]!=product_data_obeservations){
@@ -94,6 +107,7 @@ isSeriesOKAY=function(series){
 }
 
 
+
 attachFREDObservers = function(input){
   
   fetch_button_id = paste0(FRED_prefix,"fetchData")
@@ -102,7 +116,6 @@ attachFREDObservers = function(input){
     input_value = reactiveValuesToList(input)
     sub_categories_id = vector('character')
     for (key in names(input_value)) {
-      #print(key)
       if( grepl("subCatId",key) && input_value[[key]] == TRUE) {
         sub_categories_id = c(sub_categories_id, unlist(strsplit(key, "\\|"))[2])
       }
@@ -116,9 +129,12 @@ attachFREDObservers = function(input){
 
 
 
-
+### Fetches the data from FRED
+#     Fetches the sub-categories selected by user, 'sub_categories_id',
+#     and writes the series into respective files
 fetchData = function(sub_categories_id){
   
+  # Contains ids & names of sub-categories and categories
   config_fetch_data = read.csv(sub_categories_file)
   
   # TOD: no of days in a month 29,30,31
@@ -142,9 +158,12 @@ fetchData = function(sub_categories_id){
   
   for(sub_category_id in sub_categories_id){
     
-    category_id = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,"category_id"]
-    category_name = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,"category_name"]
-    sub_category_name = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,"sub_category_name"]
+    category_id = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,
+                                    "category_id"]
+    category_name = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,
+                                      "category_name"]
+    sub_category_name = config_fetch_data[config_fetch_data$sub_category_id==sub_category_id,
+                                          "sub_category_name"]
     
     
     print(paste0("Fetching series in ",sub_category_name))
@@ -172,6 +191,8 @@ fetchData = function(sub_categories_id){
       if(is_okay == "yes"){
         
         if(exists("df_series")){
+          # df_series data.frame stores the series
+          # from a sub-category
           df_series[,series_id]=series$value
         }else{
           df_series = data.frame(date=series$date)

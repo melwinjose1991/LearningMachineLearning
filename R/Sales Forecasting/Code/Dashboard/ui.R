@@ -1,8 +1,23 @@
+
+## Check and install required packages
+
+list.of.packages <- c("shiny", "shinyjs", "ggplot2", # ui and server
+                      "FredR",                       # extract   
+                      "glmnet",                      # feature selection
+                      "car", "lmtest", "forecast",   # models
+                      "earth", "tseries")
+
+new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
+if(length(new.packages)) install.packages(new.packages)
+
+
+
+## Loading Libraries
+
 library(shiny)
 library(shinyjs)
 library(ggplot2)
 
-if(TRUE){
 
 source("const.R")
   
@@ -14,15 +29,13 @@ source("forecast/main.R")
 
 source("server.R")
 
-  
+
+
+# Getting Tab
 tab_products = tabPanel(title = "Products >", tags$hr(), products_navbar)
-
 tab_extract_data = tabPanel(title = "Extract >", tags$hr(), extract_navbar)
-
 tab_feature_selection = tabPanel(title = "Feature Selection >", tags$hr(), feature_selection_navbar)
-
 tab_models = tabPanel(title = "Models >", tags$hr(), models_navbar)
-
 tab_forecast = tabPanel(title = "Forecast", tags$hr(), forecast_navbar)
 
 
@@ -39,4 +52,4 @@ ui = fluidPage(
 
 shinyApp(ui = ui, server = server)
 
-}
+
