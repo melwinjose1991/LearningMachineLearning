@@ -191,9 +191,9 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
       
       old_forecast_yearly = round(df_benchmark_fit[1,"old_forecast"]*12, 2)
       old_forecast_mae = round(mean(abs(df_benchmark_fit[,"old_forecast_error"]), 
-                                     na.rm=TRUE), 2)
-      old_forecast_total_error = round(mean(abs(df_benchmark_fit[,"old_forecast_error"]), 
-                                            na.rm=TRUE), 2)
+                                    na.rm=TRUE), 2)
+      old_forecast_total_error = round(sum(abs(df_benchmark_fit[,"old_forecast_error"]), 
+                                           na.rm=TRUE), 2)
       
       benchmark_summary = paste0(benchmark_summary, 
                                  "<td>&nbsp;",old_forecast_yearly,"&nbsp;</td>",
