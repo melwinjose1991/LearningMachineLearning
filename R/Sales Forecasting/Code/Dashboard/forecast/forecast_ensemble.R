@@ -119,6 +119,16 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
       })
       forecast_rows = paste0(forecast_rows, collapse="")
       
+      forecast_total_row = "<tr><td>TOTAL</td>"
+      for(model in models_to_use){
+        total = round(sum(df_forecast_fit[,paste0(model, "_forecast")]), 2)
+        tr_td = paste0("<td>&nbsp;", total, "&nbsp;</td>")
+        forecast_total_row = paste0(forecast_total_row, tr_td)
+      }
+      forecast_total_row = paste0(forecast_total_row, 
+                                  "<td>", (df_forecast_fit[1,"old_forecast"]*12),
+                                  "</td></tr>")
+      
       table_header = sapply(MODELS, function(model){
         if(model %in% models_to_use){
           paste0("<th>&nbsp;",model,"&nbsp;</th>")
@@ -126,8 +136,9 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
       })
       table_header = paste0(table_header, collapse="")
       table_header = paste0(table_header, "<th>&nbsp;OLD_FORECAST&nbsp;</th>")
+      
       table_forecast = paste0("<table><tr><td>#</td>", table_header, "</tr>",
-                              forecast_rows, "</table>")
+                              forecast_rows, forecast_total_row, "</table>")
       
       HTML(table_forecast)
     })
