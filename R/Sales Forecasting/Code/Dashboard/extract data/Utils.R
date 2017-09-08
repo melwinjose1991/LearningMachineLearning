@@ -36,7 +36,9 @@ createXSeriesIDs = function(file, past_months=12){
 }
 
 
-###
+### createXSeriesData
+#     Creates a new series by shifting the old series.
+#     Creates 12 new series for each of the existing series.
 createXSeriesData = function(sub_categories_file, past_months=12){
   
   FRED_folder = "../../Data/External Data/FRED/"

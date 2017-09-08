@@ -35,7 +35,7 @@ getProductData = function(product, column_name){
 }
 
 
-
+### Create the tab for the product
 getProductTabPanel = function(product){
   print(paste0("getProductTabPanel() :: INIT"))
   
@@ -233,6 +233,7 @@ attachProductsObservers = function(input, output, session, reactive_vars){
       column_name =  input[[button_id]]
       tmp = getProductData(product, column_name)
       
+      # Updating global variables
       product_line <<- product
       product_start_date <<- c(start_year, start_month)
       product_end_date <<- c(end_year, end_month)
@@ -252,6 +253,7 @@ attachProductsObservers = function(input, output, session, reactive_vars){
         forecast_end_year = tail(forecast_df[,"year"], n=1)
         forecast_end_month = tail(forecast_df[,"month"], n=1)
         
+        # Updating global variables
         product_forecast_start_date <<- c(forecast_start_year, forecast_start_month)
         product_forecast_end_date <<- c(forecast_end_year, forecast_end_month)
         product_forecast_data <<- ts(forecast_df[,"forecast"], frequency=12, 
