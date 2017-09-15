@@ -7,6 +7,10 @@ products_prefix = "products_"
 data_folder = paste0("../../Data")
 data_folders_to_skip = c("External Data")
 
+
+## Global variables that keeps track of
+#   the products to be forecasted and 
+#   meta-data about the product.
 products = vector('character')
 
 product_line = "1234"
@@ -100,7 +104,11 @@ getProductsUI = function(){
 }
 
 
-
+## Creates navigation bar of the available products.
+#   To add a new product, call the function
+#   getProductTabPanel("<product_id>").
+#   This function just creates the UI, doesn't
+#   plot the graph.
 products_navbar = navlistPanel(
   well = FALSE,
   widths = c(2, 8),
@@ -130,7 +138,7 @@ getProducts = function(){
 }
 
 
-
+##  Attaching listeners to the events.
 attachProductsObservers = function(input, output, session, reactive_vars){
   
   products <<- getProducts()
@@ -257,7 +265,8 @@ attachProductsObservers = function(input, output, session, reactive_vars){
         product_forecast_start_date <<- c(forecast_start_year, forecast_start_month)
         product_forecast_end_date <<- c(forecast_end_year, forecast_end_month)
         product_forecast_data <<- ts(forecast_df[,"forecast"], frequency=12, 
-                                     start=product_forecast_start_date, end=product_forecast_end_date)
+                                     start=product_forecast_start_date, 
+                                     end=product_forecast_end_date)
                 
       }
       
@@ -266,7 +275,3 @@ attachProductsObservers = function(input, output, session, reactive_vars){
   })
   
 }
-
-
-
-
