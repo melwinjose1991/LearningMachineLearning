@@ -12,3 +12,4 @@
 *.Rproj
 
 R/Sales Forecasting/.Rproj.user/*
+.Rproj.user
