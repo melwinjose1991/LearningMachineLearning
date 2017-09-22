@@ -189,6 +189,7 @@ attachBenchmarkObservers = function(input, output, reactive_vars){
                                   error_type=error_type)
     
     df_benchmark_fit[,BENCHMARK_LREGRESSION] <<- round(fit_forecast[['forecast']][,'fit'],2)
+    reactive_vars[[SENSITIVITY_MODELS_LINEAR_REGRESSION]] = fit_forecast[['regression']]
     
     ## Benchmark Forecast
     output_graph_benchmark = paste0(benchmark_prefix, "benchmarkPlot")

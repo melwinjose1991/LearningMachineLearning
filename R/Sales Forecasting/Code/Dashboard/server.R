@@ -35,6 +35,9 @@ server = function(input, output, session) {
   #     Benchmark
   attachBenchmarkObservers(input, output, reactive_vars)
   
+  #     Sensitivity
+  attachSensitivityObservers(input, output, reactive_vars)
+  
   #     TimeSeries
   attachTimeSeriesObservers(input, output)
   
