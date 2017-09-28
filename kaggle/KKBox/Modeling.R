@@ -1,4 +1,6 @@
 library(xgboost)
+library(data.table)
+
 
 
 ###### reading the csv files ######
@@ -14,7 +16,14 @@ test[, mode_pay_id:=as.numeric(mode_pay_id)]
 train[, payment_types:=as.numeric(payment_types)]
 test[, payment_types:=as.numeric(payment_types)]
 
-x = c("mode_pay_id", "payment_types")
+train[, mode_plandays:=as.numeric(mode_plandays)]
+test[, mode_plandays:=as.numeric(mode_plandays)]
+
+train[, plandays_unique:=as.numeric(plandays_unique)]
+test[, plandays_unique:=as.numeric(plandays_unique)]
+
+x = c("mode_pay_id", "payment_types",
+      "mode_plandays", "plandays_unique")
 
 
 
@@ -55,7 +64,7 @@ model = xgb.train(   params              = param,
 imp = as.data.frame(xgb.importance(feature_names = x, model = model))
 imp
 
-
+# 0.1933  - 0.2457 
 
 ###### Test ######
 test_DM = xgb.DMatrix(data = as.matrix(test[, x, with=FALSE]))

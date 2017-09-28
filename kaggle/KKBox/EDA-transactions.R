@@ -43,3 +43,16 @@ dt_payment_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn
 
 dt_payment_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N),
                  by=payment_types]
+
+
+
+###### payment_plan_days ######
+merged_dt = merge(eda_train_data, eda_transactions_data[, .(msno, payment_plan_days)], all.x=TRUE)
+
+dt_plandays_churn = merged_dt[, .(mode_plandays=Mode(payment_plan_days), is_churn=max(is_churn)), by=msno]
+head(dt_plandays_churn)
+dt_plandays_churn[, msno:=NULL]
+
+dt_plandays_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
+                 by=mode_plandays][order(-count)]
+
