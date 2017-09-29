@@ -1,7 +1,7 @@
 ### Exploratory Data Analysis
 
 library(data.table)
-
+library(ggplot2)
 
 
 ###### Removing tables() ######
@@ -134,7 +134,6 @@ merged_dt = merge(eda_train_data,
 
 dt_renew_churn = merged_dt[, .( mode_auto_renew=Mode(is_auto_renew), 
                                 auto_renew_ones = sum(is_auto_renew==1),
-                                auto_renew_zeros = sum(is_auto_renew==0),
                                 is_churn=max(is_churn),
                                 nof_transcations = .N
                                ), 
@@ -142,6 +141,16 @@ dt_renew_churn = merged_dt[, .( mode_auto_renew=Mode(is_auto_renew),
 dt_renew_churn[, percent_renew := (100*auto_renew_ones)/nof_transcations]
 head(dt_renew_churn[percent_renew!=100])
 
-dt_renew_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
-                 by=mode_auto_renew][order(-count)]
+breaks = c(0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110)
+# 0 : [0,10)
+# 1 : [10,20) and so on
+dt_renew_churn[, percent_renew_bin:= .bincode(percent_renew, breaks, FALSE, TRUE) - 1 ]
+# head(dt_renew_churn)
+# head(dt_renew_churn[percent_renew>=90 & percent_renew<100], 40)
+# head(dt_renew_churn[percent_renew==100])
 
+d = dt_renew_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
+                 by=percent_renew_bin][order(-count)]
+d
+
+ggplot(data=d, aes(x=percent_renew_bin, y=percent_churns)) + geom_bar(stat="identity")
