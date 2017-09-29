@@ -39,16 +39,17 @@ valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x,with=FALSE]),
 
 ###### Training ######
 seed_used = 1234
-param = list(  objective           = "binary:logistic", 
-               booster             = "gbtree",
-               eta                 = 0.0125,
-               max_depth           = as.integer(length(x)/1),
-               min_child_weight    = 75,
-               subsample           = 1,
-               colsample_bytree    = 0.70,
-               seed                = seed_used
+param = list(  
+  objective           = "binary:logistic", 
+  booster             = "gbtree",
+  max_depth           = as.integer(length(x)),
+  eta                 = 0.0125,
+  gamma               = 0,
+  colsample_bytree    = 0.9,
+  min_child_weight    = 50,
+  subsample           = 1,
+  seed                = seed_used
 )
-
 nrounds = 2000
 
 model = xgb.train(   params              = param, 
@@ -65,7 +66,10 @@ imp = as.data.frame(xgb.importance(feature_names = x, model = model))
 imp
 
 # 0.1933  - 0.2457 
-# 0.1808  - 0.2407
+# 0.1808  - 0.2407  d = 2
+# 0.1785  - 0.2406  d = 2 Tuned
+
+# for a change of 0.01 there is a change of 0.005
 
 
 

@@ -30,7 +30,7 @@ for(col in x){
 
 ###### train/test split ######
 rows = dim(train)[1]
-train_rows = sample(1:rows, 0.80*rows, replace=F)
+train_rows = sample(1:rows, 0.50*rows, replace=F)
 
 train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x,with=FALSE]), 
                         label=train[train_rows, is_churn])
@@ -38,12 +38,39 @@ valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x,with=FALSE]),
                         label=train[-train_rows, is_churn])
 
 
+
 ###### Tuning ######
-cv.ctrl <- trainControl(method = "repeatedcv", repeats = 1,number = 3, 
-                        classProbs = TRUE,
-                        allowParallel=T)
+cv.ctrl = trainControl(
+  method = "repeatedcv", 
+  repeats = 1,
+  number = 2, 
+  #classProbs = TRUE,
+  allowParallel=T,
+  verboseIter = TRUE
+)
 
+xgb.grid = expand.grid(
+  nrounds = 2000,
+  max_depth = 1:8,
+  eta = c(0.0125),
+  gamma = 0,
+  colsample_bytree    = c(0.8, 0.9, 1),
+  min_child_weight    = c(50, 100, 200),
+  subsample           = c(0.8, 0.9, 1)
+)
 
+xgb_tune = train(
+  x = as.matrix(train[train_rows, x, with=FALSE]),
+  y = as.factor(train[train_rows, is_churn]),
+  method = "xgbTree",
+  trControl = cv.ctrl,
+  tuneGrid = xgb.grid,
+  verbose = T,
+  metric = "logloss",
+  nthread = 4
+)
+  
+  
 
 ###### Test ######
 test_DM = xgb.DMatrix(data = as.matrix(test[, x, with=FALSE]))

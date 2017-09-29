@@ -1,0 +1,11 @@
+> data.table is much faster than data.frame
+
+> caret package has Grid Search of xgboost's hyper-parameter tuning
+
+> Hyper Parameter Tuning Techniques
+	- https://en.wikipedia.org/wiki/Hyperparameter_(machine_learning)
+	- Bayesian Optimization of ML algorithms
+		- http://papers.nips.cc/paper/4522-practical-bayesian-optimization-of-machine-learning-algorithms.pdf
+		- Nando de Freitas @uTube - Machine learning - Bayesian optimization and multi-armed bandits
+			- https://www.youtube.com/watch?v=vz3D36VXefI&index=10&list=PLE6Wd9FR--EdyJ5lbFl8UuGjecvVw66F6
+		
