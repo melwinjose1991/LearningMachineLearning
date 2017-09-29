@@ -4,6 +4,12 @@ library(data.table)
 
 
 
+###### Removing tables() ######
+rm(list=tables()$NAME)
+gc()
+
+
+
 ###### reading the csv files ######
 eda_train_data = fread("data/train.csv")
 eda_transactions_data = fread("data/transactions.csv")
@@ -25,6 +31,32 @@ Mode <- function(x) {
   ux <- unique(x)
   ux[which.max(tabulate(match(x, ux)))]
 }
+
+
+###### %Churns in train data ######
+sum(eda_train_data$is_churn==1) / dim(eda_train_data)[1]
+# 6.39% is churn
+
+
+
+###### %Churns in train data ######
+# logloss for all zero preidction = 3.111
+# N = 970960
+
+# p=0 is taken as max( min(0,1-1E-15), 1E-15) = 1E-15
+# log(p=0) = -34.53878
+# n_1 * -34.53878
+
+# p=1 is taken as max( min(1,1-1E-15), 1E-15) = 1
+# log(p=1) ~ 0
+# n_0 * 0
+
+# n_1 = (N*logloss)/34.538
+# n_1 = 87459
+# n_0 = 883501
+# #test records = 970960
+
+# % of churns in test = 87459/970960 = 9%
 
 
 
@@ -56,3 +88,42 @@ dt_plandays_churn[, msno:=NULL]
 dt_plandays_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                  by=mode_plandays][order(-count)]
 
+
+
+###### plan_list_price & actual_amount_paid ######
+merged_dt = merge(eda_train_data, 
+                  eda_transactions_data[, .(msno, plan_list_price, actual_amount_paid)], 
+                  all.x=TRUE)
+
+getCode = function(plan_list_price, actual_amount_paid){
+  if(plan_list_price > actual_amount_paid){
+    -1
+  }else if(plan_list_price == actual_amount_paid){
+    0
+  }else{
+    1
+  }
+}
+
+merged_dt[, pay_code := mapply(getCode, plan_list_price, actual_amount_paid)]
+
+dt_paycode_churn = merged_dt[, .(mode_pay_code=Mode(pay_code), 
+                                 is_churn=max(is_churn),
+                                 paid_less=sum(actual_amount_paid<plan_list_price),
+                                 paid_equal=sum(actual_amount_paid==plan_list_price),
+                                 paid_more=sum(actual_amount_paid>plan_list_price)), 
+                             by=msno]
+dt_paycode_churn[, msno:=NULL]
+
+dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
+                  by=mode_pay_code][order(-count)]
+# percent_churns is significantly different for -1, 0, 1
+
+dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
+                 by=paid_less][order(-count)]
+dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
+                 by=paid_equal][order(-count)]
+dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
+                 by=paid_more][order(-count)]
+
+### Ideas : #transaction, ###

@@ -1,5 +1,6 @@
 library(xgboost)
 library(data.table)
+library(caret)
 
 
 
@@ -37,35 +38,10 @@ valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x,with=FALSE]),
                         label=train[-train_rows, is_churn])
 
 
-###### Training ######
-seed_used = 1234
-param = list(  objective           = "binary:logistic", 
-               booster             = "gbtree",
-               eta                 = 0.0125,
-               max_depth           = as.integer(length(x)/1),
-               min_child_weight    = 75,
-               subsample           = 1,
-               colsample_bytree    = 0.70,
-               seed                = seed_used
-)
-
-nrounds = 2000
-
-model = xgb.train(   params              = param, 
-                     data                = train_DM,
-                     nrounds             = nrounds, 
-                     early_stopping_rounds  = 20,
-                     watchlist           = list(val=valid_DM),
-                     maximize            = FALSE,
-                     eval_metric         = "logloss",
-                     print_every_n = 25
-)
-
-imp = as.data.frame(xgb.importance(feature_names = x, model = model))
-imp
-
-# 0.1933  - 0.2457 
-# 0.1808  - 0.2407
+###### Tuning ######
+cv.ctrl <- trainControl(method = "repeatedcv", repeats = 1,number = 3, 
+                        classProbs = TRUE,
+                        allowParallel=T)
 
 
 

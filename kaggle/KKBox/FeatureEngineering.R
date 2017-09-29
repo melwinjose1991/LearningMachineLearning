@@ -2,6 +2,12 @@ library(data.table)
 
 
 
+###### Removing tables() ######
+rm(list=tables()$NAME)
+gc()
+
+
+
 ###### reading the csv files ######
 train_data = fread("data/train.csv")
 test_data = fread("data/sample_submission_zero.csv")
@@ -19,46 +25,93 @@ Mode <- function(x) {
 
 ###### mode_payment_id, payment_types ######
 merged = merge(train_data, transactions_data[, .(msno, payment_method_id)], all.x=TRUE)
-dt_train = merged[, .(mode_pay_id=Mode(payment_method_id), 
+FE_train = merged[, .(mode_pay_id=Mode(payment_method_id), 
                       payment_types=length(unique(payment_method_id)),
                       is_churn=max(is_churn)), 
                   by=msno]
-head(dt_train)
-dim(dt_train)[1] == dim(train_data)[1]
+head(FE_train)
+dim(FE_train)[1] == dim(train_data)[1]
 
 
 merged = merge(test_data, transactions_data[, .(msno, payment_method_id)], all.x=TRUE)
-dt_test = merged[, .(mode_pay_id=Mode(payment_method_id), 
+FE_test = merged[, .(mode_pay_id=Mode(payment_method_id), 
                      payment_types=length(unique(payment_method_id)),
                      is_churn=max(is_churn)), 
                  by=msno]
-head(dt_test)
-dim(dt_test)[1] == dim(test_data)[1]
+head(FE_test)
+dim(FE_test)[1] == dim(test_data)[1]
 
 
 
 ###### payment_plan_days, plandays_unique ######
 merged = merge(train_data, transactions_data[, .(msno, payment_plan_days)], all.x=TRUE)
-dt_plandays_churn = merged[, .(mode_plandays=Mode(payment_plan_days), 
+tmp = merged[, .(mode_plandays=Mode(payment_plan_days), 
                                plandays_unique=length(unique(payment_plan_days))), by=msno ]
-head(dt_plandays_churn)
-dt_train = merge(dt_train, dt_plandays_churn, by="msno", all.x=TRUE)
-
+head(tmp)
+FE_train = merge(FE_train, tmp, by="msno", all.x=TRUE)
+head(FE_train)
 
 merged = merge(test_data, transactions_data[, .(msno, payment_plan_days)], all.x=TRUE)
-dt_plandays_churn = merged[, .(mode_plandays=Mode(payment_plan_days), 
+tmp = merged[, .(mode_plandays=Mode(payment_plan_days), 
                                plandays_unique=length(unique(payment_plan_days))), by=msno ]
-head(dt_plandays_churn)
-dt_test = merge(dt_test, dt_plandays_churn, by="msno", all.x=TRUE)
+head(tmp)
+FE_test = merge(FE_test, tmp, by="msno", all.x=TRUE)
+head(FE_test)
+
+
+
+###### plan_list_price & actual_amount_paid ######
+getCode = function(plan_list_price, actual_amount_paid){
+  if( is.na(plan_list_price) || is.na(actual_amount_paid) ){
+    return(NA)
+  }else if(plan_list_price > actual_amount_paid){
+    return(-1)
+  }else if(plan_list_price == actual_amount_paid){
+    return(0)
+  }else{
+    return(1)
+  }
+}
+
+merged = merge(train_data, 
+               transactions_data[, .(msno, plan_list_price, actual_amount_paid)], 
+               all.x=TRUE)
+merged[, pay_code := mapply(getCode, plan_list_price, actual_amount_paid)]
+tmp = merged[, .(mode_pay_code=Mode(pay_code), is_churn=max(is_churn),
+                 paid_less=sum(actual_amount_paid<plan_list_price),
+                 paid_equal=sum(actual_amount_paid==plan_list_price),
+                 paid_more=sum(actual_amount_paid>plan_list_price)), 
+             by=msno]
+tmp[,is_churn:=NULL]
+
+FE_train = merge(FE_train, tmp, by="msno", all.x=TRUE)
+head(FE_train)
+
+
+merged = merge(test_data, 
+               transactions_data[, .(msno, plan_list_price, actual_amount_paid)], 
+               all.x=TRUE)
+merged[, pay_code := mapply(getCode, plan_list_price, actual_amount_paid)]
+tmp = merged[, .(mode_pay_code=Mode(pay_code), is_churn=max(is_churn),
+                 paid_less=sum(actual_amount_paid<plan_list_price),
+                 paid_equal=sum(actual_amount_paid==plan_list_price),
+                 paid_more=sum(actual_amount_paid>plan_list_price)), 
+             by=msno]
+tmp[,is_churn:=NULL]
+FE_test = merge(FE_test, tmp, by="msno", all.x=TRUE)
+head(FE_test)
 
 
 
 ###### Write train and test ######
-head(dt_train)
-write.table(dt_train, "data/fe_train_1.csv", quote=FALSE, sep=",", row.names=FALSE)
+head(FE_train)
+write.table(FE_train, "data/fe_train_1.csv", quote=FALSE, sep=",", row.names=FALSE)
 
-head(dt_test)
-write.table(dt_test, "data/fe_test_1.csv", quote=FALSE, sep=",", row.names=FALSE)
+head(FE_test)
+write.table(FE_test, "data/fe_test_1.csv", quote=FALSE, sep=",", row.names=FALSE)
 
 
 
+###### Removing tables() ######
+rm(list=tables()$NAME)
+gc()
