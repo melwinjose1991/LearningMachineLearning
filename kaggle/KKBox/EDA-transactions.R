@@ -117,7 +117,6 @@ dt_paycode_churn[, msno:=NULL]
 
 dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                   by=mode_pay_code][order(-count)]
-# percent_churns is significantly different for -1, 0, 1
 
 dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                  by=paid_less][order(-count)]
@@ -126,4 +125,23 @@ dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn
 dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                  by=paid_more][order(-count)]
 
-### Ideas : #transaction, ###
+
+
+###### is_autorenew & transcations ######
+merged_dt = merge(eda_train_data, 
+                  eda_transactions_data[, .(msno, is_auto_renew)], 
+                  all.x=TRUE)
+
+dt_renew_churn = merged_dt[, .( mode_auto_renew=Mode(is_auto_renew), 
+                                auto_renew_ones = sum(is_auto_renew==1),
+                                auto_renew_zeros = sum(is_auto_renew==0),
+                                is_churn=max(is_churn),
+                                nof_transcations = .N
+                               ), 
+                             by=msno]
+dt_renew_churn[, percent_renew := (100*auto_renew_ones)/nof_transcations]
+head(dt_renew_churn[percent_renew!=100])
+
+dt_renew_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
+                 by=mode_auto_renew][order(-count)]
+

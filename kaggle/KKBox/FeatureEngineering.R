@@ -23,20 +23,33 @@ Mode <- function(x) {
 
 
 
-###### mode_payment_id, payment_types ######
+###### nof_transcations, mode_payment_id, payment_types ######
+getPercentFromTransaction = function(id, col, value, total){
+  count = dim(transactions_data[msno==id & transactions_data[[col]]==value])[1]
+  (100*count)/total
+}
+
 merged = merge(train_data, transactions_data[, .(msno, payment_method_id)], all.x=TRUE)
-FE_train = merged[, .(mode_pay_id=Mode(payment_method_id), 
-                      payment_types=length(unique(payment_method_id)),
-                      is_churn=max(is_churn)), 
+FE_train = merged[, .( mode_pay_id = Mode(payment_method_id), 
+                       payment_types = length(unique(payment_method_id)),
+                       is_churn = max(is_churn),
+                       nof_transcations = .N
+                      ), 
                   by=msno]
 head(FE_train)
 dim(FE_train)[1] == dim(train_data)[1]
 
+# FE_train[[paste0("percent_41")]] = sapply(FE_train$msno, function(id){
+#   getPercentFromTransaction(id, "payment_method_id", 41, FE_train[msno==id]$nof_transcations)
+# })
+
 
 merged = merge(test_data, transactions_data[, .(msno, payment_method_id)], all.x=TRUE)
-FE_test = merged[, .(mode_pay_id=Mode(payment_method_id), 
-                     payment_types=length(unique(payment_method_id)),
-                     is_churn=max(is_churn)), 
+FE_test = merged[, .( mode_pay_id=Mode(payment_method_id), 
+                      payment_types=length(unique(payment_method_id)),
+                      is_churn=max(is_churn),
+                      nof_transcations = .N
+                     ), 
                  by=msno]
 head(FE_test)
 dim(FE_test)[1] == dim(test_data)[1]
@@ -99,6 +112,28 @@ tmp = merged[, .(mode_pay_code=Mode(pay_code), is_churn=max(is_churn),
              by=msno]
 tmp[,is_churn:=NULL]
 FE_test = merge(FE_test, tmp, by="msno", all.x=TRUE)
+head(FE_test)
+
+
+
+###### mode(is_auto_renew), %auto_renew, ######
+merged = merge(train_data, transactions_data[, .(msno, is_auto_renew)], all.x=TRUE)
+tmp = merged[, .( mode_auto_renew = Mode(is_auto_renew), 
+                     auto_renews = sum(is_auto_renew==1)
+                   ), 
+                by=msno ]
+FE_train = merge(FE_train, tmp, by="msno", all.x=TRUE)
+FE_train[, percent_auto_renews := (100*auto_renews)/nof_transcations]
+head(FE_train)
+
+
+merged = merge(test_data, transactions_data[, .(msno, is_auto_renew)], all.x=TRUE)
+tmp = merged[, .( mode_auto_renew = Mode(is_auto_renew), 
+                     auto_renews = sum(is_auto_renew==1)
+                   ), 
+                by=msno ]
+FE_test = merge(FE_test, tmp, by="msno", all.x=TRUE)
+FE_test[, percent_auto_renews := (100*auto_renews)/nof_transcations]
 head(FE_test)
 
 

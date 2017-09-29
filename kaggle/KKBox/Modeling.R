@@ -16,9 +16,11 @@ test = fread("data/fe_test_1.csv")
 
 
 ###### X & Y ######
-x = c("mode_pay_id", "payment_types",
+x = c("nof_transcations",
+      "mode_pay_id", "payment_types",
       "mode_plandays", "plandays_unique",
-      "mode_pay_code", "paid_less", "paid_equal", "paid_more")
+      "mode_pay_code", "paid_less", "paid_equal", "paid_more",
+      "mode_auto_renew", "percent_auto_renews")
 
 for(col in x){
   train[,col] = as.numeric(train[[col]])
@@ -68,6 +70,7 @@ imp
 # 0.1933  - 0.2457 
 # 0.1808  - 0.2407  d = 2
 # 0.1785  - 0.2406  d = 2 Tuned
+# 0.1748  - 0.2372
 
 # for a change of 0.01 there is a change of 0.005
 
