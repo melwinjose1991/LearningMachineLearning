@@ -164,6 +164,8 @@ readData = function(input) {
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
     
+    data_series = filterByProductPeriod(data_series)
+    
     series_vars = intersect(names(data_series), selected_vars)
     if(is.null(dim(data_series[, series_vars]))){
       ## there is just one column from the series
@@ -208,6 +210,8 @@ getData = function(vars_id, y_name){
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
     
+    data_series = filterByProductPeriod(data_series)
+    
     series_vars = intersect(names(data_series), vars_id)
     if(is.null(dim(data_series[, series_vars]))){
       ## there is just one column from the series
@@ -220,6 +224,7 @@ getData = function(vars_id, y_name){
   }
   
   form = as.formula("period_id~.")
+  row.names(data) = data[,"t"]
   data_mat = model.matrix(form, data=data)
   print(c(vars_id, y_name))
   data_mat = data_mat[,c(vars_id, y_name)]

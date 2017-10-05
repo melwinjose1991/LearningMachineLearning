@@ -45,6 +45,33 @@ initFeatureClustersUI = function(){
 }
 
 
+
+## subsetting those rows within the time-period of 
+## product selected
+filterByProductPeriod = function(data_series){
+  
+  data_series[,"month"] = sapply(data_series$date, 
+                                 function(date){ 
+                                   as.numeric(strsplit(as.character(date),"-")[[1]][2]) 
+                                 }
+  )
+  data_series[,"year"] = sapply(data_series$date, 
+                                function(date){ 
+                                  as.numeric(strsplit(as.character(date),"-")[[1]][1])
+                                }
+  )
+  
+  data_series = data_series[(data_series$year>product_start_date[1]) |
+                              (data_series$year==product_start_date[1] & 
+                                 data_series$month>=product_start_date[2]), ]
+  data_series = data_series[ ,!(names(data_series) %in% c("month","year"))]
+  dim(data_series)
+  
+  data_series
+}
+
+
+
 ## Server Function
 readDataForClustering = function(input, output, session) {
   print("Feature Selection :: Feature Selection :: readDataForClustering() :: INIT")
@@ -84,6 +111,8 @@ readDataForClustering = function(input, output, session) {
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
     
+    data_series = filterByProductPeriod(data_series)
+    
     series_vars = intersect(names(data_series), selected_vars)
     if(is.null(dim(data_series[, series_vars]))){
       ## there is just one column from the series
@@ -104,6 +133,8 @@ readDataForClustering = function(input, output, session) {
 
 
 doHClust = function(input, output, session, data){
+  
+  print("Feature Selection :: Feature Selection :: doHClust() :: START")
   
   cor_matrix = cor(scale(data))
   abs_cor_matrix = abs(cor_matrix)
@@ -150,6 +181,8 @@ doHClust = function(input, output, session, data){
     })
     
   })
+  
+  print("Feature Selection :: Feature Selection :: doHClust() :: EXIT")
   
 }
 
