@@ -10,14 +10,17 @@ gc()
 
 
 ###### reading the csv files ######
-train = fread("data/fe_train_1.csv")
-test = fread("data/fe_test_1.csv")
+train = fread("data/afe_train_pca_1.csv")
+test = fread("data/afe_test_pca_1.csv")
+dim(train)
+dim(test)
 
 
 
 ###### X & Y ######
 x = colnames(test)
 x = x[!x %in% c("id")]
+x
 
 
 if(FALSE){
@@ -30,13 +33,13 @@ if(FALSE){
 
 ###### train/test split ######
 rows = dim(train)[1]
-train_rows = sample(1:rows, 0.80*rows, replace=F)
+train_rows = sample(1:rows, 0.90*rows, replace=F)
 
 train_DM <- xgb.DMatrix(data = as.matrix(train[train_rows,x,with=FALSE]), 
                         label=train[train_rows, target])
 valid_DM <- xgb.DMatrix(data = as.matrix(train[-train_rows,x,with=FALSE]), 
                         label=train[-train_rows, target])
-rm(train)
+# rm(train)
 gc()
 tables()
 
@@ -47,7 +50,7 @@ seed_used = 1234
 param = list(  
   objective           = "binary:logistic", 
   booster             = "gbtree",
-  max_depth           = as.integer(length(x)/10),
+  max_depth           = as.integer(length(x)),
   eta                 = 0.0125,
   gamma               = 0,
   colsample_bytree    = 0.8,
@@ -62,14 +65,15 @@ model = xgb.train(   params              = param,
                      nrounds             = nrounds, 
                      early_stopping_rounds  = 20,
                      watchlist           = list(val=valid_DM),
-                     maximize            = FALSE,
-                     eval_metric         = "auc",
-                     print_every_n = 25
+                     feval               = xgb_normalizedgini,
+                     maximize            = TRUE,
+                     print_every_n       = 10
 )
 
 imp = as.data.frame(xgb.importance(feature_names = x, model = model))
 imp
 
+# 0.591 - 0.171
 # 0.584 - 0.172
 
 
