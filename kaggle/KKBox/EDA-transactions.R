@@ -154,3 +154,70 @@ d = dt_renew_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_chu
 d
 
 ggplot(data=d, aes(x=percent_renew_bin, y=percent_churns)) + geom_bar(stat="identity")
+
+
+
+###### transaction date & membership_expire_date######
+getHistoricalChurns = function(trans_dates, deadline_dates, cancels){
+
+  # dt = data.table(x=trans_dates, y=deadline_dates, z=cancels)
+  # dt = dt[order(x)]
+  # trans_dates = dt$x
+  # deadline_dates = dt$y
+  # cancels = dt$z
+  
+  churns = 0
+  last_deadline = -1
+  
+  for(i in 1:length(deadline_dates)){
+    if(cancels[i]==1){
+      last_deadline = as.Date(as.character(deadline_dates[i]), "%Y%m%d")
+      next
+    }
+    if(last_deadline==-1){
+      last_deadline = as.Date(as.character(deadline_dates[i]), "%Y%m%d")
+      next
+    }
+    
+    trans_date = as.Date(as.character(trans_dates[i]), "%Y%m%d")
+    
+    paid_after = as.numeric(trans_date - last_deadline)
+    if(paid_after>30){
+      #print(paste0(trans_date, " ", last_deadline, " diff:", paid_after))
+      churns = churns + 1
+    }
+    
+    last_deadline = as.Date(as.character(deadline_dates[i]), "%Y%m%d")
+    
+  }
+  return(churns)
+}
+
+sorted_transactions = eda_transactions_data[order(transaction_date)]
+setkey(sorted_transactions, msno, transaction_date)
+
+eda_train_data[,"historical_churns"] = sapply(eda_train_data$msno, function(id){
+  x = sorted_transactions[msno==id,
+                            .(transaction_date, membership_expire_date, is_cancel)]
+  trans_dates = x$transaction_date
+  deadline_dates = x$membership_expire_date
+  cancels = x$is_cancel
+  
+  getHistoricalChurns(trans_dates, deadline_dates, cancels)
+})
+
+# 2 has historical churn
+
+if(FALSE){
+  id = eda_train_data[9,msno]
+  x = eda_transactions_data[msno==id,
+                            .(transaction_date, membership_expire_date, is_cancel)]
+  
+  x[order(transaction_date)]
+  
+  trans_dates = x$transaction_date
+  deadline_dates = x$membership_expire_date
+  cancels = x$is_cancel
+  
+  getHistoricalChurns(trans_dates, deadline_dates, cancels)
+}
