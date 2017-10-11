@@ -26,7 +26,8 @@ product_forecast_start_date = vector('numeric')
 product_forecast_end_date = vector('numeric')
 
 columns_to_skip = c("period_id", "month", "year", "month_str", "t")
-product_code_mapping = list("2401"="2401 - DTR", "2404"="2404 - SPT", "0001"="0001-TEST")
+product_code_mapping = list("2401"="2401 - DTR", "2404"="2404 - SPT", 
+                            "4310"="4310-LMotor&Gen")
 
 
 
@@ -114,7 +115,7 @@ products_navbar = navlistPanel(
   widths = c(2, 8),
   getProductTabPanel("2401"),
   getProductTabPanel("2404"),
-  getProductTabPanel("0001")
+  getProductTabPanel("4310")
 )
 
 
