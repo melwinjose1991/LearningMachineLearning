@@ -65,7 +65,7 @@ initFeatureSelectionUI = function() {
       "Mean Square Error" = "mse",
       "Mean Absolute Error" = "mae"
     ),
-    selected="mae"
+    selected="mse"
   )
   
   column_select_filter = selectInput(

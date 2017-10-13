@@ -19,7 +19,7 @@ getMARSUI = function() {
                                selected="exhaustive")
   
   id = paste0(mars_prefix, "nfolds")
-  numeric_nfolds = numericInput(id, label="nfolds", value=13, 
+  numeric_nfolds = numericInput(id, label="nfolds", value="13", 
                                 min=2, max=length(product_data))
   
   id = paste0(mars_prefix, "doMARS")

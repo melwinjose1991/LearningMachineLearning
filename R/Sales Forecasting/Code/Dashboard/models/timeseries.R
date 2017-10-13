@@ -15,10 +15,11 @@ getTimeSeriesUI = function(){
   # Row - 1 : Parameters
   id = paste0(timeseries_prefix, "h")
   input_numeric_h = numericInput(id, "In-Sample Forecast Period", 
-                                           value=12, min=2, max=12, step=1, width="60%")
+                                 value=12, min=2, max=12, 
+                                 step=1, width="60%")
   
   id = paste0(timeseries_prefix, "method")
-  input_method = radioButtons(id, label="Method", selected="decompose-snaive", inline=TRUE, 
+  input_method = radioButtons(id, label="Method", selected="arima", inline=TRUE, 
                               choiceNames=c("Decompose-Naive", "Decompose-SNaive", 
                                             "Non-ARIMA","ARIMA"),
                               choiceValues=c("decompose-naive", "decompose-snaive",

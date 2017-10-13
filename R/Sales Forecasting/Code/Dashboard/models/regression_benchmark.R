@@ -18,19 +18,21 @@ getRegressionBenchmarkUI = function(){
                                  step=1, width="50%")
   
   id = paste0(benchmark_prefix, "methodId|mean")
-  input_mean_check = checkboxInput(inputId = id, label = "Mean", value = TRUE)
+  input_mean_check = checkboxInput(inputId=id, label="Mean", value=TRUE)
   
   id = paste0(benchmark_prefix, "methodId|naive")
-  input_naive_check = checkboxInput(inputId = id, label = "Naive", value = TRUE)
+  input_naive_check = checkboxInput(inputId=id, label="Naive", value=FALSE)
   
   id = paste0(benchmark_prefix, "methodId|snaive")
-  input_snaive_check = checkboxInput(inputId = id, label = "Seasonal Naive", value = TRUE)
+  input_snaive_check = checkboxInput(inputId=id, label="Seasonal Naive", 
+                                     value=FALSE)
   
   id = paste0(benchmark_prefix, "methodId|drift")
-  input_drift_check = checkboxInput(inputId = id, label = "Drift", value = TRUE)
+  input_drift_check = checkboxInput(inputId=id, label="Drift", value=FALSE)
   
   id = paste0(benchmark_prefix, "buttonPerformBenchmark")
-  button_perform_benchmark = actionButton(inputId = id, label = "Perform Benchmark")
+  button_perform_benchmark = actionButton(inputId=id, 
+                                          label="Perform Benchmark")
   
   id = paste0(benchmark_prefix, "selectErrorType")
   select_error_type = selectInput(id, "Error Type:", 

@@ -76,65 +76,84 @@ createForecastVariableTable = function(variables, input, output, session){
     
     if(is_var_numerical){
       
-      # Forecaste Button
-      input_button_var_forecast_id = paste0(var_id, "|infoButton")
-      input_button_var_forecast = actionButton(input_button_var_forecast_id, label="",
-                                           icon("area-chart",lib="font-awesome"))
-      observeEvent(input[[input_button_var_forecast_id]],{
-        
-        var_name_id = paste0(forecast_prefix,"varName")
-        output[[var_name_id]] = renderUI({ list(tags$h5(var)) })
-        
-        series = getSeries(var)
-        series_ts = ts(series, frequency=12, 
-                     start=product_start_date, end=product_end_date)
-        fast_arima = input[[paste0(forecast_prefix, "fastARIMA")]]
-        var_forecast = doAutoARIMA(series_ts, no_of_forecast, in_sample_forecast=FALSE,
-                                   stepwise=fast_arima, approximation=fast_arima)
-        
-        # plotting graph
-        graph_id = paste0(var_id, "|varInfoGraph") 
-        output[[graph_id]] = renderPlot(
-          plot(var_forecast[['forecast_fit']])
-        )
-        
-        # populating summary
-        summary_id = paste0(forecast_prefix, "varInfoSummary") 
-        summ = summary(series)
-        summ_cols = names(summ)
-        output[[summary_id]] = renderText(
-          paste0(summ_cols,"=",summ," | ")
-        )
-        
-        # populating values
-        lapply(1:no_of_forecast, function(i){
-          var_value_id = paste0(var_id, "|value|",i)
-          value = var_forecast[['forecast_fit']]$mean[i]
-          updateTextInput(session, var_value_id, value=value)
+      # Forecast Button
+      if(var_name!="t"){
+        input_button_var_forecast_id = paste0(var_id, "|infoButton")
+        input_button_var_forecast = actionButton(input_button_var_forecast_id, label="",
+                                             icon("area-chart",lib="font-awesome"))
+        observeEvent(input[[input_button_var_forecast_id]],{
+          
+          var_name_id = paste0(forecast_prefix,"varName")
+          output[[var_name_id]] = renderUI({ list(tags$h5(var)) })
+          
+          series = getSeries(var)
+          series_ts = ts(series, frequency=12, 
+                       start=product_start_date, end=product_end_date)
+          fast_arima = input[[paste0(forecast_prefix, "fastARIMA")]]
+          var_forecast = doAutoARIMA(series_ts, no_of_forecast, in_sample_forecast=FALSE,
+                                     stepwise=fast_arima, approximation=fast_arima)
+          
+          # plotting graph
+          graph_id = paste0(var_id, "|varInfoGraph") 
+          output[[graph_id]] = renderPlot(
+            plot(var_forecast[['forecast_fit']])
+          )
+          
+          # populating summary
+          summary_id = paste0(forecast_prefix, "varInfoSummary") 
+          summ = summary(series)
+          summ_cols = names(summ)
+          output[[summary_id]] = renderText(
+            paste0(summ_cols,"=",summ," | ")
+          )
+          
+          # populating values
+          lapply(1:no_of_forecast, function(i){
+            var_value_id = paste0(var_id, "|value|",i)
+            value = var_forecast[['forecast_fit']]$mean[i]
+            updateTextInput(session, var_value_id, value=value)
+          })
+          
         })
-        
-      })
+      }
+      
       
       # Variable Row - 1 : Name and Buttons
-      var_name_info_row = fluidRow(column(column_width_var_name, output_var_name), 
-                                   column(1,input_button_var_forecast))
+      if(var_name!="t"){
+        var_name_info_row = fluidRow(column(column_width_var_name, output_var_name), 
+                                     column(1,input_button_var_forecast))
+      }else{
+        var_name_info_row = fluidRow(column(column_width_var_name, output_var_name))
+      }
+      
       
       # Variable Row - 2 : Value for periods
       cols_forecast_periods_values = lapply(1:no_of_forecast, function(i){
         var_value_id = paste0(var_id, "|value|",i)
-        input_text_var_value = textInput(var_value_id, label=NULL)
+        if(var_name!="t"){
+          input_text_var_value = textInput(var_value_id, label=NULL)
+        }else{
+          t_value = length(product_data) + i
+          input_text_var_value = textInput(var_value_id, label=NULL, value=t_value)
+        }
         column(width=column_width_var_value, input_text_var_value)
       })
       
       var_value_row = fluidRow( column(no_of_forecast, cols_forecast_periods_values) )
+      
       
       # Variable Row - 3 : Graphs and Summary
       graph_id = paste0(var_id, "|varInfoGraph") 
       var_graph = plotOutput(graph_id)
       var_plot_summary = fluidRow(var_graph)
       
+      
       # Rows
-      fluidRow( var_name_info_row, var_value_row, var_plot_summary, tags$hr() )
+      if(var_name!="t"){
+        fluidRow( var_name_info_row, var_value_row, var_plot_summary, tags$hr() )
+      }else{
+        fluidRow( var_name_info_row, var_value_row, tags$hr() )
+      }
       
     }else{
       
@@ -143,7 +162,8 @@ createForecastVariableTable = function(variables, input, output, session){
       #        more number of values
       cols_forecast_periods_values = lapply(1:no_of_forecast, function(i){
         var_value_id = paste0(var_id, "|value|",i)
-        input_select_var_value = checkboxInput(var_value_id, label=NULL)
+        checked = ifelse(var_name==paste0("month",i), TRUE, FALSE)
+        input_select_var_value = checkboxInput(var_value_id, label=NULL, value=checked)
         column(width=column_width_var_value, input_select_var_value)
       })
       

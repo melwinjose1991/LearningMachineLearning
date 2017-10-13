@@ -278,6 +278,14 @@ attachProductsObservers = function(input, output, session, reactive_vars){
                 
       }
       
+      # Updating the nFolds
+      LASSO_nfolds_id = paste0(feature_selection_prefix, "kFolds")
+      nfolds_to_use = length(product_data) / 12
+      updateTextInput(session, LASSO_nfolds_id, value=nfolds_to_use)
+      
+      MARS_nfolds_id = paste0(mars_prefix, "nfolds")
+      updateTextInput(session, MARS_nfolds_id, value=nfolds_to_use)
+      
     })
     
   })
