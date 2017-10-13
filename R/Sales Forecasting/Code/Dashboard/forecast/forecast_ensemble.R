@@ -143,6 +143,18 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
       HTML(table_forecast)
     })
     
+  
+    ## Writing Tool's forecast
+    tool_forecast = c(df_benchmark_fit$BENCHMARK_ENSEMBLE_MEAN, 
+                      df_forecast_fit$ENSEMBLE_MEAN_forecast)
+    month = c(1:12,1:12)
+    year = c(rep(2016,12), rep(2017,12))
+    df_tool_forecast = data.frame(forecast=tool_forecast,
+                                  month=month, year=year)
+    
+    product_folder = paste0(data_folder,"/", product_line)
+    write_file = paste0(product_folder,"/Tool_Forecast.csv")
+    write.csv(df_tool_forecast, write_file, row.names=FALSE, quote=FALSE)
     
   })
   
