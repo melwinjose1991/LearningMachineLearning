@@ -1,0 +1,47 @@
+Exploratory time series data analysis
+	>	start(), end(), frequency(), deltat(), cycle()
+
+	
+Predicting the future
+	>	Trend Splotting
+			- log() : can linearize a rapid growth trend
+			- diff(x) : can remove a linear trend
+			- diff(x, s) : seasonal difference transformation
+			
+	>	White Noise Model
+			- fixed, constant mean
+				- series having upward or downward trend
+				  the mean changes with time
+			- fixed, constant variance
+			- no correlation over time
+				- series having periodic pattern has correlation
+				
+			- simulating WN : arima.sim(model=c(0,0,0), n, mean, sd)
+			- esimating WN model : arima(x, order=c(0,0,0))
+	
+	>	Random Walk - RW = ARIMA(0,1,0)
+			- example of non-stationary process
+			- no specified mean or variance
+			- strong dependence over time
+			- its changes or increments are white noise
+			- Y_t = Y_t-1 + e ;	e = mean zero white noise
+			- has on only one parameter, variance of white noise
+			- Y_t - Y_t-1 = e , white noise with mean 0
+				i.e diff(Y) = WN
+				
+			- RW with Drift
+				- Y_t = C + Y_t-1 + e , two parameters C and variance
+				- Y_t - Y_t-1 = C + e , WN with mean C
+	
+	>	Stationary Process
+			- Weak Stationarity
+				- mean, variance, covariance constant over time
+				- RW not weak stationary as its variance depends on T
+				- WN is stationary
+
+				
+Correlation Analysis and the autocorrelation function
+	>	Autocorrelation
+		- lag-1 autocorrelation : cor(x[-n],x[-1])
+		- AutoCorrelation Function : 
+			
