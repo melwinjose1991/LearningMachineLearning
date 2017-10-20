@@ -8,7 +8,7 @@ Predicting the future
 			- diff(x) : can remove a linear trend
 			- diff(x, s) : seasonal difference transformation
 			
-	>	White Noise Model
+	>	White Noise Model = ARIMA(0,0,0)
 			- fixed, constant mean
 				- series having upward or downward trend
 				  the mean changes with time
@@ -43,5 +43,36 @@ Predicting the future
 Correlation Analysis and the autocorrelation function
 	>	Autocorrelation
 		- lag-1 autocorrelation : cor(x[-n],x[-1])
-		- AutoCorrelation Function : 
-			
+		- AutoCorrelation Function : acf()
+
+		
+The AutoRegressive Model
+	>	(Y_t - mean) = Phi * (Y_t-1 - mean) + e
+			e is WN(0, sigma_e^2)
+	>	Three parameters
+		- mean, slope - Phi, WN variance sigma^2
+	
+	>	If phi=0, Y_t is WN with (mean, sigma^2)
+	>	If phi!=0, Y_t is autocorrelated
+	>	If phi=1 and mean=0, its a Random Walk, which is not stationary
+	
+	>	Large values of Phi, leads to greater autocorrelation
+	>	Negative values of Phi result in osciallatory time series
+	>	Persistence is defined by a high correlation between an observation 
+		and its lag, while anti-persistence is defined by a large amount of 
+		variation between an observation and its lag
+	
+	>	Example and ACFs : pg 5-6
+	
+	>	Simulating : arima.sim(model = list(ar), n) ; -1 <= ar <= 1
+	
+	>	AR Model Estimation and Forecasting
+		-	(Y_t - mean) = Phi * (Y_t-1 - mean) + e		; 	e is WN(0, sigma_e^2)
+				arima(x, model=c(1,0,0))
+	
+					ar1 = phi_hat
+					intercept = mean_hat
+					sigma^2 = sigma_e^2_hat of WN
+		
+		-	Y_t_hat = mean_hat + phi_hat * (Y_t-1_hat - mean_hat)
+		-	e_hat = Y_t - Y_t_hat
