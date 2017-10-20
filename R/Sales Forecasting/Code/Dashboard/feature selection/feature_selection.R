@@ -289,7 +289,7 @@ doLASSO = function(data, input, output, session) {
   # Varaibles and Predictors
   form = as.formula(paste0(product_data_column," ~ ."))
   x = model.matrix(form, data)[, -1]
-  x = removeUnselectedMonths(input, x)
+  x = removeUnselectedMonthsT(input, x)
   y = data[,product_data_column]
   
   # LASSO
@@ -308,7 +308,7 @@ getLASSOModels = function(data, input, output, session, cv.l2.fit){
   
   form = as.formula(paste0(product_data_column," ~ ."))
   x = model.matrix(form, data)[, -1]
-  x = removeUnselectedMonths(input, x)
+  x = removeUnselectedMonthsT(input, x)
   y = data[,product_data_column]
   
   # best model

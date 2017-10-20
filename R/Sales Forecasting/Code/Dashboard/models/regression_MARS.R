@@ -76,7 +76,7 @@ attachMARSObservers = function(input, output, reactive_vars){
     train_rows = 1:(nrow(data)-h)
     
     form = as.formula(paste0(product_data_column, "~."))
-    mars = earth(form, data=data[train_rows, ], pmethod=pmethod, 
+    mars = earth(form, data=data[train_rows, !duplicated(colnames(data))], pmethod=pmethod, 
                  nfold=nfolds, nprune=20, degree=1,
                  minspan=3, endspan=3)
     

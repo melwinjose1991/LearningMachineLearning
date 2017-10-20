@@ -77,9 +77,9 @@ attachSensitivityObservers = function(input, output, reactive_vars){
     rownames(df_coef) = c()
     intercept = df_coef[1,2]
     df_coef = df_coef[2:dim(df_coef)[1],]
-    df_coef[,"percent_change"] = round((df_coef$coef/intercept)*100, 2)
+    df_coef[,"percent_change"] = round((df_coef$coef*100)/intercept, 2)
     
-    avg_prediction = paste0("<b>Average Prediction : $", round(intercept, 2), "</b><hr/>")
+    avg_prediction = paste0("<b>Average Prediction : $", round(intercept, 3), "</b><hr/>")
     
     id_sentivity_table = paste0(sensitivity_prefix, "sensitivityTable")
     output[[id_sentivity_table]] = renderUI({

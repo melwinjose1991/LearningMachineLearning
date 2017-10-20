@@ -16,10 +16,15 @@ initAllFeaturesUI = function(){
   months = paste0("month",months)
   
   # row:0 - internal features
-  id = paste0(all_features_prefix, "internalFeatures")
-  check_internal_features = checkboxGroupInput(id, label="Internal Features", 
-                                          choices=months, selected=months, inline=TRUE) 
-  row_0 = fluidRow(check_internal_features)
+  id = paste0(all_features_prefix, "month")
+  month_internal_features = checkboxGroupInput(id, label="Months", 
+                                               choices=months, selected=months, inline=TRUE) 
+  
+  id = paste0(all_features_prefix, "trend")
+  t_internal_feature = checkboxInput(id, label="Trend", value=TRUE)
+  
+  row_0 = fluidRow(month_internal_features, t_internal_feature)
+  
   
   # row:1 - external features
   all_features_id = paste0(all_features_prefix, "all_features_box")
@@ -137,15 +142,20 @@ populateFeatures = function(input, output, session){
   
 }
 
-removeUnselectedMonths = function(input, x){
+removeUnselectedMonthsT = function(input, x){
   
   months = 2:12
   months = paste0("month",months)
-  
-  months_to_include = input[[paste0(all_features_prefix, "internalFeatures")]]
-  
+  months_to_include = input[[paste0(all_features_prefix, "month")]]
   months_to_exclude = setdiff(months, months_to_include)
   
-  x[,!colnames(x) %in% months_to_exclude]
+  t = input[[paste0(all_features_prefix, "trend")]]
+  print(paste0(">>> t:", t, "<<<"))
+  
+  if(t==FALSE){
+    x[ , ! colnames(x) %in% c(months_to_exclude, "t") ]    
+  }else{
+    x[ , ! colnames(x) %in% c(months_to_exclude) ]
+  }
   
 }
