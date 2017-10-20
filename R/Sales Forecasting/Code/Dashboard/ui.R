@@ -16,6 +16,7 @@ if(length(new.packages)) install.packages(new.packages)
 
 library(shiny)
 library(shinyjs)
+library(shinythemes)
 library(ggplot2)
 
 
@@ -40,6 +41,7 @@ tab_forecast = tabPanel(title = "Forecast", tags$hr(), forecast_navbar)
 
 
 ui = fluidPage(
+  theme = shinytheme("united"),
   useShinyjs(),
   tabsetPanel(
     tab_products,

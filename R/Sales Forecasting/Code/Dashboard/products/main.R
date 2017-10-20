@@ -191,7 +191,7 @@ attachProductsObservers = function(input, output, session, reactive_vars){
     
     x = product_df$t
     y = y_df[,revenue_cols[1]]
-
+    no_of_obs = length(y)
         
     # selecting columns within product
     button_id = paste0(products_prefix, "pId|",product,"|Columns")
@@ -203,12 +203,25 @@ attachProductsObservers = function(input, output, session, reactive_vars){
         years = product_df[,"year"]
         period_id = product_df[,"period_id"]
         
-        ticks_at = (0:(max(years)-min(years)+1))*12
-        ticks_label = ticks_at
-        ticks_label[1] = 1
+        #browser()
+        no_of_yrs = max(years)-min(years)+1
+        short_months = -(no_of_obs - (12*no_of_yrs))
+        if( short_months == 0){
+          no_of_full_yrs = no_of_yrs           
+        }else{
+          no_of_full_yrs = (no_of_obs-(12-short_months))/12
+        }
+        
+        ticks_at = ((0:no_of_full_yrs)*12) + 1
+        if(no_of_yrs!=no_of_full_yrs){
+          ticks_at = c(ticks_at, no_of_obs)
+        }else{
+          no_of_ticks = length(ticks_at)
+          ticks_at[no_of_ticks] = ticks_at[no_of_ticks] - 1
+        }
         
         ggplot(mapping=aes(x, y)) + geom_line() +
-          scale_x_continuous(breaks = ticks_at, labels=period_id[ticks_label]) +
+          scale_x_continuous(breaks = ticks_at, labels=period_id[ticks_at]) +
           labs(x="Time",y=column_name) + geom_point()
           
       })
