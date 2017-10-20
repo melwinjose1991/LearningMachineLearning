@@ -9,9 +9,16 @@ gc()
 
 
 ###### reading the csv files ######
+read_csv = "members"
+
 train_data = fread("data/train.csv")
 test_data = fread("data/sample_submission_zero.csv")
-transactions_data = fread("data/transactions.csv")
+
+if(read_csv == "transactions"){
+  transactions_data = fread("data/transactions.csv")
+}else if(read_csv == "members"){
+  members_data = fread("data/members.csv")
+}
 
 
 
@@ -22,6 +29,10 @@ Mode <- function(x) {
 }
 
 
+
+###### FE on transactions.csv ######
+
+if(read_csv == "transactions"){
 
 ###### nof_transcations, mode_payment_id, payment_types ######
 getPercentFromTransaction = function(id, col, value, total){
@@ -138,12 +149,130 @@ head(FE_test)
 
 
 
+###### historical_churns ######
+no_of_records_processed = 0
+total_records = dim(train_data)[1]
+
+getHistoricalChurns = function(trans_dates, deadline_dates, cancels, msno="-"){
+  
+  no_of_records_processed <<- no_of_records_processed + 1
+  if(no_of_records_processed %% 1000 == 0){
+    print(paste0("Reached #",no_of_records_processed," / ", total_records))
+  }
+  
+  if( length(trans_dates)==0 || length(deadline_dates)==0 || length(cancels)==0 || 
+      is.na(trans_dates)  || is.na(deadline_dates)  || is.na(cancels) ){
+    print(paste0(msno, ", has zero transactions."))
+    return(0)
+  }
+  
+  dt = data.table(x=trans_dates, y=deadline_dates, z=cancels)
+  dt = dt[order(x)]
+  trans_dates = dt$x
+  deadline_dates = dt$y
+  cancels = dt$z
+  
+  churns = 0
+  last_deadline = -1
+  
+  for(i in 1:length(deadline_dates)){
+    if(cancels[i]==1){
+      last_deadline = as.Date(as.character(deadline_dates[i]), "%Y%m%d")
+      next
+    }
+    if(last_deadline==-1){
+      last_deadline = as.Date(as.character(deadline_dates[i]), "%Y%m%d")
+      next
+    }
+    
+    trans_date = as.Date(as.character(trans_dates[i]), "%Y%m%d")
+    
+    paid_after = as.numeric(trans_date - last_deadline)
+    if(paid_after>30){
+      #print(paste0(trans_date, " ", last_deadline, " diff:", paid_after))
+      churns = churns + 1
+    }
+    
+    last_deadline = as.Date(as.character(deadline_dates[i]), "%Y%m%d")
+    
+  }
+  return(churns)
+}
+
+no_of_records_processed = 0
+total_records = dim(train_data)[1]
+merged = merge(train_data, 
+               transactions_data[, .(msno, transaction_date, membership_expire_date,is_cancel)], 
+               all.x=TRUE)
+tmp = merged[, 
+              .(historical_churns = getHistoricalChurns(transaction_date, membership_expire_date,is_cancel) )
+              ,by=msno]
+FE_train = merge(FE_train, tmp, by="msno", all.x=TRUE)
+head(FE_train)
+
+no_of_records_processed = 0
+total_records = dim(test_data)[1]
+merged = merge(test_data, 
+               transactions_data[, .(msno, transaction_date, membership_expire_date,is_cancel)], 
+               all.x=TRUE)
+tmp = merged[, 
+              .( historical_churns = getHistoricalChurns(transaction_date, membership_expire_date,is_cancel,msno) )
+              ,by=msno]
+FE_test = merge(FE_test, tmp, by="msno", all.x=TRUE)
+head(FE_test)
+
+if(FALSE){
+  id = "+++l/EXNMLTijfLBa8p2TUVVVp2aFGSuUI/h7mLmthw="
+  x = transactions_data[msno==id,
+                        .(transaction_date, membership_expire_date, is_cancel), ]
+  
+  x[order(transaction_date)]
+  
+  trans_dates = x$transaction_date
+  deadline_dates = x$membership_expire_date
+  cancels = x$is_cancel
+  
+  getHistoricalChurns(trans_dates, deadline_dates, cancels)
+}
+
+} 
+###### Version_1 ######
+
+
+
+###### members.csv ######
+if(read_csv == "members"){
+
+  FE_train = merge(train_data, members_data, all.x=TRUE)
+  head(FE_train)
+  
+  FE_test = merge(test_data, members_data, all.x=TRUE)
+  head(FE_test)
+  
+  ### city ###
+  
+  ### bd ###
+  FE_train[ bd < 0, bd := -1 ]
+  FE_train[ bd > 123, bd := -2 ]
+  sort(unique(FE_train$bd))
+  
+  FE_test[ bd < 0, bd := -1 ]
+  FE_test[ bd > 123, bd := -2 ]
+  sort(unique(FE_test$bd))
+  
+}
+###### Version_2 ######
+
+
+
 ###### Write train and test ######
 head(FE_train)
-write.table(FE_train, "data/fe_train_1.csv", quote=FALSE, sep=",", row.names=FALSE)
+file_name = paste0("data/fe_train_", read_csv, ".csv")
+write.table(FE_train, file_name, quote=FALSE, sep=",", row.names=FALSE)
 
 head(FE_test)
-write.table(FE_test, "data/fe_test_1.csv", quote=FALSE, sep=",", row.names=FALSE)
+file_name = paste0("data/fe_test_", read_csv, ".csv")
+write.table(FE_test, file_name, quote=FALSE, sep=",", row.names=FALSE)
 
 
 

@@ -50,9 +50,9 @@ cv.ctrl = trainControl(
 )
 
 xgb.grid = expand.grid(
-  nrounds = 2000,
+  nrounds = 1000,
   max_depth = 1:8,
-  eta = c(0.0125),
+  eta = c(0.025),
   gamma = 0,
   colsample_bytree    = c(0.8, 0.9, 1),
   min_child_weight    = c(50, 100, 200),

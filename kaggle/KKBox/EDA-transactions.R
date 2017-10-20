@@ -158,13 +158,20 @@ ggplot(data=d, aes(x=percent_renew_bin, y=percent_churns)) + geom_bar(stat="iden
 
 
 ###### transaction date & membership_expire_date######
-getHistoricalChurns = function(trans_dates, deadline_dates, cancels){
+no_of_records_processed = 0
 
-  # dt = data.table(x=trans_dates, y=deadline_dates, z=cancels)
-  # dt = dt[order(x)]
-  # trans_dates = dt$x
-  # deadline_dates = dt$y
-  # cancels = dt$z
+getHistoricalChurns = function(trans_dates, deadline_dates, cancels){
+  
+  no_of_records_processed <<- no_of_records_processed + 1
+  if(no_of_records_processed %% 1000 == 0){
+    print(paste0("Reached #",no_of_records_processed," / ",dim(eda_train_data)[1]))
+  }
+  
+  dt = data.table(x=trans_dates, y=deadline_dates, z=cancels)
+  dt = dt[order(x)]
+  trans_dates = dt$x
+  deadline_dates = dt$y
+  cancels = dt$z
   
   churns = 0
   last_deadline = -1
@@ -193,25 +200,32 @@ getHistoricalChurns = function(trans_dates, deadline_dates, cancels){
   return(churns)
 }
 
-sorted_transactions = eda_transactions_data[order(transaction_date)]
-setkey(sorted_transactions, msno, transaction_date)
+merged_dt = merge(eda_train_data, 
+                  eda_transactions_data[, .(msno, transaction_date, membership_expire_date,is_cancel)], 
+                  all.x=TRUE)
 
-eda_train_data[,"historical_churns"] = sapply(eda_train_data$msno, function(id){
-  x = sorted_transactions[msno==id,
-                            .(transaction_date, membership_expire_date, is_cancel)]
-  trans_dates = x$transaction_date
-  deadline_dates = x$membership_expire_date
-  cancels = x$is_cancel
-  
-  getHistoricalChurns(trans_dates, deadline_dates, cancels)
-})
+no_of_records_processed = 0
+hist_churn_dt = merged_dt[, 
+                          .(hist_churn = getHistoricalChurns(transaction_date, membership_expire_date,is_cancel) )
+                          ,by=msno]
+merged_dt_2 = merge(eda_train_data, 
+                    hist_churn_dt, 
+                    all.x=TRUE)
+
+head(merged_dt_2)
+merged_dt_2[, .(
+  records = .N,
+  nof_churns = sum(is_churn),
+  percent_churns = sum(is_churn)/.N
+), by=hist_churn]
+
 
 # 2 has historical churn
 
 if(FALSE){
-  id = eda_train_data[9,msno]
+  id = "+++hVY1rZox/33YtvDgmKA2Frg/2qhkz12B9ylCvh8o="
   x = eda_transactions_data[msno==id,
-                            .(transaction_date, membership_expire_date, is_cancel)]
+                            .(transaction_date, membership_expire_date, is_cancel), ]
   
   x[order(transaction_date)]
   

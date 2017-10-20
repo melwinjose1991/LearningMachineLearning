@@ -10,8 +10,20 @@ gc()
 
 
 ###### reading the csv files ######
-train = fread("data/fe_train_1.csv")
-test = fread("data/fe_test_1.csv")
+train_trans = fread("data/fe_train_transactions.csv")
+train_members = fread("data/fe_train_members.csv")
+train = merge(train_trans, train_members, all.x=TRUE)
+head(train)
+
+test_trans = fread("data/fe_test_transactions.csv")
+test_members = fread("data/fe_test_members.csv")
+test = merge(test_trans, test_members, all.x=TRUE)
+head(test)
+
+rm(train_trans)
+rm(train_members)
+rm(test_trans)
+rm(test_members)
 
 
 
@@ -20,7 +32,10 @@ x = c("nof_transcations",
       "mode_pay_id", "payment_types",
       "mode_plandays", "plandays_unique",
       "mode_pay_code", "paid_less", "paid_equal", "paid_more",
-      "mode_auto_renew", "percent_auto_renews")
+      "mode_auto_renew", "percent_auto_renews",
+      "historical_churns",
+      
+      "city", "bd")
 
 for(col in x){
   train[,col] = as.numeric(train[[col]])
@@ -44,10 +59,10 @@ seed_used = 1234
 param = list(  
   objective           = "binary:logistic", 
   booster             = "gbtree",
-  max_depth           = as.integer(length(x)),
+  max_depth           = as.integer(length(x)/2),
   eta                 = 0.0125,
   gamma               = 0,
-  colsample_bytree    = 0.9,
+  colsample_bytree    = 1,
   min_child_weight    = 50,
   subsample           = 1,
   seed                = seed_used
@@ -71,6 +86,7 @@ imp
 # 0.1808  - 0.2407  d = 2
 # 0.1785  - 0.2406  d = 2 Tuned
 # 0.1748  - 0.2372
+# 0.1725  - 0.236
 
 # for a change of 0.01 there is a change of 0.005
 
