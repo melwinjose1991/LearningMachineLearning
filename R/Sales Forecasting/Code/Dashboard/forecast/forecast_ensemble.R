@@ -43,7 +43,11 @@ getForecastEnsembleUI = function(){
 getForecastEnsembleMean = function(models_to_use){
   models_to_use = paste0(models_to_use,"_forecast")
   df = df_forecast_fit[, models_to_use]
-  rowMeans(df)
+  if(is.null(dim(df))){
+    df
+  }else{
+    rowMeans(df)
+  }
 }
 
 attachEnsembleObservers = function(input, output, session, reactive_vars){

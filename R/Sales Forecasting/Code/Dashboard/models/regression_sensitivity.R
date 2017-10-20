@@ -27,8 +27,8 @@ getRegressionSensitivityUI = function(){
   id = paste0(benchmark_prefix, "featureValues")
   table_feature_values = uiOutput(id)
   
-  row_2 = fluidRow(column(6, table_sensitivity), 
-                   column(6, table_feature_values)
+  row_2 = fluidRow(column(8, table_sensitivity), 
+                   column(4, table_feature_values)
   )
   
   tabPanel(title = "LRegression Sensitivity", row_0, row_1, row_2)
@@ -85,14 +85,22 @@ attachSensitivityObservers = function(input, output, reactive_vars){
     output[[id_sentivity_table]] = renderUI({
       
       rows = sapply(1:nrow(df_coef), function(i){
-        td_feature = paste0("<td>", df_coef[i,"feature"], "&nbsp;</td>")
+        
+        feature_id = as.character(df_coef[i,"feature"])
+        feature_name = as.character(meta_data[meta_data$series_id==feature_id, "title"])
+        if(length(feature_name)>0){
+          td_feature = paste0("<td>", feature_name, "&nbsp;</td>")
+        }else{
+          td_feature = paste0("<td>", feature_id, "&nbsp;</td>")
+        }
+        
         td_change = paste0("<td>&nbsp;", df_coef[i,"percent_change"], "</td>")
         row = paste0("<tr>",td_feature,td_change,"</tr>")
       })
       
       rows = paste0(rows, collapse="")
       
-      table_header = paste0("<tr><td><b>Feature</b></td><td><b>%</b></td>")
+      table_header = paste0("<tr><td><b>Feature</b></td><td><b>%</b></td></tr>")
       table = paste0("<table>", table_header, rows, "</table>")
       
       HTML(avg_prediction, table)

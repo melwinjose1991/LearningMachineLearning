@@ -63,6 +63,7 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
     t = ts(product_data, frequency=12, start=product_start_date, end=product_end_date)
     preview_window = window(t, start=preview_start_ym)
     
+    validation_window = window(t, start=valid_start_ym)
     
     ## Calculating Ensemble_Mean
     if("ENSEMBLE_MEAN" %in% models_to_use){
@@ -165,7 +166,9 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
         old_forecast = paste0("<td>", row[["old_forecast"]], "</td>",
                               "<td>", row[["old_forecast_error"]], "</td>")
         
-        tr_td = paste0(tr_td, old_forecast, "</tr>")
+        actuals = paste0("<td>", validation_window[i], "</td>")
+        
+        tr_td = paste0(tr_td, old_forecast, actuals, "</tr>")
       })
       benchmark_rows = paste0(benchmark_rows, collapse="")
       
@@ -195,23 +198,28 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
       old_forecast_total_error = round(sum(abs(df_benchmark_fit[,"old_forecast_error"]), 
                                            na.rm=TRUE), 2)
       
+      year_actuals = sum(validation_window)
+      
       benchmark_summary = paste0(benchmark_summary, 
                                  "<td>&nbsp;",old_forecast_yearly,"&nbsp;</td>",
                                  "<td>&nbsp;", old_forecast_mae, "&nbsp;/&nbsp;", 
-                                 old_forecast_total_error, "&nbsp;</td>")
+                                 old_forecast_total_error, "&nbsp;</td>",
+                                 "<td>&nbsp;",year_actuals,"&nbsp;</td>")
       
       benchmark_summary = paste0(benchmark_summary, "</tr>")
                                        
       
       table_header = sapply(MODELS, function(model){
         if(model %in% models_to_use){
-          paste0("<th>&nbsp;",model,"&nbsp;</th>",
+          model_shortcode = MODELS_SHORTCODE[which(MODELS==model)]
+          paste0("<th>&nbsp;",model_shortcode,"&nbsp;</th>",
                  "<th>&nbsp;error&nbsp;</th>")
         }
       })
       table_header = paste0(table_header, collapse="")
-      table_header = paste0(table_header,"<th>OLD_FORECAST</th>",
-                            "<th>&nbsp;error&nbsp;</th>")
+      table_header = paste0(table_header,"<th>ABB</th>",
+                            "<th>&nbsp;error&nbsp;</th>",
+                            "<th>&nbsp;Actuals&nbsp;</th>")
       
       
       table_forecast = paste0("<table><tr><td>#</td>", table_header, "</tr>",

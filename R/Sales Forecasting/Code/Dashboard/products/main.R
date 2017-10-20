@@ -26,11 +26,24 @@ product_forecast_start_date = vector('numeric')
 product_forecast_end_date = vector('numeric')
 
 columns_to_skip = c("period_id", "month", "year", "month_str", "t")
-product_code_mapping = list("2401"="2401-DTR", "2404"="2404-SPT", 
-                            "4130"="4130-LMotor&Gen",
-                            "4131"="4131-M&G Service",
-                            "4133"="4133-IEC LV Motors",
-                            "4156"="4156-NEMA Motors")
+
+product_code_mapping = list(
+  ### PGTR ###
+  "2401"="2401-DTR", 
+  "2404"="2404-SPT", 
+  
+  ### RMMG ###
+  "4130"="4130-LMotor&Gen",
+  "4131"="4131-M&G Service",
+  "4133"="4133-IEC LV Motors",
+  "4156"="4156-NEMA Motors",
+  "4157"="4157-MechPwrTransm",
+  
+  ### IAMA ###
+  "3129"="3129-Measuremnt Prdt Srvc",
+  "3199"="3199-Measuremnt Prdt Sales",
+  "4498"="4498-Analytics Measurement"
+)
 
 
 
@@ -116,12 +129,22 @@ getProductsUI = function(){
 products_navbar = navlistPanel(
   well = FALSE,
   widths = c(2, 8),
+  
+  ### PGTR ###
   getProductTabPanel("2401"),
   getProductTabPanel("2404"),
+  
+  ### RMMG ###
   getProductTabPanel("4130"),
   getProductTabPanel("4131"),
   getProductTabPanel("4133"),
-  getProductTabPanel("4156")
+  getProductTabPanel("4156"),
+  getProductTabPanel("4157"),
+  
+  ### IAMA ###
+  getProductTabPanel("3129"),
+  getProductTabPanel("3199"),
+  getProductTabPanel("4498")
 )
 
 
