@@ -41,7 +41,7 @@ tab_forecast = tabPanel(title = "Forecast", tags$hr(), forecast_navbar)
 
 
 ui = fluidPage(
-  theme = shinytheme("united"),
+  #theme = shinytheme("united"),
   useShinyjs(),
   tabsetPanel(
     tab_products,

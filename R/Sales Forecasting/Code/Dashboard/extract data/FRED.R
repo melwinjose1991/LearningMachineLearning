@@ -183,7 +183,8 @@ fetchData = function(sub_categories_id){
       series_name = series_id_title[series_id_title$id==series_id, "title"]
       series_name = gsub(",", "-", series_name)
       
-      print(paste0("Fetching series : ", series_id))
+      print(paste0("Fetching series: ", series_id, 
+                   " date-range: ", date_start, " -> ", date_end))
       series = fred$series.observations(series_id=series_id, 
                                         observation_start = date_start,
                                         observation_end = date_end)
@@ -213,17 +214,21 @@ fetchData = function(sub_categories_id){
     
     
     ## Writing Series into CSV
-    file = paste0(FRED_folder, "/", as.character(category_name), 
-                  "/", as.character(sub_category_name) )
-    if(sa_OR_nsa=="Not Seasonally Adjusted"){
-      file = paste0(file, "_nsa.csv")
-    }else{
-      file = paste0(file, "_sa.csv")
+    if(exists("df_series")){
+      
+      file = paste0(FRED_folder, "/", as.character(category_name), 
+                    "/", as.character(sub_category_name) )
+      if(sa_OR_nsa=="Not Seasonally Adjusted"){
+        file = paste0(file, "_nsa.csv")
+      }else{
+        file = paste0(file, "_sa.csv")
+      }
+      print(paste0("Saving series in file ",file))
+      write.csv(df_series, file, quote=FALSE, row.names=FALSE)
+      
+      rm(df_series)
+      
     }
-    print(paste0("Saving series in file ",file))
-    write.csv(df_series, file, quote=FALSE, row.names=FALSE)
-    
-    rm(df_series)
     
   }
   

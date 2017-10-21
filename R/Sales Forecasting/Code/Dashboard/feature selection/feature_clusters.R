@@ -61,9 +61,14 @@ filterByProductPeriod = function(data_series){
                                 }
   )
   
-  data_series = data_series[(data_series$year>product_start_date[1]) |
-                              (data_series$year==product_start_date[1] & 
-                                 data_series$month>=product_start_date[2]), ]
+  data_series = data_series[(data_series$year > product_start_date[1]) |
+                              (data_series$year == product_start_date[1] & 
+                                 data_series$month >= product_start_date[2]), ]
+  
+  data_series = data_series[(data_series$year < product_end_date[1]) |
+                              (data_series$year == product_end_date[1] & 
+                                 data_series$month <= product_end_date[2]), ]
+  
   data_series = data_series[ ,!(names(data_series) %in% c("month","year"))]
   dim(data_series)
   
