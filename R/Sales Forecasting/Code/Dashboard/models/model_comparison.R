@@ -97,8 +97,8 @@ attachModelComparisonObservers = function(input, output, reactive_vars){
     
     ## Populating Forecast
     df_benchmark_fit[,"actuals"] <<- round(tail(product_data, n=h), 2)
-    df_benchmark_fit[,"best_model"] <<- rep("-", no_of_forecast)
-    df_benchmark_fit[,"worst_model"] <<- rep("-", no_of_forecast)
+    df_benchmark_fit[,"best_model"] <<- rep("-", no_of_benchmark_fits)
+    df_benchmark_fit[,"worst_model"] <<- rep("-", no_of_benchmark_fits)
     df_benchmark_fit[,"old_forecast"] <<- round(old_forecast_window, 2)
     df_benchmark_fit[,"old_forecast_error"] <<- round(old_forecast_window - df_benchmark_fit[,"actuals"], 2)
     

@@ -1,4 +1,7 @@
 models_prefix = "models_"
+models_forecast_h = no_of_benchmark_fits
+
+
 
 source("models/regression.R")
 source("models/regression_benchmark.R")

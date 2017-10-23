@@ -161,11 +161,10 @@ readData = function(input) {
     } else{
       file = paste0(file, "_sa.csv")
     }
+    
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
-    
     data_series = filterByProductPeriod(data_series)
-    
     series_vars = intersect(names(data_series), selected_vars)
     if(is.null(dim(data_series[, series_vars]))){
       ## there is just one column from the series
@@ -207,11 +206,10 @@ getData = function(vars_id, y_name){
     } else{
       file = paste0(file, "_sa.csv")
     }
+
     print(paste0("Reading file : ", file))
     data_series = read.csv(file, header = TRUE, sep = ",")
-    
     data_series = filterByProductPeriod(data_series)
-    
     series_vars = intersect(names(data_series), vars_id)
     if(is.null(dim(data_series[, series_vars]))){
       ## there is just one column from the series

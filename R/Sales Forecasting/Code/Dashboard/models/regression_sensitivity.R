@@ -43,7 +43,7 @@ attachSensitivityObservers = function(input, output, reactive_vars){
   id_show_button = paste0(sensitivity_prefix, "show")
   observeEvent(input[[id_show_button]],{
     
-    h = 12
+    h = models_forecast_h
     df_ = data.frame(t=1:(2*h))
     
     id_output_sensitivity_plot = paste0(sensitivity_prefix, "plot")
@@ -68,9 +68,7 @@ attachSensitivityObservers = function(input, output, reactive_vars){
     
     })
     
-    # browser()
     model = reactive_vars[[SENSITIVITY_MODELS_LINEAR_REGRESSION]]
-    # df_x_y = as.data.frame(tail(model$model, 2*h))
     
     df_coef = data.frame(feature=names(model$coefficients),
                          coef=model$coefficients)

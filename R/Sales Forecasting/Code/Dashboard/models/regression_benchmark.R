@@ -14,8 +14,8 @@ getRegressionBenchmarkUI = function(){
   
   # row_1 - options
   id = paste0(benchmark_prefix, "h")
-  input_numeric_h = numericInput(id, "Forecast Period", value=12, min=2, max=12, 
-                                 step=1, width="50%")
+  input_numeric_h = numericInput(id, "Forecast Period", value=models_forecast_h, 
+                                 min=2, max=12, step=1, width="50%")
   
   id = paste0(benchmark_prefix, "methodId|mean")
   input_mean_check = checkboxInput(inputId=id, label="Mean", value=TRUE)

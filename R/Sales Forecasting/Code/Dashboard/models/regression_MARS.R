@@ -65,8 +65,8 @@ attachMARSObservers = function(input, output, reactive_vars){
   id_1 = paste0(mars_prefix, "doMARS")
   observeEvent(input[[id_1]],{
     
-    h = 12
-    nfolds = as.numeric(input[[paste0(mars_prefix, "nfolds")]])
+    h = models_forecast_h
+    nfolds = as.integer(input[[paste0(mars_prefix, "nfolds")]])
     pmethod = input[[paste0(mars_prefix, "pmethod")]]
     
     print(nfolds)

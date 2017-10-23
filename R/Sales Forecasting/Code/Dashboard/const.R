@@ -34,7 +34,7 @@ MODEL_MARS = paste0(MODEL_, MODELS[3])
 
 
 # Benchmark
-no_of_benchmark_fits = 12
+no_of_benchmark_fits = 8  # No of forecasts for benchmarking
 df_benchmark_fit = data.frame(n=1:no_of_benchmark_fits)
 
 BENCHMARK_ = "BENCHMARK_"

@@ -15,7 +15,7 @@ getTimeSeriesUI = function(){
   # Row - 1 : Parameters
   id = paste0(timeseries_prefix, "h")
   input_numeric_h = numericInput(id, "In-Sample Forecast Period", 
-                                 value=12, min=2, max=12, 
+                                 value=models_forecast_h, min=2, max=12, 
                                  step=1, width="60%")
   
   id = paste0(timeseries_prefix, "method")
@@ -53,170 +53,8 @@ getTimeSeriesUI = function(){
 }
 
 
+
 ## Server Function
-buildSTLModel = function(train, h=6, forecast_method="naive"){
-  
-  t.windows = 1:15
-  s.windows = c(7,9,11,13)
-  maes = vector('numeric')
-  configs_t = vector('numeric')
-  configs_s = vector('numeric')
-  window_ts = train
-  
-  for(s.window in s.windows){
-    for(t.window in t.windows){
-      
-      # plot(window_ts)
-      fit <- stl(window_ts, t.window=t.window, s.window=s.window, robust=TRUE)
-      
-      if(forecast_method=="naive"){
-        sa_adj <- seasadj(fit)
-        forecast = naive(sa_adj, h=h)  
-      }else if(forecast_method=="snaive"){
-        forecast = forecast(fit, method="naive", h=h)
-      }
-      
-      # plot(forecast)
-      # print(forecast$mean)
-      
-      mae = mean(abs(c(tail(train,n=h))-forecast$mean))
-      maes = c(maes, mae)
-      
-      configs_t = c(configs_t, t.window)
-      configs_s = c(configs_s, s.window)
-      
-    }
-  }
-  
-  maes[which.min(maes)]
-  
-  t.window = configs_t[which.min(maes)]
-  s.window = configs_s[which.min(maes)]
-  fit = stl(window_ts, t.window=t.window, s.window=s.window, robust=TRUE)
-  if(forecast_method=="naive"){
-    sa_adj = seasadj(fit)
-    forecast = naive(sa_adj, h=h)  
-  }else if(forecast_method=="snaive"){
-    forecast = forecast(fit, method="naive", h=h)
-  }
-  plot(forecast)
-  mae = mean(abs(c(tail(train,n=h))-forecast$mean))
-  
-  list(forecast_fit=forecast, error=mae)
-}
-
-doSES = function(train, h=6){
-  print(paste0("Models :: Time-Series :: doSES() :: START"))
-  
-  # data_ts = ts(product_data, frequency=12)
-  # window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))  
-  window_ts = train
-  fit = ses(window_ts, initial="simple", h=h)
-  mae = mean(abs(c(tail(train,n=h))-c(fit$mean)))
-  
-  print(paste0("Models :: Time-Series :: doSES() :: DONE"))
-  list(forecast_fit=fit, error=mae)
-}
-
-doHolts = function(train, h=6, damped=FALSE, t_multiplicative=FALSE){
-  print(paste0("Models :: Time-Series :: doHolts() :: START"))
-  
-  # data_ts = ts(product_data, frequency=12)
-  # window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
-  window_ts = train
-  fit = holt(window_ts, h=h, damped=damped, 
-             exponential=t_multiplicative)
-  #plot(data_ts)
-  #lines(fit$fitted, col="red", lwd=2, lty=2)
-  #lines(fit$mean, col="green", lwd=2, lty=2)
-  mae = mean(abs(c(tail(train,n=h))-c(fit$mean)))
-
-  print(paste0("Models :: Time-Series :: doHolts() :: DONE"))
-  list(forecast_fit=fit, error=mae)
-}
-
-doHW = function(train, h=6, seasonal="additive", damped=FALSE, t_multiplicative=FALSE){
-  print(paste0("Models :: Time-Series :: doHW() :: START"))
-  
-  #data_ts = ts(product_data, frequency=12)
-  #window_ts = window(data_ts, end=product_last_year_index+((12-(h+1))/12))
-  window_ts = train
-  fit = hw(window_ts, h=h, seasonal=seasonal,
-                        damped=damped, 
-                        exponential=t_multiplicative)
-  #plot(data_ts, lwd=2)
-  #lines(fit_multi_damped$fitted, col="red", lwd=2, lty=2)
-  #lines(fit_multi_damped$mean, col="green", lwd=2, lty=2)
-  #train_mae = mean(abs(fit_multi_damped$residuals))
-  mae = mean(abs(c(tail(train,n=h)-c(fit$mean))))
-  
-  print(paste0("Models :: Time-Series :: doHW() :: DONE"))
-  list(forecast_fit=fit, error=mae)
-}
-
-getBestNonArimaModelError = function(train, h=6){
-  print(paste0("Models :: Time-Series :: getBestNonArimaModelError() :: START"))
-  
-  best_error = vector('numeric')
-  
-  result_ses = doSES(train, h)
-  best_error = c(best_error, result_ses[['error']])
-  
-  ## Holts  
-  result_holts = doHolts(train, h, damped=FALSE, t_multiplicative=FALSE)
-  best_error = c(best_error, result_holts[['error']])
-  
-  result_holts_m = doHolts(train, h, damped=FALSE, t_multiplicative=TRUE)
-  best_error = c(best_error, result_holts_m[['error']])
-  
-  result_holts_d = doHolts(train, h, damped=TRUE, t_multiplicative=FALSE)
-  best_error = c(best_error, result_holts_d[['error']])
-  
-  result_holts_dm = doHolts(train, h, damped=TRUE, t_multiplicative=TRUE)
-  best_error = c(best_error, result_holts_dm[['error']])
-  
-  ## Holt's Winters
-  result_hw_a = doHW(train, h, seasonal="additive", damped=FALSE, t_multiplicative=FALSE)
-  best_error = c(best_error, result_hw_a[['error']])
-  
-  #result_hw_am = doHW(train, h, seasonal="additive", damped=FALSE, t_multiplicative=TRUE)
-  
-  result_hw_ad = doHW(train, h, seasonal="additive", damped=TRUE, t_multiplicative=FALSE)
-  best_error = c(best_error, result_hw_ad[['error']])
-  
-  #result_hw_adm = doHW(train, h, seasonal="additive", damped=TRUE, t_multiplicative=TRUE)
-  
-  result_hw_x = doHW(train, h, seasonal="multiplicative", damped=FALSE, t_multiplicative=FALSE)
-  best_error = c(best_error, result_hw_x[['error']])
-  
-  result_hw_xm = doHW(train, h, seasonal="multiplicative", damped=FALSE, t_multiplicative=TRUE)
-  best_error = c(best_error, result_hw_xm[['error']])
-  
-  result_hw_xd = doHW(train, h, seasonal="multiplicative", damped=TRUE, t_multiplicative=FALSE)
-  best_error = c(best_error, result_hw_xd[['error']])
-  
-  result_hw_xdm = doHW(train, h, seasonal="multiplicative", damped=TRUE, t_multiplicative=TRUE)
-  best_error = c(best_error, result_hw_xdm[['error']])
-
-  print(paste0("Models :: Time-Series :: getBestNonArimaModelError() :: END"))
-  switch( which.min(best_error),
-         "1" = result_ses,
-         
-         "2" = result_holts,
-         "3" = result_holts_d,
-         "4" = result_holts_m,
-         "5" = result_holts_dm,
-         
-         "6" = result_hw_a,
-         "7" = result_hw_ad,
-         "8" = result_hw_x,
-         "9" = result_hw_xm,
-         "10" = result_hw_xd,
-         "11" = result_hw_xdm
-  )
-  
-}
-
 tailForecast = function(pred, n=24){
   pred$x = tail(pred$x, n)
   pred$fitted = tail(pred$fitted, n)
@@ -280,16 +118,7 @@ attachTimeSeriesObservers = function(input, output){
     train_end_ym = as.numeric(unlist(strsplit(train_end_ym,"-")))
     train = window(data_ts, end=train_end_ym)  
     
-    if(input[[id]]=="decompose-naive"){
-      result = buildSTLModel(train, h=h, forecast_method="naive")
-      
-    }else if(input[[id]]=="decompose-snaive"){  
-      result = buildSTLModel(train, h=h, forecast_method="snaive")
-      
-    }else if(input[[id]]=="non-arima"){
-      result = getBestNonArimaModelError(train, h=h)
-      
-    }else if(input[[id]]=="arima"){
+    if(input[[id]]=="arima"){
       result = doAutoARIMA(train, h, actuals=tail(data_ts, n=h))
     }
     
