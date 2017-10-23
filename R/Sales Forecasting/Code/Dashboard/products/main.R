@@ -56,6 +56,7 @@ getProductData = function(product, column_name){
 }
 
 
+
 ### Create the tab for the product
 getProductTabPanel = function(product){
   print(paste0("getProductTabPanel() :: INIT"))
@@ -121,6 +122,7 @@ getProductsUI = function(){
 }
 
 
+
 ## Creates navigation bar of the available products.
 #   To add a new product, call the function
 #   getProductTabPanel("<product_id>").
@@ -167,6 +169,7 @@ getProducts = function(){
   }
   products
 }
+
 
 
 ##  Attaching listeners to the events.

@@ -141,6 +141,9 @@ doHClust = function(input, output, session, data){
   
   print("Feature Selection :: Feature Selection :: doHClust() :: START")
   
+  sd_zero_cols = apply(data, 2, function(col){ sd(col)==0 })
+  data = data[, !(sd_zero_cols)]
+  
   cor_matrix = cor(scale(data))
   abs_cor_matrix = abs(cor_matrix)
   d = dist(abs_cor_matrix)

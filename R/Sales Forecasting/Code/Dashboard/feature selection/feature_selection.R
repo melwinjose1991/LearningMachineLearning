@@ -388,7 +388,7 @@ getModelSummary = function(data, input, output, session, model_name, coefs, erro
                                            icon("area-chart",lib="font-awesome"))
       observeEvent(input[[button_id]],{
         series = getSeries(var)
-        my_df = data.frame(xx=series,yy=y)
+        my_df = data.frame(xx=series, yy=y)
         fit = lm(yy~xx, data=my_df)
         
         output[[plot_id]] = renderPlot({

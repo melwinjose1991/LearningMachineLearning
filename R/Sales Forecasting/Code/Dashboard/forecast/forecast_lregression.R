@@ -210,7 +210,7 @@ getSeries = function(var_id){
     }
     print(paste0("Reading file : ", file))
     series_df = read.csv(file, header = TRUE, sep = ",")
-    
+    series_df = filterByProductPeriod(series_df[,c(var_id,"date")])
     series_df[,var_id]
     
   }else{
