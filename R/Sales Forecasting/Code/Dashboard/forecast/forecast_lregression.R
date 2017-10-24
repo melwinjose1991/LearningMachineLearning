@@ -49,9 +49,9 @@ createForecastVariableTable = function(variables, input, output, session){
   print(paste0("forecast :: createForecastVariableTable :: START"))
   
   column_width_var_name = 5
-  column_width_var_value = 1
+  column_width_var_value = 2
     
-  cols_forecast_periods_header = lapply(1:no_of_forecast, function(i){
+  cols_forecast_periods_header = lapply((12-no_of_forecast+1):12, function(i){
     tag_name = paste0("month-",i)
     column(width=column_width_var_value, tags$h5(tag_name))
   })
@@ -108,9 +108,9 @@ createForecastVariableTable = function(variables, input, output, session){
           )
           
           # populating values
-          lapply(1:no_of_forecast, function(i){
+          lapply((12-no_of_forecast+1):12, function(i){
             var_value_id = paste0(var_id, "|value|",i)
-            value = var_forecast[['forecast_fit']]$mean[i]
+            value = var_forecast[['forecast_fit']]$mean[i-(12-no_of_forecast)]
             updateTextInput(session, var_value_id, value=value)
           })
           
@@ -128,18 +128,18 @@ createForecastVariableTable = function(variables, input, output, session){
       
       
       # Variable Row - 2 : Value for periods
-      cols_forecast_periods_values = lapply(1:no_of_forecast, function(i){
+      cols_forecast_periods_values = lapply((12-no_of_forecast+1):12, function(i){
         var_value_id = paste0(var_id, "|value|",i)
         if(var_name!="t"){
           input_text_var_value = textInput(var_value_id, label=NULL)
         }else{
-          t_value = length(product_data) + i
+          t_value = length(product_data) + (i-(12-no_of_forecast))
           input_text_var_value = textInput(var_value_id, label=NULL, value=t_value)
         }
         column(width=column_width_var_value, input_text_var_value)
       })
       
-      var_value_row = fluidRow( column(no_of_forecast, cols_forecast_periods_values) )
+      var_value_row = fluidRow( column(no_of_forecast*column_width_var_value, cols_forecast_periods_values) )
       
       
       # Variable Row - 3 : Graphs and Summary
@@ -160,7 +160,7 @@ createForecastVariableTable = function(variables, input, output, session){
       # Value to use
       # NOTE : need to generalized to categorical variables with 
       #        more number of values
-      cols_forecast_periods_values = lapply(1:no_of_forecast, function(i){
+      cols_forecast_periods_values = lapply((12-no_of_forecast+1):12, function(i){
         var_value_id = paste0(var_id, "|value|",i)
         checked = ifelse(var_name==paste0("month",i), TRUE, FALSE)
         input_select_var_value = checkboxInput(var_value_id, label=NULL, value=checked)
@@ -312,9 +312,9 @@ attachForecastObservers = function(input, output, reactive_vars){
     forecast_model = reactive_vars[[MODEL_LINEAR_REGRESSION]]
     for(var in reactive_vars[[MODEL_LINEAR_REGRESSION_VARS]]){
       if(!exists("variable_values")){
-        variable_values = data.frame(row=1:h)
+        variable_values = data.frame(row=(12-no_of_forecast+1):12)
       }
-      variable_values[,var] = unlist(lapply(1:h, function(i){
+      variable_values[,var] = unlist(lapply((12-no_of_forecast+1):12, function(i){
         var_id = paste0(forecast_prefix, "varId|", var, "|value|", i)
         if(is.logical(input[[var_id]])){
           ifelse(input[[var_id]],1,0)
@@ -336,7 +336,7 @@ attachForecastObservers = function(input, output, reactive_vars){
     
     ## Converting to data_frame for iterability
     f_interval = abs(results[['line_modelX_upr']] - results[['line_modelX_lwr']])
-    df = data.frame(n=1:no_of_forecast)
+    df = data.frame(n=(12-no_of_forecast+1):12)
     df[,DF_COL_LREG_FORECAST] = results[['line_modelX']]
     df[,DF_COL_LREG_LWR] = results[['line_modelX_lwr']]
     df[,DF_COL_LREG_UPR] = results[['line_modelX_upr']]

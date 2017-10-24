@@ -48,8 +48,8 @@ BENCHMARK_ENSEMBLE_MEAN = paste0(BENCHMARK_, MODELS[4])
 
 
 # Forecasted Values
-no_of_forecast = 12
-df_forecast_fit = data.frame(n=1:no_of_forecast)
+no_of_forecast = 4
+df_forecast_fit = data.frame(n=(12-no_of_forecast+1):12)
 
 FORECAST_ = "FORECAST_"
 

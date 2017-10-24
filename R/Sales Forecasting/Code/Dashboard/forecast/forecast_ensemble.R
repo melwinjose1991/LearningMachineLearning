@@ -59,7 +59,7 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
     last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
     models_to_use = input[[paste0(forecast_ensemble_prefix, "models")]]
     
-    preview_start_ym = format(last_ym - ((1*h)/12),"%Y-%m")
+    preview_start_ym = format(last_ym - ((2*h)/12),"%Y-%m")
     preview_start_ym = as.numeric(unlist(strsplit(preview_start_ym,"-")))
     
     forecast_start_ym = format(last_ym + (1/12),"%Y-%m")
@@ -130,7 +130,7 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
         forecast_total_row = paste0(forecast_total_row, tr_td)
       }
       forecast_total_row = paste0(forecast_total_row, 
-                                  "<td>", (df_forecast_fit[1,"old_forecast"]*12),
+                                  "<td>", round(sum(df_forecast_fit[,"old_forecast"]),2),
                                   "</td></tr>")
       
       table_header = sapply(MODELS, function(model){

@@ -4,7 +4,7 @@ print("Forecast :: main.R :: Init")
 
 # Globals & Includes
 forecast_tab_prefix = "forecastTab_"
-no_of_forecast = 12
+no_of_forecast = 4
 
 source("forecast/forecast_lregression.R")
 source("forecast/forecast_timeseries.R")
