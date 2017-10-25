@@ -44,14 +44,22 @@ getForecastLRegressionUI = function(){
 
 
 ## Server Functions
+shifter = function(x, n = 1) {
+  if (n == 0) x else c(tail(x, -n), head(x, n))
+}
+
+
+
 createForecastVariableTable = function(variables, input, output, session){
   
   print(paste0("forecast :: createForecastVariableTable :: START"))
   
   column_width_var_name = 5
   column_width_var_value = 2
+  
+  months_to_forecast = shifter(1:12, product_end_date[2])
     
-  cols_forecast_periods_header = lapply((12-no_of_forecast+1):12, function(i){
+  cols_forecast_periods_header = lapply(months_to_forecast, function(i){
     tag_name = paste0("month-",i)
     column(width=column_width_var_value, tags$h5(tag_name))
   })
@@ -139,7 +147,7 @@ createForecastVariableTable = function(variables, input, output, session){
         column(width=column_width_var_value, input_text_var_value)
       })
       
-      var_value_row = fluidRow( column(no_of_forecast*column_width_var_value, cols_forecast_periods_values) )
+      var_value_row = fluidRow( column(no_of_forecast, cols_forecast_periods_values) )
       
       
       # Variable Row - 3 : Graphs and Summary
@@ -161,8 +169,8 @@ createForecastVariableTable = function(variables, input, output, session){
       # NOTE : need to generalized to categorical variables with 
       #        more number of values
       cols_forecast_periods_values = lapply((12-no_of_forecast+1):12, function(i){
-        var_value_id = paste0(var_id, "|value|",i)
-        checked = ifelse(var_name==paste0("month",i), TRUE, FALSE)
+        var_value_id = paste0(var_id, "|value|", i)
+        checked = ifelse(var_name==paste0("month",months_to_forecast[i]), TRUE, FALSE)
         input_select_var_value = checkboxInput(var_value_id, label=NULL, value=checked)
         column(width=column_width_var_value, input_select_var_value)
       })
