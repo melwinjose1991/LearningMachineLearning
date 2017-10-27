@@ -1,0 +1,86 @@
+Done
+----
+	Time Series
+		- Manipulating Time Series Data in R with xts and zoo
+		- Introduction to Time Series Analysis
+		- ARIMA Modeling in R
+	
+	Machine Learning
+		- Deep Learning in Python
+		
+	Visualization
+		- Data Visualization with ggplot2 - part 1
+
+		
+TODO
+----
+	Time Series 
+*		- Forecasting Using R
+		- Visualizing Time Series Data in R
+		- Manipulating Time Series Data in R : Case Study
+
+	Statistics
+*		- Corrleation and Regression
+*		- Supervised Learning in R : Regression
+*		- Multiple and Logistic Regression
+		- Foundations of Inference
+		- Statistical Modeling in R - part 1
+		- Statistical Modeling in R - part 2
+	
+	Machine Learning
+		- Introduction to Machine Learning
+		- Machine Learning Toolbox	
+		- Unsupervised Learning in R
+		- Supervised Learning in R : Classification
+		
+	Data Loading, Exploration & Analysis
+*		- Data Analysis in R, the data.table way
+*		- Data Manipulation in R with dplyr
+		- Introduction to Data
+		- Importing Data in R - part 1
+		- Importing Data in R - part 2
+		- Cleaning Data in R
+		- Importing and Cleaning Data in R : Case Study
+		- Exploratory Data Analysis
+		- Exploratory Data Analysis in R : Case Study
+		- Joining data in R with dplyr
+	
+	Data Visualization
+		- Data Visualization with ggplot2 - part 2
+		- Data Visualization with ggplot2 - part 3
+		- Data Visualization in R
+		- Data Visualization in R with lattice
+		- Data Visualization in R with ggvis
+		
+	Better Coding
+*		- Writing Efficient Code in R
+*		- String manipulation in R with stringr
+		- Working with the RStudio IDE - part 1
+		- Working with the RStudio IDE - part 2
+		- Introduction to R
+		- Intermediate R
+		- Intermediate R - Practice
+		- Writing Functions in R
+	
+	Text
+		- Sentiment Analysis in R : The Tidy Way
+		- Text Mining : Bag of Words
+	
+	Finance
+		- Introduction to R for Finance
+		- Intermediate R for Finance
+		- Financial Trading in R
+		- Bond Valuation and Analysis in R
+		- Importing and Managing Financial Data in R
+		- Quantitive Risk Management in R
+		- Introduction to Portfolio Analysis in R
+		- Intermediate Portfolio Analysis in R
+		- Credit Risk Modeling in R
+	
+	Misc
+		- Working with Geospatical Data in R
+		- Exploring Pitch Data with R
+		- Spatial Statistics
+		- Reporting with R Markdown
+		- Working with Web Data in R
+		- Introduction to SparkR in R using sparklyr
