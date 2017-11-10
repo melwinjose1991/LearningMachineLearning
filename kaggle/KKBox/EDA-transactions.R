@@ -76,6 +76,9 @@ dt_payment_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn
 dt_payment_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N),
                  by=payment_types]
 
+ggplot(dt_payment_churn, aes(x=mode_pay_id, fill=factor(is_churn))) + geom_bar(position="fill")
+ggplot(dt_payment_churn, aes(x=payment_types, fill=factor(is_churn))) + geom_bar(position="fill")
+
 
 
 ###### payment_plan_days ######
@@ -88,6 +91,7 @@ dt_plandays_churn[, msno:=NULL]
 dt_plandays_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                  by=mode_plandays][order(-count)]
 
+ggplot(dt_plandays_churn, aes(x=mode_plandays, fill=factor(is_churn))) + geom_bar(position="fill")
 
 
 ###### plan_list_price & actual_amount_paid ######
@@ -117,14 +121,22 @@ dt_paycode_churn[, msno:=NULL]
 
 dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                   by=mode_pay_code][order(-count)]
+ggplot(dt_paycode_churn, aes(x=mode_pay_code, fill=factor(is_churn))) + geom_bar(position="fill")
+
 
 dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                  by=paid_less][order(-count)]
+ggplot(dt_paycode_churn, aes(x=paid_less, fill=factor(is_churn))) + geom_bar(position="fill")
+
+
 dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                  by=paid_equal][order(-count)]
+ggplot(dt_paycode_churn, aes(x=paid_equal, fill=factor(is_churn))) + geom_bar(position="fill")
+
+
 dt_paycode_churn[, .(count=.N, churns=sum(is_churn), percent_churns=sum(is_churn)/.N), 
                  by=paid_more][order(-count)]
-
+ggplot(dt_paycode_churn, aes(x=paid_more, fill=factor(is_churn))) + geom_bar(position="fill")
 
 
 ###### is_autorenew & transcations ######
