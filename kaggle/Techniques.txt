@@ -1,0 +1,7 @@
+Missing Values
+==============
+	-	Drop Columns or Rows
+	- 	Impute (using just the column) : mean, median and most_frequent
+	-	Impute and indicate that they have been by adding a new binary column
+			https://www.kaggle.com/dansbecker/handling-missing-values
+	-	Predict missing values using models built on other columns without missing-values
