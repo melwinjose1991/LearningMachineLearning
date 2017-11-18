@@ -148,15 +148,31 @@ attachEnsembleObservers = function(input, output, session, reactive_vars){
     })
     
     ## Writing Tool's forecast
-    tool_forecast = c(df_benchmark_fit$BENCHMARK_ENSEMBLE_MEAN, 
-                      df_forecast_fit$ENSEMBLE_MEAN_forecast)
-    month = c(1:12,1:8)
-    year = c(rep(2016,12), rep(2017,8))
-    df_tool_forecast = data.frame(forecast=tool_forecast,
-                                  month=month, year=year)
+    ensemble_forecast = c(df_benchmark_fit$BENCHMARK_ENSEMBLE_MEAN, 
+                          df_forecast_fit$ENSEMBLE_MEAN_forecast)
     
-    product_folder = paste0(data_folder,"/", product_line)
-    write_file = paste0(product_folder,"/Tool_Forecast.csv")
+    lregression_forecast = c(df_benchmark_fit$BENCHMARK_LREGRESSION, 
+                             df_forecast_fit$LREGRESSION_forecast)
+    
+    timeseries_forecast = c(df_benchmark_fit$BENCHMARK_TIMESERIES, 
+                            df_forecast_fit$TIMESERIES_forecast)
+    
+    ABB_forecast = c(df_benchmark_fit$old_forecast, df_forecast_fit$old_forecast)
+    
+    month = c(1:12,1:8)
+    year = c(rep(2017,12), rep(2018,8))
+    t_Jan_2017 = length(product_data)-8+1
+    t_forecast = (t_Jan_2017):(t_Jan_2017+7+no_of_forecast)
+    
+    df_tool_forecast = data.frame(lregression_forecast=lregression_forecast,
+                                  timeseries_forecast=timeseries_forecast,
+                                  ensemble_forecast=ensemble_forecast,
+                                  ABB_forecast=ABB_forecast,
+                                  month=month, year=year,
+                                  t=t_forecast)
+    
+    TCS_folder = paste0(external_data_folder,"/TCS")
+    write_file = paste0(TCS_folder,"/", product_line, "_forecast.csv")
     write.csv(df_tool_forecast, write_file, row.names=FALSE, quote=FALSE)
     
   })

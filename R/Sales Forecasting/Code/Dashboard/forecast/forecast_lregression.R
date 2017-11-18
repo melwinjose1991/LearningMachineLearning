@@ -305,6 +305,26 @@ getForecastResults=function(y_name="orders_rcvd", forecast_model, input_variable
 
 
 
+saveLASSOFeatures = function(selected_vars, selected_vars_forecast_df, coeffs){
+  
+  selected_vars_df = data.frame(t=1:(length(product_data)+no_of_forecast))
+  for(var in selected_vars){
+    if(var!="(Intercept)" & !grepl("month", var)){
+      print(var)
+      selected_vars_df[,var] = c(getSeries(var), selected_vars_forecast_df[,var])
+    }
+  }
+  
+  TCS_folder = paste0(external_data_folder,"/TCS")
+  output_file = paste0(TCS_folder, "/", product_line ,"_variables.csv")
+  write.csv(selected_vars_df, output_file, quote=FALSE, row.names=FALSE)
+  
+  coefs_df = data.frame(Features=names(coeffs), Coeffs=coeffs)
+  output_file = paste0(TCS_folder, "/", product_line ,"_coeffs.csv")
+  write.csv(coefs_df, output_file, quote=FALSE, row.names=FALSE)
+  
+}
+
 attachForecastObservers = function(input, output, reactive_vars){
   
   forecast_do_forecast = paste0(forecast_prefix, "buttonForecast")
@@ -330,9 +350,12 @@ attachForecastObservers = function(input, output, reactive_vars){
           as.numeric(input[[var_id]])
         }
       }))
+      
     }
-    
     print(variable_values)
+    browser()
+    saveLASSOFeatures(reactive_vars[[MODEL_LINEAR_REGRESSION_VARS]], variable_values, 
+                      forecast_model$coefficients)
     
     last_ym = as.yearmon(paste0(product_end_date,collapse="-"))
     forecast_start_ym = format(last_ym + (1/12),"%Y-%m")

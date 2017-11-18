@@ -8,6 +8,7 @@ data_folder = paste0("../../Data")
 data_folders_to_skip = c("External Data")
 
 
+
 ## Global variables that keeps track of
 #   the products to be forecasted and 
 #   meta-data about the product.
@@ -316,6 +317,14 @@ attachProductsObservers = function(input, output, session, reactive_vars){
                                      end=product_forecast_end_date)
                 
       }
+
+            
+      # Files for TCS
+      TCS_df = product_df[,c("t","month","year","base_orders_3rd_party")]
+      TCS_folder = paste0(external_data_folder,"/TCS")
+      TCS_product_line_file = paste0(TCS_folder, "/", product_line,".csv")
+      write.csv(TCS_df, TCS_product_line_file, quote=FALSE, row.names=FALSE)
+      
       
       # Updating the nFolds
       LASSO_nfolds_id = paste0(feature_selection_prefix, "kFolds")
