@@ -353,7 +353,6 @@ attachForecastObservers = function(input, output, reactive_vars){
       
     }
     print(variable_values)
-    browser()
     saveLASSOFeatures(reactive_vars[[MODEL_LINEAR_REGRESSION_VARS]], variable_values, 
                       forecast_model$coefficients)
     
