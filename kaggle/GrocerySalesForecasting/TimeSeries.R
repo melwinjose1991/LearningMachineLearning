@@ -16,7 +16,7 @@ setkey(test, store_nbr, item_nbr)
 
 
 
-### Mean Prediction
+### Mean Prediction for item_nbr x store_nbr
 tmp_train = train[, .(mean_sales=mean(unit_sales)), by=list(item_nbr, store_nbr)]
 head(tmp_train)
 
@@ -33,6 +33,18 @@ tmp_test[mean_sales<0, mean_sales:=0]
 
 setnames(tmp_test, "mean_sales", "unit_sales")
 write.table(tmp_test[,.(id, unit_sales)], "submission.csv", quote=FALSE, sep=",", row.names=FALSE)
+
+
+
+### Mean Prediction for item_nbr
+tmp_train = train[, .(mean_sales=mean(unit_sales)), by=list(item_nbr)]
+setnames(tmp_train, "item_nbr", "tmp_item_nbr")
+head(tmp_train)
+
+test[, unit_sales:=tmp_train[tmp_item_nbr==item_nbr,c("mean_sales")], by=item_nbr]
+head(test)
+
+write.table(test[,.(id, unit_sales)], "submission.csv", quote=FALSE, sep=",", row.names=FALSE)
 
 
 
@@ -54,4 +66,3 @@ tmp_test[is.na(last_sales) | last_sales<0, last_sales:=0]
 
 setnames(tmp_test, "last_sales", "unit_sales")
 write.table(tmp_test[,.(id, unit_sales)], "submission.csv", quote=FALSE, sep=",", row.names=FALSE)
-
