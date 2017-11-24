@@ -20,8 +20,10 @@ test[, onpromotion := NULL]
 gc()
 
 ## Converting date to Date
+memory.limit(size=memory.limit()*2)
 train$date = as.Date(parse_date_time(train$date, '%y-%m-%d'))
 test$date = as.Date(parse_date_time(test$date, '%y-%m-%d'))
+gc()
 
 ## store_item_nbr = <store_nbr>_<item_nbr>
 train$store_item_nbr = paste(train$store_nbr, train$item_nbr, sep="_")
@@ -34,7 +36,7 @@ test[, store_nbr:=NULL]
 gc()
 
 ## filtering rows after 2017-04-01
-train_sub = train[date >= as.Date("2017-04-01"), ]
+train_sub = train[date >= as.Date("2017-03-01"), ]
 train_sub = train_sub[, c('date','store_item_nbr', 'unit_sales')]
 head(train_sub)
 head(test)
@@ -65,7 +67,10 @@ registerDoParallel(cl)
 
 fcst_matrix = foreach(i=1:nrow(train_ts), .combine=rbind, .packages=c("forecast")) %dopar% { 
   fcst_matrix = forecast(ets(train_ts[i,]), h=fcst_intv)$mean
+  # fcst_matrix = forecast(auto.arima(train_ts[i,], seasonal=TRUE), h=fcst_intv)$mean
 }
+
+stopCluster(cl)
 head(fcst_matrix)
 
 # post-processing the forecast table
@@ -95,5 +100,5 @@ submission = left_join(test, fcst_df_long,
 submission$unit_sales[is.na(submission$unit_sales)] = 0
 head(submission)
 
-write.csv(submission[,c("id","unit_sales")], "submission_v0.csv", row.names = FALSE)
+write.csv(submission[,c("id","unit_sales")], "submission_0.csv", row.names = FALSE)
 
