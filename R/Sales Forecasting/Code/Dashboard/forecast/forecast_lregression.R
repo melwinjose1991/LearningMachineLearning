@@ -309,7 +309,7 @@ saveLASSOFeatures = function(selected_vars, selected_vars_forecast_df, coeffs){
   
   selected_vars_df = data.frame(t=1:(length(product_data)+no_of_forecast))
   for(var in selected_vars){
-    if(var!="(Intercept)" & !grepl("month", var)){
+    if(var!="(Intercept)" & !grepl("month", var) & var!="t"){
       print(var)
       selected_vars_df[,var] = c(getSeries(var), selected_vars_forecast_df[,var])
     }
