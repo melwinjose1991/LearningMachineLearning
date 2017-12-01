@@ -2,14 +2,17 @@
 ## Check and install required packages
 
 list.of.packages <- c("shiny", "shinyjs", "ggplot2", # ui and server
-                      "FredR",                       # extract   
-                      "glmnet",                      # feature selection
+                      "shinythemes",                 
+                      "devtools" ,                   # extract   
+                      "glmnet", "caret", "mnormt",   # feature selection
+                      "party", "Boruta",
                       "car", "lmtest", "forecast",   # models
                       "earth", "tseries")
 
 new.packages <- list.of.packages[!(list.of.packages %in% installed.packages()[,"Package"])]
 if(length(new.packages)) install.packages(new.packages)
 
+# devtools::install_github("jcizel/FredR")
 
 
 ## Loading Libraries
